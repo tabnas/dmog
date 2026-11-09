@@ -2062,7 +2062,7 @@ func matrix(t *testing.T, docs []document, b bounds) {
 			if unstreamed(f) {
 				key := fmt.Sprintf("%s (%s)", doc.name, from.ID())
 				if _, seen := readWhole[key]; !seen {
-					readWhole[key] = string(f.Code)
+					readWhole[key] = f.Code.String()
 					readWholeOrder = append(readWholeOrder, key)
 				}
 				written, f = translateAs(from, to, doc.text, nil, true)
