@@ -153,16 +153,24 @@ function format(id: string): Format {
 const COMPILED = new Map<string, Compiled>()
 
 // Translate `text`, read as `from`, into `to`, with `program` in front
-// when there is one.
-function translateText(from: Format, to: Format, text: string, program?: { file: string; text: string }): string {
+// when there is one; read whole, as `--whole` reads it, where `whole` is
+// asked.
+function translateText(
+  from: Format,
+  to: Format,
+  text: string,
+  program?: { file: string; text: string },
+  whole = false,
+): string {
   const request: Request = {
     from,
     to,
     options: alchemyTranslate.Options.default(),
     program,
+    whole,
     limits: Limits.default(),
   }
-  const key = JSON.stringify([from.id, to.id, program?.text ?? null])
+  const key = JSON.stringify([from.id, to.id, program?.text ?? null, whole])
   let compiled = COMPILED.get(key)
   if (undefined === compiled) {
     compiled = compile(request)
@@ -178,6 +186,18 @@ function translateText(from: Format, to: Format, text: string, program?: { file:
 // position, or what else was thrown.
 function why(err: unknown): string {
   return String(err)
+}
+
+// Whether a translation failed because the source's transducer part
+// cannot stream the document (a repeated member, a stream of several YAML
+// documents, a merge key): its code, and the route that reads it named,
+// since the output streams and is never written twice (admin ADR-33).
+function unstreamed(err: unknown): boolean {
+  const fail = err as { code?: string; message?: string } | undefined
+  return (
+    ('STREAMABILITY_UNKNOWN' === fail?.code || 'DUPLICATE_MEMBER' === fail?.code) &&
+    String(fail?.message).endsWith('; --whole reads the document whole')
+  )
 }
 
 // ---------------------------------------------------------------------
@@ -1410,6 +1430,9 @@ type Bounds = {
   floor: number
   tooDeep: number
   tooLarge: number
+  // The documents a source's part refuses part way, at most: each is read
+  // with --whole, and its pairs are held to what that writes.
+  whole: number
   refusals: number
   grammarsWritten: number
   samplesCompared: number
@@ -1431,6 +1454,7 @@ function matrix(docs: Doc[], bounds: Bounds): void {
   const tooLarge: string[] = []
   const defective: string[] = []
   const refusals: string[] = []
+  const readWhole = new Map<string, string>()
   let grammarsWritten = 0
   let samplesCompared = 0
   const declaredOtherwise: string[] = []
@@ -1467,6 +1491,18 @@ function matrix(docs: Doc[], bounds: Bounds): void {
         written = translateText(from, to, text)
       } catch (err) {
         refused = err
+      }
+      // A document the source's part cannot stream fails, naming --whole;
+      // read whole, the pair is held to what that writes, and the document
+      // is counted.
+      if (undefined === written && unstreamed(refused)) {
+        readWhole.set(`${name} (${from.id})`, String((refused as { code?: string }).code))
+        refused = undefined
+        try {
+          written = translateText(from, to, text, undefined, true)
+        } catch (err) {
+          refused = err
+        }
       }
       if (!held.written) {
         const fail = refused as { code?: string; message?: string } | undefined
@@ -1528,6 +1564,7 @@ function matrix(docs: Doc[], bounds: Bounds): void {
   for (const line of refusedSources) process.stderr.write(`refused source: ${line}\n`)
   for (const line of tooDeep) process.stderr.write(`deeper than every format reads: ${line}\n`)
   for (const line of tooLarge) process.stderr.write(`larger than ${SIZE_BOUND} values: ${line}\n`)
+  for (const [doc, code] of readWhole) process.stderr.write(`read with --whole, which its part cannot stream: ${doc}: ${code}\n`)
   for (const line of declaredOtherwise) {
     process.stderr.write(
       'recognised otherwise across the lexing, as the loss lists declare and test/notation-samples.json ' +
@@ -1541,7 +1578,7 @@ function matrix(docs: Doc[], bounds: Bounds): void {
   process.stderr.write(
     `matrix: ${pairs} pairs of ${docs.length} documents; ${refusedSources.length} refused by their own ` +
       `reader, ${tooDeep.length} too deep, ${tooLarge.length} too large, ${defective.length} left out for a ` +
-      `registered reader defect; ` +
+      `registered reader defect; ${readWhole.size} read with --whole, which their parts cannot stream; ` +
       `${refusals.length} pairs refused as their target declares (${schemaOnly} by a schema-only target, ` +
       `${unwritable} by a grammar notation's render, ${exprRefused} by expr's render, ` +
       `${refusals.length - schemaOnly - unwritable - exprRefused} by Semantic ` +
@@ -1555,6 +1592,10 @@ function matrix(docs: Doc[], bounds: Bounds): void {
     `the corpus shrank: ${docs.length} documents`,
   )
   assert.ok(tooDeep.length <= bounds.tooDeep, `${tooDeep.length} documents are deeper than every format reads (above)`)
+  assert.ok(
+    readWhole.size <= bounds.whole,
+    `${readWhole.size} documents are read with --whole, more than the ${bounds.whole} the corpus gives (above)`,
+  )
   assert.ok(
     tooLarge.length <= bounds.tooLarge,
     `${tooLarge.length} documents hold more than ${SIZE_BOUND} values (above)`,
@@ -1590,7 +1631,7 @@ describe('translate', () => {
   // transduce's fixtures, one document per format at least, and the
   // documents of JSONTestSuite every JSON parser must accept.
   it('every document translates into every format', () => {
-    matrix(corpus(), { floor: 151, tooDeep: 0, tooLarge: 4, refusals: 1084, grammarsWritten: 36, samplesCompared: 236 })
+    matrix(corpus(), { floor: 151, tooDeep: 0, tooLarge: 4, whole: 12, refusals: 1084, grammarsWritten: 36, samplesCompared: 236 })
   })
 
   // Each registered reader defect still stands: a version past 2^53 - 1
@@ -1649,20 +1690,33 @@ describe('translate', () => {
     assert.strictEqual(translateText(zon, json, translateText(zon, zon, text)).trimEnd(), want)
   })
 
-  // The metrics a run is given are its own, whether the transducer part's
-  // attempt wrote the output or one it gave up was read again whole.
-  it("a run's metrics are those of the attempt that wrote the output", () => {
+  // The metrics a run is given count what it wrote, whether it streamed
+  // through the transducer part or read the document whole (--whole), and
+  // a run the part gives up writes nothing twice: it fails, its metrics
+  // what it had written.
+  it("a run's metrics are its own", () => {
     const json = named('json')
-    for (const text of ['{"a": [1, 2]}', '{"a": 1, "a": 2}']) {
+    for (const [text, whole] of [
+      ['{"a": [1, 2]}', false],
+      ['{"a": 1, "a": 2}', true],
+    ] as const) {
       const out = new BytesWriter()
       const metrics = new Metrics()
-      const r = request(json, json)
+      const r = { ...request(json, json), whole }
       runCompiled(r, compile(r), text, out, metrics)
       const written = out.bytes().length
       assert.ok(0 < written, text)
       assert.strictEqual(metrics.output_bytes, written, text)
       assert.ok(0 < metrics.events, text)
     }
+    const out = new BytesWriter()
+    const metrics = new Metrics()
+    const r = request(json, json)
+    assert.throws(
+      () => runCompiled(r, compile(r), '{"a": 1, "a": 2}', out, metrics),
+      (err: { code?: string }) => 'DUPLICATE_MEMBER' === err.code,
+    )
+    assert.strictEqual(metrics.output_bytes, out.bytes().length)
   })
 
   // A writer that fails once it has taken some of the output: the failure

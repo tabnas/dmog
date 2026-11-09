@@ -239,12 +239,26 @@ func TestTranslateWritesADocumentInAnotherFormat(t *testing.T) {
 		{"json", "jsonl", `[{"a":1},2]`, "{\"a\":1}\n2\n"},
 		// Lossy: TOML has no null, and writes the root under the key.
 		{"json", "toml", `[1,null]`, "\"items\" = [ 1 ]\n"},
-		// The values a transducer part cannot follow, read again whole: a
-		// YAML stream of several documents, a repeated member.
-		{"yaml", "json", "a: 1\n---\nb: 2\n", `[{"a":1},{"b":2}]` + "\n"},
-		{"json", "json", `{"a":1,"a":2}`, `{"a":2}` + "\n"},
 	} {
 		wantSuccess(t, invoke(t, []string{"translate", "--from", c.from, "--to", c.to, "-"}, text(c.stdin)), c.want)
+	}
+	// The values a transducer part cannot follow, a YAML stream of several
+	// documents and a repeated member: the output streams, so each fails
+	// with its code and names the route that reads it, and --whole reads it
+	// whole, as its grammar's value (admin ADR-33).
+	for _, c := range []struct {
+		from, stdin, code string
+		status            int
+		want              string
+	}{
+		{"yaml", "a: 1\n---\nb: 2\n", "STREAMABILITY_UNKNOWN", 2, `[{"a":1},{"b":2}]` + "\n"},
+		{"json", `{"a":1,"a":2}`, "DUPLICATE_MEMBER", 1, `{"a":2}` + "\n"},
+	} {
+		f := wantFailure(t, invoke(t, []string{"translate", "--from", c.from, "--to", "json", "-"}, text(c.stdin)), c.status, c.code, "")
+		if message, _ := f["message"].(string); !strings.HasSuffix(message, "; --whole reads the document whole") {
+			t.Errorf("%s: %v", c.stdin, f)
+		}
+		wantSuccess(t, invoke(t, []string{"translate", "--whole", "--from", c.from, "--to", "json", "-"}, text(c.stdin)), c.want)
 	}
 }
 
@@ -508,7 +522,7 @@ func TestTranslateToAClosedStandardOutputIsOutputFailed(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 	f := failJSON(t, output{stderr: stderr.String()})
-	if f["code"] != "OUTPUT_FAILED" || f["message"] != "the output could not be written: Broken pipe (os error 32)" {
+	if f["code"] != "OUTPUT_FAILED" || f["message"] != "writing the output failed: Broken pipe (os error 32)" {
 		t.Errorf("%v", f)
 	}
 }

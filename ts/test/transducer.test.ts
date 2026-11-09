@@ -51,6 +51,7 @@ function translated(
   path: string | undefined,
   program: { file: string; text: string } | undefined,
   input: string,
+  whole = false,
 ): string {
   const limits = Limits.default()
   const target = formatNamed(to)
@@ -63,6 +64,7 @@ function translated(
       path: undefined === path ? undefined : parsePath(path, limits),
       options: alchemyTranslate.Options.default(),
       program,
+      whole,
       limits,
     },
     input,
@@ -81,9 +83,11 @@ describe('a transducer part', () => {
   // part keeps and the walk spells as the engine does; the part's own
   // output shows the route ran. A path keeps the document's value, the one
   // route a path has. A repeated member, which the part streams twice and
-  // the composition's tree-contract refuses, is read again whole, as a
-  // format without a part is read.
-  it('reads the format, and the walk stands in where it refuses', () => {
+  // the composition's tree-contract refuses, fails with its code and names
+  // --whole, since the output streams and is not written twice; read
+  // whole, it is the grammar's value, as a format without a part writes it
+  // (admin ADR-33).
+  it('reads the format, and the walk stands in where it is asked', () => {
     const plain = plainJson()
     const through = formatNamed('json')
     assert.ok(through)
@@ -125,32 +129,48 @@ describe('a transducer part', () => {
     // materialized value spells a number as the engine does.
     assert.equal(translated(marking, 'json', '["a",1]', undefined, tree), '2.5\n')
     const repeated = '{"a":1,"a":2}'
-    assert.equal(translated(through, 'json', undefined, undefined, repeated), translated(plain, 'json', undefined, undefined, repeated))
-    assert.equal(translated(through, 'json', undefined, undefined, repeated), '{"a":2}\n')
+    assert.throws(
+      () => translated(through, 'json', undefined, undefined, repeated),
+      (err: unknown) =>
+        err instanceof Fail && 'DUPLICATE_MEMBER' === err.code && err.message.endsWith('; --whole reads the document whole'),
+    )
+    assert.equal(
+      translated(through, 'json', undefined, undefined, repeated, true),
+      translated(plain, 'json', undefined, undefined, repeated),
+    )
+    assert.equal(translated(through, 'json', undefined, undefined, repeated, true), '{"a":2}\n')
     assert.throws(
       () => translated(through, 'json', undefined, undefined, '[1,'),
       (err: unknown) => err instanceof Fail && 'INPUT_INVALID' === err.code,
     )
   })
 
-  // YAML is read through its part, and whole where the part streams a
-  // repeated key, which the tree contract refuses: the grammar merges it,
-  // at the root and in a sequence entry's mapping alike (@tabnas/yaml
-  // 0.5.26 merges the entry's, which kept the later value before). A
-  // sequence entry's keys stand at the column its content starts at, so a
-  // key with an empty value before a sibling is null, and an entry with
-  // more than one space after its dash reads (both 0.5.26).
+  // YAML is read through its part, and a repeated key, which the part
+  // streams twice and the tree contract refuses, fails unless the
+  // document is read whole: the grammar merges it, at the root and in a
+  // sequence entry's mapping alike (@tabnas/yaml 0.5.26 merges the
+  // entry's, which kept the later value before). A sequence entry's keys
+  // stand at the column its content starts at, so a key with an empty
+  // value before a sibling is null, and an entry with more than one space
+  // after its dash reads (both 0.5.26).
   it('reads a YAML sequence entry as its grammar does', () => {
     const yaml = formatNamed('yaml')
     assert.ok(yaml)
-    const cases: Array<[string, string]> = [
-      ['a:\n  b: 1\na:\n  c: 2\n', '{"a":{"b":1,"c":2}}\n'],
-      ['- a:\n    b: 1\n  a:\n    c: 2\n', '[{"a":{"b":1,"c":2}}]\n'],
-      ['- a:\n  b: 1\n', '[{"a":null,"b":1}]\n'],
-      ['-   a: 1\n    b: 2\n', '[{"a":1,"b":2}]\n'],
+    const cases: Array<[string, string, boolean]> = [
+      ['a:\n  b: 1\na:\n  c: 2\n', '{"a":{"b":1,"c":2}}\n', true],
+      ['- a:\n    b: 1\n  a:\n    c: 2\n', '[{"a":{"b":1,"c":2}}]\n', true],
+      ['- a:\n  b: 1\n', '[{"a":null,"b":1}]\n', false],
+      ['-   a: 1\n    b: 2\n', '[{"a":1,"b":2}]\n', false],
     ]
-    for (const [doc, want] of cases) {
-      assert.equal(translated(yaml, 'json', undefined, undefined, doc), want, JSON.stringify(doc))
+    for (const [doc, want, repeats] of cases) {
+      if (repeats) {
+        assert.throws(
+          () => translated(yaml, 'json', undefined, undefined, doc),
+          (err: unknown) => err instanceof Fail && 'DUPLICATE_MEMBER' === err.code,
+          JSON.stringify(doc),
+        )
+      }
+      assert.equal(translated(yaml, 'json', undefined, undefined, doc, repeats), want, JSON.stringify(doc))
     }
   })
 

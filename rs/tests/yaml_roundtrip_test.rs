@@ -23,18 +23,22 @@ use std::time::{Duration, Instant};
 
 use tabnas_alchemy::translate::Options;
 use tabnas_dmog::translate::{self, Request};
-use tabnas_transduce::{Limits, Metrics};
+use tabnas_transduce::{Code, Fail, Limits, Metrics};
 
-/// The inputs whose output YAML's reader misreads, each with the issue
-/// that records the defect, named as this test names an input:
-/// `spec/<file>.tsv:<line>`, or the YAML Test Suite case's id.
+/// The inputs YAML's reading misreads, each with the issue that records
+/// the defect, named as this test names an input: `spec/<file>.tsv:<line>`,
+/// or the YAML Test Suite case's id.
 ///
 /// Empty since the reader fixed the two defects the pilot found
 /// (tabnas/yaml#86, a quoted key at the start of a line after a block
-/// sequence read into the sequence; tabnas/yaml#88, a flow sequence
-/// first in an indented block sequence replacing it): every input comes
-/// back the same. The ledger stays, so that a reader defect a later
-/// checkout brings is recorded here rather than hidden.
+/// sequence read into the sequence; tabnas/yaml#88, a flow sequence first
+/// in an indented block sequence replacing it), and since tabnas/yaml
+/// 0.5.28 holds transduce's pruning while a value with an anchor is open
+/// (tabnas/yaml#138: an alias to an anchored sequence used as a key had
+/// read through YAML's part as the text of the sequence emptied behind the
+/// stream, `""` where the whole read gives `"1,2"`): every input comes back
+/// the same. The ledger stays, so that a defect a later checkout brings is
+/// recorded here rather than hidden.
 const READER_DEFECT: &[(&str, u32)] = &[];
 
 /// What a run wrote, shared with the test.
@@ -178,7 +182,7 @@ fn render(
     request: &Request<'_>,
     compiled: &translate::Compiled,
     text: &str,
-) -> Result<String, String> {
+) -> Result<String, Fail> {
     let out = Buffer::default();
     translate::run_compiled(
         request,
@@ -186,10 +190,27 @@ fn render(
         text,
         Box::new(out.clone()),
         Metrics::new(),
-    )
-    .map_err(|e| format!("{e:?}"))?;
+    )?;
     let bytes = out.0.lock().unwrap().clone();
     Ok(String::from_utf8(bytes).expect("the render writes UTF-8"))
+}
+
+/// `text` written through `translate` as YAML: streamed through YAML's
+/// part, and read whole (`--whole`) where the part refuses it part way, a
+/// stream of several documents, a merge key or a repeated key, since the
+/// output streams and nothing reads a document again (admin ADR-33).
+fn written(
+    (request, compiled): (&Request<'_>, &translate::Compiled),
+    (whole, compiled_whole): (&Request<'_>, &translate::Compiled),
+    text: &str,
+) -> Result<String, String> {
+    match render(request, compiled, text) {
+        Err(f) if matches!(f.code, Code::StreamabilityUnknown | Code::DuplicateMember) => {
+            render(whole, compiled_whole, text)
+        }
+        other => other,
+    }
+    .map_err(|e| format!("{e:?}"))
 }
 
 #[test]
@@ -202,6 +223,16 @@ fn every_yaml_fixture_written_as_yaml_reads_back_as_the_same_value() {
         path: None,
         options: Options::default(),
         program: None,
+        whole: false,
+        limits: Limits::default(),
+    };
+    let whole = Request {
+        from: yaml,
+        to: yaml,
+        path: None,
+        options: Options::default(),
+        program: None,
+        whole: true,
         limits: Limits::default(),
     };
     let inputs = inputs(&root);
@@ -227,9 +258,12 @@ fn every_yaml_fixture_written_as_yaml_reads_back_as_the_same_value() {
         let handles: Vec<_> = chunks
             .iter()
             .map(|chunk| {
-                let (request, done, reported, progress) = (&request, &done, &reported, &progress);
+                let (request, whole, done, reported, progress) =
+                    (&request, &whole, &done, &reported, &progress);
                 scope.spawn(move || {
                     let compiled = translate::compile(request).unwrap_or_else(|f| panic!("{f}"));
+                    let compiled_whole =
+                        translate::compile(whole).unwrap_or_else(|f| panic!("{f}"));
                     let (mut same, mut unread) = (0, 0);
                     let mut differ: Vec<String> = Vec::new();
                     for (name, text) in chunk.iter() {
@@ -239,8 +273,12 @@ fn every_yaml_fixture_written_as_yaml_reads_back_as_the_same_value() {
                         match read(text) {
                             None => unread += 1,
                             Some(value) => {
-                                let written = render(request, &compiled, text)
-                                    .unwrap_or_else(|e| panic!("{name}: {e}"));
+                                let written = written(
+                                    (request, &compiled),
+                                    (whole, &compiled_whole),
+                                    text,
+                                )
+                                .unwrap_or_else(|e| panic!("{name}: {e}"));
                                 match read(&written) {
                                     Some(back) if back == value => same += 1,
                                     back => differ.push(format!(

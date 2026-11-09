@@ -200,6 +200,7 @@ type compiledKey struct {
 	from, to   string
 	program    string
 	hasProgram bool
+	whole      bool
 }
 
 // compiled is the compositions compiled so far, by source, target and
@@ -209,14 +210,21 @@ var compiled = map[compiledKey]*translate.Compiled{}
 // translateText translates text, read as from, into to, with program in
 // front when there is one.
 func translateText(from, to *translate.Format, text string, program *alchemy.Source) (string, *tt.Fail) {
+	return translateAs(from, to, text, program, false)
+}
+
+// translateAs is translateText, read whole, as --whole reads it, where
+// whole is asked.
+func translateAs(from, to *translate.Format, text string, program *alchemy.Source, whole bool) (string, *tt.Fail) {
 	request := &translate.Request{
 		From:    from,
 		To:      to,
 		Options: at.DefaultOptions(),
 		Program: program,
+		Whole:   whole,
 		Limits:  tt.DefaultLimits(),
 	}
-	key := compiledKey{from: from.ID(), to: to.ID()}
+	key := compiledKey{from: from.ID(), to: to.ID(), whole: whole}
 	if program != nil {
 		key.program, key.hasProgram = program.Text, true
 	}
@@ -292,9 +300,10 @@ func TestARegisteredReaderDefectStillStands(t *testing.T) {
 // module's typed value is written in its fields' order, where the Rust and
 // TypeScript readers keep the document's (a feed, and a PGN move's
 // annotations). PGN's transducer part keeps the document's order, so its
-// example is a document the part refuses, which is read whole as the
-// typed database's tree. Otherwise the values are
-// the same, and the matrix, comparing values, cannot see the order;
+// example is a document the part refuses, which --whole reads as the typed
+// database's tree; every example is read so, in its reader's own order.
+// Otherwise the values are the same, and the matrix, comparing values,
+// cannot see the order;
 // TestAReadersMemberOrderIsPinned holds each entry to its example. (A
 // grammar spec was one until tabnas-bnf 0.1.30, whose Go serializer writes
 // a spec's members in the order the compiler emits them, as the TypeScript
@@ -319,7 +328,7 @@ var orderDivergent = map[string][2]string{
 // title.
 func TestAReadersMemberOrderIsPinned(t *testing.T) {
 	for id, c := range orderDivergent {
-		got, f := translateText(format(t, id), format(t, "json"), c[0], nil)
+		got, f := translateAs(format(t, id), format(t, "json"), c[0], nil, true)
 		if f != nil || strings.TrimSuffix(got, "\n") != c[1] {
 			t.Errorf("%s now writes %q as %s (%v), not as registered: delete its entry if its members keep their order", id, c[0], got, f)
 		}
@@ -1980,7 +1989,21 @@ const sizeBound = 10_000
 // those notation's Otherwise registers for the pair.
 type bounds struct {
 	floor, tooDeep, tooLarge, refusals, grammarsWritten, samplesCompared int
-	notation                                                             notation
+	// whole is the documents a source's part refuses part way, at most:
+	// each is read with --whole, and its pairs are held to what that
+	// writes.
+	whole    int
+	notation notation
+}
+
+// unstreamed is whether a translation failed because the source's
+// transducer part cannot stream the document (a repeated member, a stream
+// of several YAML documents, a merge key): its code, and the route that
+// reads it named, since the output streams and is never written twice
+// (admin ADR-33).
+func unstreamed(f *tt.Fail) bool {
+	return f != nil && (f.Code == tt.CodeStreamabilityUnknown || f.Code == tt.CodeDuplicateMember) &&
+		strings.HasSuffix(f.Message, "; --whole reads the document whole")
 }
 
 // divergent is the pairs that fail in this runtime, and not in Rust's, for
@@ -2006,6 +2029,8 @@ func matrix(t *testing.T, docs []document, b bounds) {
 	met := map[string]bool{}
 	pairs, grammarsWritten, samplesCompared := 0, 0, 0
 	var declaredOtherwise []string
+	readWhole := map[string]string{}
+	var readWholeOrder []string
 	started := time.Now()
 	reported := time.Now()
 	for n, doc := range docs {
@@ -2031,6 +2056,17 @@ func matrix(t *testing.T, docs []document, b bounds) {
 			name := fmt.Sprintf("%s (%s) -> %s", doc.name, from.ID(), to.ID())
 			held := expect(from, to, &source)
 			written, f := translateText(from, to, doc.text, nil)
+			// A document the source's part cannot stream fails, naming
+			// --whole; read whole, the pair is held to what that writes, and
+			// the document is counted.
+			if unstreamed(f) {
+				key := fmt.Sprintf("%s (%s)", doc.name, from.ID())
+				if _, seen := readWhole[key]; !seen {
+					readWhole[key] = f.Code.String()
+					readWholeOrder = append(readWholeOrder, key)
+				}
+				written, f = translateAs(from, to, doc.text, nil, true)
+			}
 			var why error
 			switch {
 			case !held.written && f == nil:
@@ -2105,6 +2141,9 @@ func matrix(t *testing.T, docs []document, b bounds) {
 	for _, line := range diverged {
 		t.Logf("divergent, as registered: %s", line)
 	}
+	for _, key := range readWholeOrder {
+		t.Logf("read with --whole, which its part cannot stream: %s: %s", key, readWhole[key])
+	}
 	for _, line := range failures {
 		t.Logf("FAIL %s", line)
 	}
@@ -2120,11 +2159,13 @@ func matrix(t *testing.T, docs []document, b bounds) {
 		}
 	}
 	t.Logf("matrix: %d pairs of %d documents; %d refused by their own reader, %d too deep, %d too large, %d left out "+
-		"for a registered reader defect, %d divergent as registered; %d pairs refused as their target declares (%d by a "+
+		"for a registered reader defect, %d divergent as registered, %d read with --whole, which their parts cannot "+
+		"stream; %d pairs refused as their target declares (%d by a "+
 		"schema-only target, %d by a grammar notation's render, %d by expr's render, %d by Semantic Versioning's "+
 		"embedding); %d grammars written in a grammar notation, %d of their samples compared, %d pairs recognising "+
 		"some otherwise across the lexing, as registered",
-		pairs, len(docs), len(refusedSources), len(tooDeep), len(tooLarge), len(defective), len(diverged), len(refusals),
+		pairs, len(docs), len(refusedSources), len(tooDeep), len(tooLarge), len(defective), len(diverged), len(readWhole),
+		len(refusals),
 		schemaOnly, unwritable, exprRefused, len(refusals)-schemaOnly-unwritable-exprRefused, grammarsWritten,
 		samplesCompared, len(declaredOtherwise))
 	leftOut := len(refusedSources) + len(tooDeep) + len(tooLarge) + len(defective)
@@ -2133,6 +2174,9 @@ func matrix(t *testing.T, docs []document, b bounds) {
 	}
 	if len(tooDeep) > b.tooDeep {
 		t.Fatalf("%d documents are deeper than every format reads (above)", len(tooDeep))
+	}
+	if len(readWhole) > b.whole {
+		t.Fatalf("%d documents are read with --whole, more than the %d the corpus gives (above)", len(readWhole), b.whole)
 	}
 	if len(tooLarge) > b.tooLarge {
 		t.Fatalf("%d documents hold more than %d values (above)", len(tooLarge), sizeBound)
@@ -2193,7 +2237,7 @@ func TestParsePathReadsKeysAndIndexes(t *testing.T) {
 // parser must accept, and the grammar notations' example grammars, into
 // every format.
 func TestEveryDocumentTranslatesIntoEveryFormat(t *testing.T) {
-	matrix(t, corpus(t), bounds{floor: 151, tooDeep: 0, tooLarge: 4, refusals: 1087, grammarsWritten: 33,
+	matrix(t, corpus(t), bounds{floor: 151, tooDeep: 0, tooLarge: 4, whole: 12, refusals: 1087, grammarsWritten: 33,
 		samplesCompared: 191, notation: notationSamples(t)})
 }
 
@@ -2226,20 +2270,35 @@ func TestAZonIntegerNoFloatHoldsIsTheBigObject(t *testing.T) {
 	}
 }
 
-// The metrics a run is given are its own, whether the transducer part's
-// attempt wrote the output or one it gave up was read again whole.
-func TestARunsMetricsAreThoseOfTheAttemptThatWroteTheOutput(t *testing.T) {
+// The metrics a run is given count what it wrote, whether it streamed
+// through the transducer part or read the document whole (--whole), and a
+// run the part gives up writes nothing twice: it fails, its metrics what it
+// had written.
+func TestARunsMetricsAreItsOwn(t *testing.T) {
 	json := format(t, "json")
-	for _, text := range []string{`{"a": [1, 2]}`, `{"a": 1, "a": 2}`} {
+	for _, c := range []struct {
+		text  string
+		whole bool
+	}{{`{"a": [1, 2]}`, false}, {`{"a": 1, "a": 2}`, true}} {
 		var out bytes.Buffer
 		metrics := tt.NewMetrics()
-		if f := translate.Run(request(json, json), text, &out, metrics); f != nil {
-			t.Fatalf("%s: %v", text, f)
+		r := request(json, json)
+		r.Whole = c.whole
+		if f := translate.Run(r, c.text, &out, metrics); f != nil {
+			t.Fatalf("%s: %v", c.text, f)
 		}
 		if out.Len() == 0 || metrics.OutputBytes.Load() != uint64(out.Len()) || metrics.Events.Load() == 0 {
 			t.Errorf("%s: wrote %d bytes; the metrics count %d output bytes and %d events",
-				text, out.Len(), metrics.OutputBytes.Load(), metrics.Events.Load())
+				c.text, out.Len(), metrics.OutputBytes.Load(), metrics.Events.Load())
 		}
+	}
+	var out bytes.Buffer
+	metrics := tt.NewMetrics()
+	if f := translate.Run(request(json, json), `{"a": 1, "a": 2}`, &out, metrics); f == nil || f.Code != tt.CodeDuplicateMember {
+		t.Errorf("a repeated member, streamed: %v", f)
+	}
+	if metrics.OutputBytes.Load() != uint64(out.Len()) {
+		t.Errorf("the metrics count %d output bytes, the writer took %d", metrics.OutputBytes.Load(), out.Len())
 	}
 }
 

@@ -32,7 +32,7 @@ require (
 	github.com/tabnas/toml/go v0.5.19
 	github.com/tabnas/transduce/go v0.4.0
 	github.com/tabnas/xml/go v0.7.19
-	github.com/tabnas/yaml/go v0.5.26
+	github.com/tabnas/yaml/go v0.5.27
 	github.com/tabnas/zon/go v0.5.18
 )
 

@@ -685,9 +685,9 @@ describe('cli translate', () => {
       [['--from', 'json', '--to', 'xml', '-'], '42', '<document type="number">42</document>\n'],
       [['--from', 'csv', '--to', 'json', '-'], 'a,b\n1,x\n', '[{"a":"1","b":"x"}]\n'],
       [['--from', 'csv', '--to', 'markdown', '-'], 'a,b\n1,x\n', '| a | b |\n| --- | --- |\n| 1 | x |\n'],
-      // A YAML stream of several documents is read whole, as the grammar's
-      // own value, which YAML's transducer part cannot follow.
-      [['--from', 'yaml', '--to', 'json', '-'], 'a: 1\n---\nb: 2\n', '[{"a":1},{"b":2}]\n'],
+      // A YAML stream of several documents, which YAML's transducer part
+      // cannot follow, is read with --whole, as the grammar's own value.
+      [['--whole', '--from', 'yaml', '--to', 'json', '-'], 'a: 1\n---\nb: 2\n', '[{"a":1},{"b":2}]\n'],
       // A byte order mark is the document's, and its grammar's to read.
       [['--from', 'csv', '--to', 'json', '-'], '\ufeffa\n1\n', '[{"\ufeffa":"1"}]\n'],
     ] as Array<[string[], string, string]>) {
@@ -695,6 +695,18 @@ describe('cli translate', () => {
       assert.equal(out.status, 0, `${args}: ${out.stderr}`)
       assert.equal(out.stdout, want, String(args))
       assert.equal(out.stderr, '', String(args))
+    }
+    // Without --whole the output streams, so a document the part cannot
+    // follow fails with its code and names the route that reads it
+    // (admin ADR-33): a second root, a repeated member.
+    for (const [args, stdin, code, status] of [
+      [['--from', 'yaml', '--to', 'json', '-'], 'a: 1\n---\nb: 2\n', 'STREAMABILITY_UNKNOWN', 2],
+      [['--from', 'json', '--to', 'yaml', '-'], '{"a":1,"a":2}', 'DUPLICATE_MEMBER', 1],
+    ] as Array<[string[], string, string, number]>) {
+      out = dmog(['translate', ...args], stdin)
+      assert.equal(out.status, status, `${args}: ${out.stderr}`)
+      assert.equal(failJson(out).code, code, out.stderr)
+      assert.ok(failJson(out).message.endsWith('; --whole reads the document whole'), out.stderr)
     }
   })
 

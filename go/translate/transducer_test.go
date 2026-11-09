@@ -50,12 +50,18 @@ func transducedJSON(t *testing.T, text string) *Format {
 
 func translated(t *testing.T, from *Format, to, path string, program *alchemy.Source, input string) (string, *tt.Fail) {
 	t.Helper()
+	return translatedAs(t, from, to, path, program, input, false)
+}
+
+// translatedAs is translated, read whole (--whole) where whole is asked.
+func translatedAs(t *testing.T, from *Format, to, path string, program *alchemy.Source, input string, whole bool) (string, *tt.Fail) {
+	t.Helper()
 	limits := tt.DefaultLimits()
 	target := Named(to)
 	if target == nil {
 		t.Fatalf("%s is a format", to)
 	}
-	r := &Request{From: from, To: target, Options: at.DefaultOptions(), Program: program, Limits: limits}
+	r := &Request{From: from, To: target, Options: at.DefaultOptions(), Program: program, Whole: whole, Limits: limits}
 	if path != "" {
 		p, f := ParsePath(path, limits)
 		if f != nil {
@@ -88,8 +94,10 @@ func mustTranslate(t *testing.T, from *Format, to, path string, program *alchemy
 // marking part given in the module's place shows the route ran. A path
 // keeps the document's value, the one route a path has. A repeated member,
 // which the part streams twice and the composition's tree-contract
-// refuses, is read again whole, as a format without a part is read.
-func TestATransducerPartReadsTheFormatAndTheWalkStandsInWhereItRefuses(t *testing.T) {
+// refuses, fails with its code and names --whole, since the output streams
+// and is not written twice; read whole, it is the grammar's value, as a
+// format without a part writes it (admin ADR-33).
+func TestATransducerPartReadsTheFormatAndTheWalkStandsInWhereItIsAsked(t *testing.T) {
 	plain := plainJSON(t)
 	through := Named("json")
 	marking := transducedJSON(t, markingTransduce)
@@ -135,31 +143,43 @@ func TestATransducerPartReadsTheFormatAndTheWalkStandsInWhereItRefuses(t *testin
 		t.Errorf("a path keeps the document's value: %q", got)
 	}
 	repeated := `{"a":1,"a":2}`
-	if got, want := mustTranslate(t, through, "json", "", nil, repeated), mustTranslate(t, plain, "json", "", nil, repeated); got != want || got != "{\"a\":2}\n" {
-		t.Errorf("a repeated member: the transducer's route wrote %q, the plain one %q", got, want)
+	if _, f := translated(t, through, "json", "", nil, repeated); f == nil || f.Code != tt.CodeDuplicateMember || !strings.HasSuffix(f.Message, "; --whole reads the document whole") {
+		t.Errorf("a repeated member, streamed: %v", f)
+	}
+	whole, f := translatedAs(t, through, "json", "", nil, repeated, true)
+	if want := mustTranslate(t, plain, "json", "", nil, repeated); f != nil || whole != want || whole != "{\"a\":2}\n" {
+		t.Errorf("a repeated member, read whole: the transducer's format wrote %q (%v), the plain one %q", whole, f, want)
 	}
 	if _, f := translated(t, through, "json", "", nil, "[1,"); f == nil || f.Code != tt.CodeInputInvalid {
 		t.Errorf("a refused document: %v", f)
 	}
 }
 
-// YAML is read through its part, and whole where the part streams a
-// repeated key, which the tree contract refuses: the grammar merges it, at
-// the root and in a sequence entry's mapping alike (tabnas/yaml 0.5.26
-// merges the entry's, which kept the later value before). A sequence
-// entry's keys stand at the column its content starts at, so a key with an
-// empty value before a sibling is null, and an entry with more than one
-// space after its dash reads (both 0.5.26).
+// YAML is read through its part, and a repeated key, which the part
+// streams twice and the tree contract refuses, fails unless the document
+// is read whole: the grammar merges it, at the root and in a sequence
+// entry's mapping alike (tabnas/yaml 0.5.26 merges the entry's, which kept
+// the later value before). A sequence entry's keys stand at the column its
+// content starts at, so a key with an empty value before a sibling is null,
+// and an entry with more than one space after its dash reads (both 0.5.26).
 func TestYAMLReadsASequenceEntryAsItsGrammarDoes(t *testing.T) {
 	yaml := Named("yaml")
-	for _, c := range []struct{ doc, want string }{
-		{"a:\n  b: 1\na:\n  c: 2\n", "{\"a\":{\"b\":1,\"c\":2}}\n"},
-		{"- a:\n    b: 1\n  a:\n    c: 2\n", "[{\"a\":{\"b\":1,\"c\":2}}]\n"},
-		{"- a:\n  b: 1\n", "[{\"a\":null,\"b\":1}]\n"},
-		{"-   a: 1\n    b: 2\n", "[{\"a\":1,\"b\":2}]\n"},
+	for _, c := range []struct {
+		doc, want string
+		repeats   bool
+	}{
+		{"a:\n  b: 1\na:\n  c: 2\n", "{\"a\":{\"b\":1,\"c\":2}}\n", true},
+		{"- a:\n    b: 1\n  a:\n    c: 2\n", "[{\"a\":{\"b\":1,\"c\":2}}]\n", true},
+		{"- a:\n  b: 1\n", "[{\"a\":null,\"b\":1}]\n", false},
+		{"-   a: 1\n    b: 2\n", "[{\"a\":1,\"b\":2}]\n", false},
 	} {
-		if got := mustTranslate(t, yaml, "json", "", nil, c.doc); got != c.want {
-			t.Errorf("%q: got %q, want %q", c.doc, got, c.want)
+		if c.repeats {
+			if _, f := translated(t, yaml, "json", "", nil, c.doc); f == nil || f.Code != tt.CodeDuplicateMember {
+				t.Errorf("%q, streamed: %v", c.doc, f)
+			}
+		}
+		if got, f := translatedAs(t, yaml, "json", "", nil, c.doc, c.repeats); f != nil || got != c.want {
+			t.Errorf("%q: got %q (%v), want %q", c.doc, got, f, c.want)
 		}
 	}
 }

@@ -11,7 +11,7 @@
 //	                      run the program over the JSON document INPUT; with --grammar, over
 //	                      the rule passes of INPUT parsed as FORMAT (a transducer part's input)
 //	dmog translate --from FORMAT --to FORMAT [--path PATH] [--key KEY]
-//	               [--with PROGRAM] [--max-output-bytes N] INPUT
+//	               [--with PROGRAM] [--whole] [--max-output-bytes N] INPUT
 //	                      write INPUT, read as FORMAT, in another format
 //	dmog formats          print the formats translate reads and writes, as JSON
 //
@@ -80,7 +80,7 @@ import (
 // finds it.
 const VERSION = "0.2.0"
 
-const usage = "usage: dmog canon|format|check|explain FILE\n       dmog run [--grammar FORMAT] [--render csv|json] [--max-output-bytes N] PROGRAM INPUT\n       dmog translate --from FORMAT --to FORMAT [--path PATH] [--key KEY] [--with PROGRAM] [--max-output-bytes N] INPUT\n       dmog formats\n       (a FILE may be - for standard input)"
+const usage = "usage: dmog canon|format|check|explain FILE\n       dmog run [--grammar FORMAT] [--render csv|json] [--max-output-bytes N] PROGRAM INPUT\n       dmog translate --from FORMAT --to FORMAT [--path PATH] [--key KEY] [--with PROGRAM] [--whole] [--max-output-bytes N] INPUT\n       dmog formats\n       (a FILE may be - for standard input)"
 
 func main() {
 	// A write to a closed standard output or standard error fails with an
@@ -294,6 +294,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (string, *exit) {
 			From:    options.from,
 			To:      options.to,
 			Options: at.DefaultOptions(),
+			Whole:   options.whole,
 			Limits:  limits,
 		}
 		if options.key != nil {
@@ -387,6 +388,7 @@ type translateOptions struct {
 	path           *string
 	key            *string
 	program        *string
+	whole          bool
 	maxOutputBytes *uint64
 	input          string
 }
@@ -407,6 +409,11 @@ func parseTranslateOptions(args []string) (*translateOptions, *exit) {
 	var files []string
 	for i := 0; i < len(args); {
 		arg := args[i]
+		if arg == "--whole" {
+			options.whole = true
+			i++
+			continue
+		}
 		switch arg {
 		case "--from", "--to", "--path", "--key", "--with", "--max-output-bytes":
 		default:

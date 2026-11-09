@@ -91,7 +91,7 @@ const OPTIONS: CompileOptions = { routers, renderers }
 const USAGE =
   'usage: dmog canon|format|check|explain FILE\n' +
   '       dmog run [--grammar FORMAT] [--render csv|json] [--max-output-bytes N] PROGRAM INPUT\n' +
-  '       dmog translate --from FORMAT --to FORMAT [--path PATH] [--key KEY] [--with PROGRAM] [--max-output-bytes N] INPUT\n' +
+  '       dmog translate --from FORMAT --to FORMAT [--path PATH] [--key KEY] [--with PROGRAM] [--whole] [--max-output-bytes N] INPUT\n' +
   '       dmog formats\n' +
   '       (a FILE may be - for standard input)'
 
@@ -273,6 +273,7 @@ type TranslateOptions = {
   path?: string
   key?: string
   program?: string
+  whole: boolean
   maxOutputBytes: number | null
   input: string
 }
@@ -290,6 +291,7 @@ function parseTranslateOptions(args: ReadonlyArray<string>): TranslateOptions {
   let path: string | undefined
   let key: string | undefined
   let program: string | undefined
+  let whole = false
   let maxOutputBytes: number | null = null
   const files: string[] = []
   let i = 0
@@ -299,6 +301,11 @@ function parseTranslateOptions(args: ReadonlyArray<string>): TranslateOptions {
       const v = args[i + 1]
       if (undefined === v) throw usage()
       return v
+    }
+    if ('--whole' === arg) {
+      whole = true
+      i += 1
+      continue
     }
     if ('--from' === arg) from = named('--from', value())
     else if ('--to' === arg) to = named('--to', value())
@@ -319,7 +326,7 @@ function parseTranslateOptions(args: ReadonlyArray<string>): TranslateOptions {
   if ('-' === program && '-' === input) {
     throw new Exit(Fail.input('only one of PROGRAM and INPUT may be - (standard input)'), 2)
   }
-  return { from, to, path, key, program, maxOutputBytes, input }
+  return { from, to, path, key, program, whole, maxOutputBytes, input }
 }
 
 // Run the program over one JSON document, into the sink that writes its
@@ -434,6 +441,7 @@ function command(args: ReadonlyArray<string>): string {
         path,
         options: { key: options.key ?? alchemyTranslate.Options.default().key },
         program,
+        whole: options.whole,
         limits,
       }
       // The composition is compiled before the input is read, so a route
