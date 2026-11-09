@@ -30,7 +30,7 @@ require (
 	github.com/tabnas/render/go v0.2.6
 	github.com/tabnas/semver/go v0.0.11
 	github.com/tabnas/toml/go v0.5.20
-	github.com/tabnas/transduce/go v0.4.1
+	github.com/tabnas/transduce/go v0.5.0
 	github.com/tabnas/xml/go v0.7.19
 	github.com/tabnas/yaml/go v0.5.28
 	github.com/tabnas/zon/go v0.5.18
