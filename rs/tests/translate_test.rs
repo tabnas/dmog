@@ -1475,9 +1475,9 @@ fn feed_object(m: &Datum, position: Option<usize>) -> Vec<(Box<str>, Datum)> {
 /// What a feed reads back as, by its loss list: an Atom 1.0 feed of its
 /// members and its entries as `feed_object` writes them, and an author,
 /// named by the feed's title where that is text and not empty and
-/// `unknown` otherwise, where the feed has none, unless the render held its
-/// entries (a tree whose entries come before its other members, as the
-/// reader builds one) and each of them has one.
+/// `unknown` otherwise, where the feed has none, though every entry may
+/// have one: the render writes a feed's elements before its entries, each
+/// entry as it comes, so it cannot see them first.
 fn feed_reading(d: &Datum) -> Datum {
     let members = d.as_object().expect("a feed is an object");
     let entries: Vec<Datum> = match members.get("entries") {
@@ -1493,31 +1493,10 @@ fn feed_reading(d: &Datum) -> Datum {
         ("version".into(), Datum::String("1.0".into())),
     ];
     if members.contains_key("entries") {
-        out.push(("entries".into(), Datum::Array(entries.clone())));
+        out.push(("entries".into(), Datum::Array(entries)));
     }
     out.extend(feed_object(d, None));
-    let feed_members = [
-        "id",
-        "title",
-        "subtitle",
-        "rights",
-        "updated",
-        "authors",
-        "contributors",
-        "categories",
-        "links",
-        "generator",
-        "icon",
-        "logo",
-    ];
-    let entries_at = members.get_index_of("entries");
-    let held = entries_at.is_some_and(|at| {
-        feed_members
-            .iter()
-            .any(|m| members.get_index_of(*m).is_none_or(|i| i > at))
-    });
-    let entries_authored = held && !entries.is_empty() && entries.iter().all(feed_has_author);
-    if !(feed_has_author(d) || entries_authored) {
+    if !feed_has_author(d) {
         let name = match members.get("title") {
             Some(Datum::Object(t))
                 if t.get("type").and_then(Datum::as_str) == Some("text")
