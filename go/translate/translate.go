@@ -451,8 +451,8 @@ func modules() []module {
 		}, transduce: func() *at.PartText {
 			return partText((*modulePart)(tabnasfeed.Translate().Transduce))
 		}, parser: func() *tabnas.Tabnas {
-			parser := tabnas.Make()
-			installed("tabnas-feed", parser.UseDefaults(tabnasfeed.Feed, tabnasfeed.Defaults))
+			parser, err := tabnasfeed.Make()
+			installed("tabnas-feed", err)
 			return parser
 		}, tree: feedTree},
 		{descriptor: func() at.Descriptor {
@@ -484,11 +484,7 @@ func modules() []module {
 			return descriptor("tabnas-jsonc", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
 		}, transduce: func() *at.PartText {
 			return partText((*modulePart)(tabnasjsonc.Translate().Transduce))
-		}, parser: func() *tabnas.Tabnas {
-			parser := tabnasjsonic.Make()
-			installed("tabnas-jsonc", parser.Use(tabnasjsonc.Jsonc))
-			return parser
-		}},
+		}, parser: func() *tabnas.Tabnas { return tabnasjsonc.Make() }},
 		{descriptor: func() at.Descriptor {
 			p := tabnasjsonic.Translate()
 			return descriptor("tabnas-jsonic", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
@@ -525,11 +521,11 @@ func modules() []module {
 		}, transduce: func() *at.PartText {
 			return partText((*modulePart)(tabnasxml.Translate().Transduce))
 		}, parser: func() *tabnas.Tabnas {
-			// XML's plugin, outside its embed mode, reconfigures the jsonic
-			// host it is installed on as a pure XML parser, jsonic's own
-			// grammar and lexers unreachable.
-			parser := tabnasjsonic.Make()
-			installed("tabnas-xml", parser.UseDefaults(tabnasxml.Xml, tabnasxml.Defaults))
+			// XML's own constructor, on the bare engine: its plugin, outside
+			// its embed mode, makes any host a pure XML parser, and the
+			// module holds the two to the same values and errors.
+			parser, err := tabnasxml.Make()
+			installed("tabnas-xml", err)
 			return parser
 		}},
 		{descriptor: func() at.Descriptor {

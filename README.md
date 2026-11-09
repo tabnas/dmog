@@ -99,9 +99,11 @@ input, a window at a time where the JSON grammar declares `lex.window`
 document rather than all of it, and the output streams as the parse
 goes. `run --grammar` reads `INPUT` the same way: a window at a time
 where the grammar declares it, and whole first otherwise. Which grammars
-declare it is each package's to say, in each runtime: in Rust, JSON,
-JSONC, JSON Lines and CSV; in TypeScript and Go, those that declare it in
-the packages this build has. `translate` reads a file or standard input
+declare it is each package's to say, in the constructor this command
+calls in each runtime (`make()` in Rust and TypeScript, `Make()` in Go):
+JSON, JSON Lines, JSONC, CSV, XML, feeds and PGN do from the releases of
+2026-11-09, and jsonic's base constructor, which most relaxed grammars
+build on, does not. `translate` reads a file or standard input
 that way on the route through its format's transducer part, and whole on
 every other route, under `--whole` among them. On every route through a
 part, the engine's tree is emptied behind the stream for a grammar that

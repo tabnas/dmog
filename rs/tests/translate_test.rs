@@ -2182,8 +2182,8 @@ fn every_fixture_of_every_format_translates_into_every_format() {
 /// text, into JSON and into CSV, written or refused alike. A file is read
 /// through the transducer part's route where its format's package ships a
 /// part: through a reader, a window at a time where the grammar declares
-/// `lex.window` (JSON, JSONC, JSON Lines and CSV), and whole first
-/// otherwise. A document the part refuses fails from its file as from its
+/// `lex.window` (the sibling checkout's package says which), and whole
+/// first otherwise. A document the part refuses fails from its file as from its
 /// text, since nothing reads a document again.
 #[test]
 fn every_document_translates_from_its_file_as_from_its_text() {

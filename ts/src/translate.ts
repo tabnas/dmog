@@ -48,17 +48,17 @@ import { abnfCompile, toJsonic, toPureSpec, translate as abnfParts } from '@tabn
 import { Program, compile as compileProgram, compileSources, isFail, translate } from '@tabnas/alchemy'
 import type { CompileOptions } from '@tabnas/alchemy'
 import { C, translate as cParts } from '@tabnas/c'
-import { Chess, translate as chessParts } from '@tabnas/chess'
+import { make as makeChess, translate as chessParts } from '@tabnas/chess'
 import { Css, translate as cssParts } from '@tabnas/css'
 import { make as makeCsv, translate as csvParts } from '@tabnas/csv'
 import { ebnfConvert, translate as ebnfParts } from '@tabnas/ebnf'
 import { Expr, parseSimplified, translate as exprParts } from '@tabnas/expr'
-import { Feed, translate as feedParts } from '@tabnas/feed'
+import { make as makeFeed, translate as feedParts } from '@tabnas/feed'
 import { gbnfConvert, translate as gbnfParts } from '@tabnas/gbnf'
 import { Ini, translate as iniParts } from '@tabnas/ini'
 import { make as makeJson, translate as jsonParts } from '@tabnas/json'
 import { Json5, translate as json5Parts } from '@tabnas/json5'
-import { Jsonc, translate as jsoncParts } from '@tabnas/jsonc'
+import { make as makeJsonc, translate as jsoncParts } from '@tabnas/jsonc'
 import { jsonic, translate as jsonicParts } from '@tabnas/jsonic'
 import { make as makeJsonl, translate as jsonlParts } from '@tabnas/jsonl'
 import { Markdown, translate as markdownParts } from '@tabnas/markdown'
@@ -89,7 +89,7 @@ import {
   walkValue,
 } from '@tabnas/transduce'
 import type { Flow, JsonEvent, Segment, Sink } from '@tabnas/transduce'
-import { Xml, translate as xmlParts } from '@tabnas/xml'
+import { make as makeXml, translate as xmlParts } from '@tabnas/xml'
 import { Yaml, translate as yamlParts } from '@tabnas/yaml'
 import { Zon, translate as zonParts } from '@tabnas/zon'
 
@@ -468,24 +468,24 @@ function packages(): Array<[Described | undefined, Reading]> {
   return [
     [descriptor('tabnas-abnf', abnfParts()), { tree: abnfTree }],
     [descriptor('tabnas-c', cParts()), () => new Tabnas().use(jsonic).use(C)],
-    [descriptor('tabnas-chess', chessParts()), () => new Tabnas().use(Chess)],
+    [descriptor('tabnas-chess', chessParts()), () => makeChess()],
     [descriptor('tabnas-css', cssParts()), () => new Tabnas().use(jsonic).use(Css)],
     [descriptor('tabnas-csv', csvParts()), () => makeCsv()],
     [descriptor('tabnas-ebnf', ebnfParts()), { tree: ebnfTree }],
     [descriptor('tabnas-expr', exprParts()), { tree: exprTree }],
-    [descriptor('tabnas-feed', feedParts()), () => new Tabnas().use(Feed)],
+    [descriptor('tabnas-feed', feedParts()), () => makeFeed()],
     [descriptor('tabnas-gbnf', gbnfParts()), { tree: gbnfTree }],
     [descriptor('tabnas-ini', iniParts()), () => new Tabnas().use(jsonic).use(Ini)],
     [descriptor('tabnas-json', jsonParts()), () => makeJson()],
     [descriptor('tabnas-json5', json5Parts()), { parser: json5Parser, check: json5Check }],
-    [descriptor('tabnas-jsonc', jsoncParts()), () => new Tabnas().use(jsonic).use(Jsonc)],
+    [descriptor('tabnas-jsonc', jsoncParts()), () => makeJsonc()],
     [descriptor('tabnas-jsonic', jsonicParts()), () => new Tabnas().use(jsonic)],
     [descriptor('tabnas-jsonl', jsonlParts()), () => makeJsonl()],
     [descriptor('tabnas-markdown', markdownParts()), () => new Tabnas().use(Markdown)],
     [descriptor('tabnas-proto', protoParts()), { tree: protoTree }],
     [descriptor('tabnas-semver', semverParts()), () => new Tabnas().use(Semver)],
     [descriptor('tabnas-toml', tomlParts()), () => new Tabnas().use(jsonic).use(Toml)],
-    [descriptor('tabnas-xml', xmlParts()), () => new Tabnas().use(Xml)],
+    [descriptor('tabnas-xml', xmlParts()), () => makeXml()],
     [descriptor('tabnas-yaml', yamlParts()), () => new Tabnas().use(jsonic).use(Yaml)],
     [descriptor('tabnas-zon', zonParts()), () => zonParser()],
   ]
