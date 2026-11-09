@@ -17,7 +17,7 @@ require (
 	github.com/tabnas/csv/go v0.6.9
 	github.com/tabnas/ebnf/go v0.1.19
 	github.com/tabnas/expr/go v0.5.19
-	github.com/tabnas/feed/go v0.6.19
+	github.com/tabnas/feed/go v0.6.20
 	github.com/tabnas/gbnf/go v0.1.20
 	github.com/tabnas/ini/go v0.5.21
 	github.com/tabnas/json/go v0.5.19

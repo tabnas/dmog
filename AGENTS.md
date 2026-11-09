@@ -216,10 +216,10 @@ tree is the document, read whole (`Reader::Tree` in Rust, `tree` in Go,
   shared compiler's serializers over the conversion with the builtins on,
   which tabnas-abnf re-exports);
 - Go's feeds and PGN databases, whose modules build typed values, through
-  their JSON encoding (`plainTree`). A PGN database is read so only where
-  its transducer part refuses it: otherwise the part reads it over the
-  parser's rule passes, as in every runtime, so Go's module carries both
-  the parser and the tree.
+  their JSON encoding (`plainTree`). A feed or a PGN database is read so
+  only where its transducer part refuses it: otherwise the part reads it
+  over the parser's rule passes, as in every runtime, so Go's modules
+  carry both the parser and the tree.
 
 Where a package's own parse checks a document before its parser runs, and
 the parser does not check it itself, the reader makes the same check
