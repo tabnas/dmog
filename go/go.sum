@@ -26,8 +26,8 @@ github.com/tabnas/hoover/go v0.3.14 h1:4GxBwo4ktLMSXBlkibQRNv7SanaWwRJ4kFZj5lQc1
 github.com/tabnas/hoover/go v0.3.14/go.mod h1:FB/9Zpm0JynFdXZHFUvANyzFgBN+X+pUU3mXJW4Gi4c=
 github.com/tabnas/ini/go v0.5.21 h1:efAKJNC+Ot+zDZVUncjinpJTTEgyuhaq7nuMjI/Wl2s=
 github.com/tabnas/ini/go v0.5.21/go.mod h1:1ESwUy+1a8h7H7nznM7R8BtJhBwh6Yd4QWUZlbb5eaM=
-github.com/tabnas/json/go v0.5.19 h1:hK0dmkVnClxY0T2jS9hnidItCVKptMzRNQ/g2Bds8b0=
-github.com/tabnas/json/go v0.5.19/go.mod h1:E1ltuPi2G/50u1NV9ZgcND5OQXqPqYMdosa3RgKhyv4=
+github.com/tabnas/json/go v0.5.20 h1:E9KeCSnuUMk+qH6QtOC6phPHHkcodFDI4BAoBI8LPoI=
+github.com/tabnas/json/go v0.5.20/go.mod h1:rKGMefZtAKYWzDDzb5VF6mTxUgsRKfq02CsuSlR9Se0=
 github.com/tabnas/json5/go v0.5.17 h1:kyHaFB2Hl9TRn8McbDzmeGD3zL/A4KCZMlMmIYb24Zk=
 github.com/tabnas/json5/go v0.5.17/go.mod h1:n7ZSZjfph3yKUDMjb1cH0xnZCyA18FKS5fNZ5Js6fMQ=
 github.com/tabnas/jsonc/go v0.5.16 h1:WE4S3Iz2CUS6hkvLBCBz0YeNxXUqT6Aw0p/9WKPLNNM=
