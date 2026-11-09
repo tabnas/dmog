@@ -75,11 +75,13 @@ fails with its code part way, after what it wrote, with `"output":
 "partial"` in the failure where bytes had left: a repeated key, which
 the grammar's value keeps once (`DUPLICATE_MEMBER`, status 1), and a
 YAML stream of several documents, a YAML merge key or alias to a
-collection, a TOML table or an INI section entered again after another
-(`STREAMABILITY_UNKNOWN`, status 2). The failure's message ends by
-naming `--whole`, which reads such a document whole, as its grammar's
-value, and writes that: a YAML stream of several documents as the array
-of them, a repeated key as the grammar keeps it.
+collection, a TOML table or an INI section entered again after another,
+and a feed's element after its first entry that changes the feed's own
+members, written before the entries (`STREAMABILITY_UNKNOWN`, status
+2). The failure's message ends by naming `--whole`, which reads such a
+document whole, as its grammar's value, and writes that: a YAML stream
+of several documents as the array of them, a repeated key as the
+grammar keeps it.
 
 `dmog formats` lists each format, as JSON:
 its `id`, the shapes it `reads` and `writes`, the `root` its render

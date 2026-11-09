@@ -511,7 +511,7 @@ fn packages() -> Vec<(Option<Described>, Reader)> {
             Reader::Tree(read_expr),
         ),
         (
-            descriptor!("tabnas-feed", tabnas_feed, embed),
+            descriptor!("tabnas-feed", tabnas_feed, embed, transduce),
             reader!(tabnas_feed),
         ),
         (
@@ -1265,6 +1265,7 @@ mod tests {
             [
                 ("css", "css-transduce"),
                 ("csv", "csv-transduce"),
+                ("feed", "feed-transduce"),
                 ("ini", "ini-transduce"),
                 ("json", "json-transduce"),
                 ("json5", "json5-transduce"),

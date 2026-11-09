@@ -140,7 +140,6 @@ func TestFormatsPrintsTheRegistryAsJSON(t *testing.T) {
 		"c":        tabnasc.Translate().Manifest,
 		"ebnf":     tabnasebnf.Translate().Manifest,
 		"expr":     tabnasexpr.Translate().Manifest,
-		"feed":     tabnasfeed.Translate().Manifest,
 		"gbnf":     tabnasgbnf.Translate().Manifest,
 		"markdown": tabnasmarkdown.Translate().Manifest,
 		"proto":    tabnasproto.Translate().Manifest,
@@ -155,12 +154,13 @@ func TestFormatsPrintsTheRegistryAsJSON(t *testing.T) {
 			t.Errorf("%s: whole %v, its manifest's %q (%v)", id, byID[id]["whole"], m.Translate.Whole, err)
 		}
 	}
-	// CSS, INI and TOML give the sentence up with the transducer part they
-	// ship from their next release, so each is held to the module this
-	// build has, whichever side of that release: the published one, or the
-	// sibling checkout the polyglot gate's workspace uses.
+	// CSS, INI, TOML and feed give the sentence up with the transducer
+	// part they ship from their next release, so each is held to the module
+	// this build has, whichever side of that release: the published one, or
+	// the sibling checkout the polyglot gate's workspace uses.
 	for id, manifest := range map[string]string{
 		"css":  tabnascss.Translate().Manifest,
+		"feed": tabnasfeed.Translate().Manifest,
 		"ini":  tabnasini.Translate().Manifest,
 		"toml": tabnastoml.Translate().Manifest,
 	} {

@@ -738,14 +738,14 @@ fn formats_lists_the_formats_translate_reads_and_writes() {
     // streams only once the last line is in, each in the sentence its
     // manifest gives; JSON's none, nor PGN's, which streams a game at a
     // time, nor CSS's, which streams a statement at a time, nor INI's and
-    // TOML's, which stream a member at a time.
+    // TOML's, which stream a member at a time, nor feed's, which streams
+    // an entry at a time.
     let by_id = |id: &str| formats.iter().find(|f| f["id"] == id).expect("a format");
     for (id, manifest) in [
         ("abnf", tabnas_abnf::translate().unwrap().manifest),
         ("c", tabnas_c::translate().unwrap().manifest),
         ("ebnf", tabnas_ebnf::translate().unwrap().manifest),
         ("expr", tabnas_expr::translate().unwrap().manifest),
-        ("feed", tabnas_feed::translate().unwrap().manifest),
         ("gbnf", tabnas_gbnf::translate().unwrap().manifest),
         ("markdown", tabnas_markdown::translate().unwrap().manifest),
         ("proto", tabnas_proto::translate().unwrap().manifest),
@@ -761,6 +761,7 @@ fn formats_lists_the_formats_translate_reads_and_writes() {
     assert!(by_id("css")["whole"].is_null());
     assert!(by_id("ini")["whole"].is_null());
     assert!(by_id("toml")["whole"].is_null());
+    assert!(by_id("feed")["whole"].is_null());
     let keys: Vec<&str> = by_id("css")
         .as_object()
         .expect("an object")

@@ -1660,7 +1660,9 @@ describe('translate', () => {
 
   // feed's TypeScript reader builds a person's absent uri and email as
   // null, where its Rust and Go readers leave them out, so a translation
-  // from a feed writes them as null in this runtime alone. feed's render
+  // from a feed read whole (--whole, the reader's value) writes them as null
+  // in this runtime alone. feed's transducer part, from the package that
+  // ships one, writes what the Rust and Go readers build. feed's render
   // writes no member whose value is null, so the matrix reads a written feed
   // back with its null members left out. This fails once the readers agree,
   // and is then deleted.
@@ -1668,7 +1670,7 @@ describe('translate', () => {
     const text =
       '<feed xmlns="http://www.w3.org/2005/Atom"><title>T</title><id>i</id>' +
       '<updated>2003-12-13T18:30:02Z</updated><author><name>A</name></author></feed>'
-    const json = translateText(named('feed'), named('json'), text)
+    const json = translateText(named('feed'), named('json'), text, undefined, true)
     assert.ok(json.includes('"authors":[{"name":"A","uri":null,"email":null}]'), json)
   })
 
