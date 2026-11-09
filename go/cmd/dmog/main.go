@@ -41,7 +41,8 @@
 // transduce's ParserEventSource and compiles the program over the parser's
 // rule passes, as a transducer part is compiled. The source of rule passes
 // needs no adapter of transduce's, so every run reads its document in every
-// build, with the tabnas_nodecell tag or without it.
+// build; the tabnas_nodecell tag, which built transduce's rule-event
+// adapter, gates nothing since transduce 0.5.0 retired the adapter.
 //
 // translate reads INPUT with the grammar of --from and writes it in --to,
 // through the translation parts each format's module exports, as the

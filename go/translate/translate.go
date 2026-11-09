@@ -35,8 +35,9 @@
 // a module whose manifest names no parts this host can take is not a
 // format here.
 //
-// Neither route needs transduce's rule-event adapter (the tabnas_nodecell
-// build tag), so every build reads a document as every other does.
+// Neither route needed transduce's rule-event adapter (the tabnas_nodecell
+// build tag), which transduce 0.5.0 retired, so every build reads a document
+// as every other does.
 package translate
 
 import (
