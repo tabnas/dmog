@@ -47,7 +47,7 @@
     "@tabnas/csv": ">=0.6.7",
     "@tabnas/ebnf": ">=0.1.19",
     "@tabnas/expr": ">=0.5.19",
-    "@tabnas/feed": ">=0.6.19",
+    "@tabnas/feed": ">=0.6.20",
     "@tabnas/gbnf": ">=0.1.20",
     "@tabnas/ini": ">=0.5.20",
     "@tabnas/json": ">=0.5.18",

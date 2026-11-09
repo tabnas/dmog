@@ -194,14 +194,14 @@ func TestAFormatWithAParserGivesItsRulePasses(t *testing.T) {
 		}
 	}
 	// C is parsed here, where the Rust crate reads it as its realized
-	// tree; feed is read as a tree here, where it parses it; pgn is parsed
-	// for its transducer part, and a document the part does not stream is
-	// read whole as the typed database's tree.
-	want := "c css csv ini json json5 jsonc jsonic jsonl markdown pgn semver toml xml yaml zon"
+	// tree; feed and pgn are parsed for their transducer parts, and a
+	// document a part does not stream is read whole as the typed feed's or
+	// database's tree.
+	want := "c css csv feed ini json json5 jsonc jsonic jsonl markdown pgn semver toml xml yaml zon"
 	if got := strings.Join(parsed, " "); got != want {
 		t.Errorf("the parsed formats are %s", got)
 	}
-	if got := ParserNames(); got != "c, css, csv, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, semver, toml, xml, yaml or zon" {
+	if got := ParserNames(); got != "c, css, csv, feed, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, semver, toml, xml, yaml or zon" {
 		t.Errorf("ParserNames is %q", got)
 	}
 	abnf := Named("abnf")

@@ -274,9 +274,10 @@ type module struct {
 // modules is every grammar module this command carries, each with how its
 // documents are read: the module's own parser, under its own options, or,
 // where its parser's value is not yet the tree its parts declare, the tree
-// its own API reads a document as. chess's is both: a database streams
-// through its transducer part over the parser's rule passes, and one the
-// part does not stream is read whole as the typed database's tree.
+// its own API reads a document as. chess's and feed's are both: a database
+// or a feed streams through its transducer part over the parser's rule
+// passes, and one the part does not stream is read whole as the typed
+// database's or feed's tree.
 func modules() []module {
 	return []module{
 		{descriptor: func() at.Descriptor {
@@ -324,6 +325,12 @@ func modules() []module {
 		{descriptor: func() at.Descriptor {
 			p := tabnasfeed.Translate()
 			return descriptor("tabnas-feed", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
+		}, transduce: func() *at.PartText {
+			return partText((*modulePart)(tabnasfeed.Translate().Transduce))
+		}, parser: func() *tabnas.Tabnas {
+			parser := tabnas.Make()
+			installed("tabnas-feed", parser.UseDefaults(tabnasfeed.Feed, tabnasfeed.Defaults))
+			return parser
 		}, tree: feedTree},
 		{descriptor: func() at.Descriptor {
 			p := tabnasgbnf.Translate()

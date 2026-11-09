@@ -576,9 +576,9 @@ describe('cli translate', () => {
     })
     // The formats read through a transducer part are those whose packages
     // ship one, each under the entry its manifest names, and no other. CSS,
-    // INI and TOML ship theirs from their next release, so each is held to
-    // the package this build has, whichever side of that release: the
-    // registry's copy, or the sibling checkout the polyglot gate links.
+    // INI, TOML and feed ship theirs from their next release, so each is
+    // held to the package this build has, whichever side of that release:
+    // the registry's copy, or the sibling checkout the polyglot gate links.
     const shipped = (id: string, parts: any): string[][] =>
       parts?.transduce ? [[id, parts.transduce.entry]] : []
     assert.deepStrictEqual(
@@ -586,6 +586,7 @@ describe('cli translate', () => {
       [
         ...shipped('css', cssParts()),
         ['csv', 'csv-transduce'],
+        ...shipped('feed', feedParts()),
         ...shipped('ini', iniParts()),
         ['json', 'json-transduce'],
         ['json5', 'json5-transduce'],
@@ -632,7 +633,6 @@ describe('cli translate', () => {
       ['c', cParts()],
       ['ebnf', ebnfParts()],
       ['expr', exprParts()],
-      ['feed', feedParts()],
       ['gbnf', gbnfParts()],
       ['markdown', markdownParts()],
       ['proto', protoParts()],
@@ -643,11 +643,12 @@ describe('cli translate', () => {
       assert.strictEqual(byId(id).whole, whole, id)
     }
     assert.strictEqual(byId('pgn').whole, null)
-    // CSS, INI and TOML give the sentence up with the part they ship from
-    // their next release: each is held to the package this build has, and
-    // has one of the two, never both or neither.
+    // CSS, INI, TOML and feed give the sentence up with the part they ship
+    // from their next release: each is held to the package this build has,
+    // and has one of the two, never both or neither.
     for (const [id, parts] of [
       ['css', cssParts()],
+      ['feed', feedParts()],
       ['ini', iniParts()],
       ['toml', tomlParts()],
     ] as const) {
