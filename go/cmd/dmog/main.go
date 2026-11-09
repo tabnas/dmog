@@ -164,6 +164,50 @@ func read(file string, stdin io.Reader) (string, *exit) {
 	return string(data), nil
 }
 
+// open is file, or standard input for "-", for a parse that reads it
+// through a reader, with done to close what was opened. A file that cannot
+// be opened is refused as read refuses it; one that fails part way fails
+// the run (unreadable).
+func open(file string, stdin io.Reader) (io.Reader, func(), *exit) {
+	if file == "-" {
+		return rustReader{stdin}, func() {}, nil
+	}
+	opened, err := os.Open(file)
+	if err != nil {
+		return nil, nil, &exit{fail: tt.InputFail(fmt.Sprintf("cannot read %s: %s", file, ioMessage(err))), status: 2}
+	}
+	return rustReader{opened}, func() { opened.Close() }, nil
+}
+
+// rustReader is a reader whose failures read as the Rust binary's I/O
+// errors do (ioMessage), so that a document a read fails part way through
+// is reported in the Rust binary's words.
+type rustReader struct{ r io.Reader }
+
+func (r rustReader) Read(p []byte) (int, error) {
+	n, err := r.r.Read(p)
+	if err != nil && err != io.EOF {
+		return n, errors.New(ioMessage(err))
+	}
+	return n, err
+}
+
+// unreadable is a run's failure, where file could not be read as read
+// reports one: a read that failed, or bytes that are not UTF-8, which a
+// parse from a reader meets part way (translate.Unreadable). It exits 2 and
+// keeps the mark of any output written before it.
+func unreadable(file string, f *tt.Fail) *exit {
+	reason, ok := translate.Unreadable(f)
+	if !ok {
+		return fromFail(f)
+	}
+	cannot := tt.InputFail(fmt.Sprintf("cannot read %s: %s", file, reason))
+	if f.CommittedOutput {
+		cannot.Committed()
+	}
+	return &exit{fail: cannot, status: 2}
+}
+
 // ioMessage is an I/O error as the Rust binary's message has it, from the
 // operating system's own text and number: `No such file or directory (os
 // error 2)`.
@@ -263,12 +307,13 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (string, *exit) {
 			if f != nil {
 				return "", fromFail(f)
 			}
-			input, e := read(options.input, stdin)
+			input, done, e := open(options.input, stdin)
 			if e != nil {
 				return "", e
 			}
+			defer done()
 			if f := executePasses(options.grammar, sink, metrics, input, limits); f != nil {
-				return "", fromFail(f)
+				return "", unreadable(options.input, f)
 			}
 			return "", nil
 		}
@@ -276,12 +321,13 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (string, *exit) {
 		if f != nil {
 			return "", fromFail(f)
 		}
-		input, e := read(options.input, stdin)
+		input, done, e := open(options.input, stdin)
 		if e != nil {
 			return "", e
 		}
+		defer done()
 		if f := execute(sink, metrics, input, limits); f != nil {
-			return "", fromFail(f)
+			return "", unreadable(options.input, f)
 		}
 		return "", nil
 	case "translate":
@@ -316,17 +362,21 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (string, *exit) {
 			request.Program = &alchemy.Source{File: *options.program, Text: src}
 		}
 		// The composition is compiled before the input is read, so a route
-		// that cannot be composed never waits on standard input.
+		// that cannot be composed never waits on standard input. Standard
+		// input is read once, through a reader on the part's route, as a
+		// file is: nothing reads a document again.
 		compiled, f := translate.Compile(request)
 		if f != nil {
 			return "", fromFail(f)
 		}
-		input, e := read(options.input, stdin)
+		input, done, e := open(options.input, stdin)
 		if e != nil {
 			return "", e
 		}
-		if f := translate.RunCompiled(request, compiled, input, rustIO{stdout}, tt.NewMetrics()); f != nil {
-			return "", fromFail(f)
+		defer done()
+		document := translate.ReaderDocument(input)
+		if f := translate.RunDocument(request, compiled, document, rustIO{stdout}, tt.NewMetrics()); f != nil {
+			return "", unreadable(options.input, f)
 		}
 		return "", nil
 	case "formats":
@@ -544,9 +594,9 @@ func parseRunOptions(args []string) (*runOptions, *exit) {
 
 // execute runs the program over one JSON document, into the sink that
 // writes its output. The document's events come from JSON's own transducer
-// part over the parser's rule passes, the engine's arrays emptied behind
-// them.
-func execute(sink tt.Sink, metrics *tt.Metrics, input string, limits tt.Limits) *tt.Fail {
+// part over the parser's rule passes, read through a reader, a window of
+// the document at a time, the engine's lists emptied behind them.
+func execute(sink tt.Sink, metrics *tt.Metrics, input io.Reader, limits tt.Limits) *tt.Fail {
 	json := translate.Named("json")
 	if json == nil {
 		return tt.InputFail("no JSON grammar to read the input")
@@ -562,22 +612,20 @@ func execute(sink tt.Sink, metrics *tt.Metrics, input string, limits tt.Limits) 
 	if f != nil {
 		return f
 	}
-	source, f := json.Passes(input)
-	if f != nil {
-		return committed(f, metrics)
-	}
-	_, f = source.Grammar(json.ID()).Prune().Limits(limits).Metrics(metrics).Run(head)
-	return committed(f, metrics)
+	return executePasses(json, head, metrics, input, limits)
 }
 
 // executePasses runs the program over the rule passes of one document,
-// parsed with grammar, into the sink that writes its output.
-func executePasses(grammar *translate.Format, sink tt.ParserSink, metrics *tt.Metrics, input string, limits tt.Limits) *tt.Fail {
-	source, f := grammar.Passes(input)
+// which input gives, parsed with grammar, into the sink that writes its
+// output: read through a reader, a window of it at a time where the grammar
+// declares Lex.Window, and pruned where transduce verifies the grammar alike
+// pruned and not.
+func executePasses(grammar *translate.Format, sink tt.ParserSink, metrics *tt.Metrics, input io.Reader, limits tt.Limits) *tt.Fail {
+	source, f := grammar.PassesFrom(input)
 	if f != nil {
 		return committed(f, metrics)
 	}
-	_, f = source.Limits(limits).Metrics(metrics).Run(sink)
+	_, f = grammar.Pruned(source).Limits(limits).Metrics(metrics).Run(sink)
 	return committed(f, metrics)
 }
 

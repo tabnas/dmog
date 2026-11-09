@@ -33,6 +33,16 @@
 // compiles to), that tree is the document, read whole. Nothing here knows
 // a format by its name: a format is what its manifest says, and a package
 // whose manifest names no parts this host can take is not a format here.
+//
+// A document may be a file (`{ file }`) or a stream (`{ reader }`,
+// standard input): the transducer part's route reads it through a reader
+// (transduce's `ParserEventSource.fromReader`), a window of it at a time
+// where the source's grammar declares `lex.window` (tabnas/parser's admin
+// ADR-30), the engine's arrays emptied behind the stream where transduce
+// verifies the grammar alike pruned and not, and every other route reads
+// it whole.
+
+import { closeSync, openSync, readFileSync, readSync } from 'node:fs'
 
 import { abnfCompile, toJsonic, toPureSpec, translate as abnfParts } from '@tabnas/abnf'
 import { Program, compile as compileProgram, compileSources, isFail, translate } from '@tabnas/alchemy'
@@ -72,6 +82,7 @@ import {
   TreeContract,
   engineFailure,
   getPath,
+  isPrunable,
   routers,
   toText,
   walkDatum,
@@ -114,6 +125,101 @@ type Reading =
   | (() => Tabnas)
   | { readonly parser: () => Tabnas; readonly check: (text: string) => void }
   | { readonly tree: (text: string) => unknown }
+
+// A synchronous pull reader of bytes, as the engine's `parseReader` and
+// transduce's `ParserEventSource.fromReader` take it: `read(buf)` writes up
+// to `buf.length` bytes into `buf` from its start and answers how many it
+// wrote, 0 at the end of the input; a read that fails throws.
+export type Reader = { read(buf: Uint8Array): number }
+
+// What a translation reads: a text, read whole; a file, which the
+// transducer part's route reads through a reader, a window of it at a time
+// where the source's grammar declares `lex.window`, so that the run holds a
+// window of the document rather than all of it, and every other route
+// reads whole; or a stream, such as standard input, read once, through a
+// reader on the part's route, as a file is, and whole on every other.
+export type Document = { readonly text: string } | { readonly file: string } | { readonly reader: Reader }
+
+// The size of one read of a reader read whole.
+const CHUNK = 64 * 1024
+
+// A file's bytes, one read at a time, as a reader: what the engine reads a
+// window of. The file is opened by `openFile`, and closed by its caller.
+function fileReader(fd: number): Reader {
+  return { read: (buf: Uint8Array) => readSync(fd, buf, 0, buf.length, null) }
+}
+
+// The text of a reader read to its end. A read that fails, or bytes that
+// are not UTF-8, fail as the engine's `unreadable` fails a parse from a
+// reader (`cannotRead`).
+function readAll(reader: Reader): string {
+  const chunks: Uint8Array[] = []
+  const buf = new Uint8Array(CHUNK)
+  for (;;) {
+    let n: number
+    try {
+      n = reader.read(buf)
+    } catch (err: any) {
+      throw cannotRead(err?.message ?? String(err))
+    }
+    if (0 === n) break
+    chunks.push(buf.slice(0, n))
+  }
+  return decode(Buffer.concat(chunks))
+}
+
+// A leading byte order mark is kept, as Rust's `read_to_string` keeps it:
+// whether a document may begin with one is its grammar's to say.
+const UTF8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
+
+function decode(bytes: Uint8Array): string {
+  try {
+    return UTF8.decode(bytes)
+  } catch (_err) {
+    throw cannotRead('stream did not contain valid UTF-8')
+  }
+}
+
+// A file's text, read whole; one that cannot be read, or that holds bytes
+// that are not UTF-8, fails as a reader that fails does (`cannotRead`).
+function readFile(file: string): string {
+  let bytes: Buffer
+  try {
+    bytes = readFileSync(file)
+  } catch (err: any) {
+    throw cannotRead(err?.message ?? String(err))
+  }
+  return decode(bytes)
+}
+
+// A document's text, read whole.
+function textOf(document: Document): string {
+  if ('text' in document) return document.text
+  if ('file' in document) return readFile(document.file)
+  return readAll(document.reader)
+}
+
+// A document that could not be read, failed as the engine's `unreadable`
+// fails a parse from a reader once transduce reports it: `INPUT_INVALID`,
+// the code and why (`unreadable` reads it back).
+function cannotRead(reason: string): Fail {
+  return Fail.input(`unreadable: ${reason}`)
+}
+
+// Why a run's document could not be read, where that is why it failed: a
+// read that failed, or bytes that are not UTF-8, which a parse from a
+// reader meets where they are (the engine's `unreadable`, which transduce
+// reports as `INPUT_INVALID`, the engine's code before its message), and
+// a file read whole that could not be. A host reports such a document as a
+// file it could not read, not as one that does not parse.
+export function unreadable(err: unknown): string | undefined {
+  if (!isFail(err) || 'INPUT_INVALID' !== err.code) return undefined
+  const prefix = 'unreadable: '
+  if (!err.message.startsWith(prefix)) return undefined
+  const reason = err.message.slice(prefix.length)
+  const engine = 'the source could not be read: '
+  return reason.startsWith(engine) ? reason.slice(engine.length) : reason
+}
 
 // A document's events, as a format reads it: the builder transduce's
 // ParserSource has, which TreeSource has too.
@@ -229,15 +335,66 @@ export class Format {
   passes(text: string): ParserEventSource {
     const reading = this.reading
     if ('function' === typeof reading) return new ParserEventSource(reading(), text)
-    if ('tree' in reading) {
-      throw Fail.input(`${this.id} is read as a tree, not parsed: it has no rule passes for a program to read`)
-    }
+    if ('tree' in reading) throw this.noPasses()
     try {
       reading.check(text)
     } catch (err) {
       throw engineFailure(err, new AbortFlag())
     }
     return new ParserEventSource(reading.parser(), text)
+  }
+
+  // The parser's rule passes over a document read through `reader`, a
+  // window of it at a time where the grammar declares `lex.window`; a read
+  // that fails, or bytes that are not UTF-8, fail the run where the parse
+  // meets them, with the engine's `unreadable` (`unreadable`). The check
+  // the package's parse makes first, where it makes one, reads the
+  // document whole, and the parser then reads the text it passed.
+  passesFrom(reader: Reader): ParserEventSource {
+    const reading = this.reading
+    if ('function' === typeof reading) return ParserEventSource.fromReader(reading(), reader)
+    if ('tree' in reading) throw this.noPasses()
+    const text = readAll(reader)
+    try {
+      reading.check(text)
+    } catch (err) {
+      throw engineFailure(err, new AbortFlag())
+    }
+    return new ParserEventSource(reading.parser(), text)
+  }
+
+  // The rule passes over a document, from its text, or through a reader
+  // over its file or its stream. A file that cannot be opened fails as one
+  // that cannot be read (`cannotRead`); `close` closes what was opened.
+  passesOf(document: Document): { source: ParserEventSource; close: () => void } {
+    if ('text' in document) return { source: this.passes(document.text), close: () => {} }
+    if ('reader' in document) return { source: this.passesFrom(document.reader), close: () => {} }
+    let fd: number
+    try {
+      fd = openSync(document.file, 'r')
+    } catch (err: any) {
+      throw cannotRead(err?.message ?? String(err))
+    }
+    try {
+      return { source: this.passesFrom(fileReader(fd)), close: () => closeSync(fd) }
+    } catch (err) {
+      closeSync(fd)
+      throw err
+    }
+  }
+
+  // `source`, pruned where transduce verifies the format's grammar alike
+  // pruned and not (`isPrunable`, by the format's id): the engine's arrays
+  // are emptied behind the stream, so its tree holds no record the stream
+  // has passed. Any other grammar's source is left as it is, since a run
+  // that prunes an unlisted grammar is refused before the parse.
+  pruned(source: ParserEventSource): ParserEventSource {
+    return isPrunable(this.id) ? source.grammar(this.id).prune() : source
+  }
+
+  // The refusal of a format read as a tree, which has no rule passes.
+  private noPasses(): Fail {
+    return Fail.input(`${this.id} is read as a tree, not parsed: it has no rule passes for a program to read`)
   }
 
   // A source over `text`, read as this format reads a document.
@@ -582,21 +739,39 @@ export function runCompiled(
   out: Writer,
   metrics: Metrics,
 ): void {
+  runDocument(request, compiled, { text: input }, out, metrics)
+}
+
+// `runCompiled` over a document, which may be a file or a stream
+// (`Document`). A document that cannot be read fails as one a reader gives
+// up on part way does, with the engine's `unreadable` (`unreadable`).
+export function runDocument(
+  request: Request,
+  compiled: Compiled,
+  document: Document,
+  out: Writer,
+  metrics: Metrics,
+): void {
   const { composition, program, parsed } = compiled
   try {
     if (undefined !== parsed) {
       // The transducer's route, where the source ships a part and the
       // whole document is asked: its rule passes through the part into the
-      // program, streamed whatever the grammar.
+      // program, streamed whatever the grammar, from a file or a stream
+      // through a reader.
       const sink = parsed.program.parserSink(out, undefined, request.limits, metrics)
+      const { source, close } = request.from.passesOf(document)
       try {
-        request.from.passes(input).limits(request.limits).metrics(metrics).run(sink)
+        request.from.pruned(source).limits(request.limits).metrics(metrics).run(sink)
       } catch (err) {
         if (unfollowed(err) && undefined === request.program) err.message += WHOLE
         throw err
+      } finally {
+        close()
       }
       return
     }
+    const input = textOf(document)
     const inner = program.sink(out, undefined, request.limits, metrics)
     // The source's events reach a tree's render as the source made them,
     // so a stream that is no tree's is refused in front of it rather than

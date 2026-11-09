@@ -154,24 +154,53 @@ function report(fail: Fail): void {
   }
 }
 
-// All of standard input, waiting out a non-blocking descriptor's `EAGAIN`.
+// One read of standard input into `buf`, waiting out a non-blocking
+// descriptor's `EAGAIN`; 0 at its end. A closed or absent standard input
+// reads as empty, as Rust's does.
+function readStdinInto(buf: Uint8Array): number {
+  for (;;) {
+    try {
+      return readSync(0, buf, 0, buf.length, null)
+    } catch (err: any) {
+      if ('EAGAIN' === err?.code) continue
+      if ('EOF' === err?.code) return 0
+      throw err
+    }
+  }
+}
+
+// Standard input as a reader, read once: what a parse reads a window of.
+const STDIN: translate.Reader = { read: readStdinInto }
+
+// All of standard input.
 function readStdin(): Buffer {
   const chunks: Buffer[] = []
   const chunk = Buffer.alloc(64 * 1024)
   for (;;) {
-    let n: number
-    try {
-      n = readSync(0, chunk, 0, chunk.length, null)
-    } catch (err: any) {
-      if ('EAGAIN' === err?.code) continue
-      // A closed or absent standard input reads as empty, as Rust's does.
-      if ('EOF' === err?.code) break
-      throw err
-    }
+    const n = readStdinInto(chunk)
     if (0 === n) break
     chunks.push(Buffer.from(chunk.subarray(0, n)))
   }
   return Buffer.concat(chunks)
+}
+
+// INPUT as a document read through a reader: standard input for `-`, a
+// file otherwise, which the run opens. A file that cannot be opened fails
+// the run as one that cannot be read (`unreadable`).
+function document(file: string): translate.Document {
+  return '-' === file ? { reader: STDIN } : { file }
+}
+
+// A run's failure, where `file` could not be read as `read` reports one:
+// a read that failed, or bytes that are not UTF-8, which a parse from a
+// reader meets part way (`translate.unreadable`). It exits 2 and keeps the
+// mark of any output written before it.
+function unreadable(file: string, err: unknown): unknown {
+  const reason = translate.unreadable(err)
+  if (undefined === reason || !isFail(err)) return err
+  const cannot = Fail.input(`cannot read ${file}: ${reason}`)
+  if (err.committedOutput) cannot.committed()
+  return new Exit(cannot, 2)
 }
 
 // A leading byte order mark is kept, as Rust's `read_to_string` and Go's
@@ -331,31 +360,36 @@ function parseTranslateOptions(args: ReadonlyArray<string>): TranslateOptions {
 
 // Run the program over one JSON document, into the sink that writes its
 // output. The document's events come from JSON's own transducer part over
-// the parser's rule passes, the engine's arrays emptied behind them.
-function execute(sink: Sink, metrics: Metrics, input: string, limits: Limits): void {
+// the parser's rule passes, read through a reader, a window of the
+// document at a time, the engine's arrays emptied behind them.
+function execute(sink: Sink, metrics: Metrics, input: translate.Document, limits: Limits): void {
   const json = translate.format('json')
   if (undefined === json) throw Fail.input('no JSON grammar to read the input')
   const part = json.transducerProgram()
   if (undefined === part) throw Fail.input('the JSON grammar ships no transducer part')
   const head = part.parserSinkInto(sink, limits, metrics)
-  try {
-    json.passes(input).grammar(json.id).prune().limits(limits).metrics(metrics).run(head)
-  } catch (err) {
-    throw committed(err, metrics)
-  }
+  executePasses(json, head, metrics, input, limits)
 }
 
-// Run the program over the rule passes of one document, parsed with
-// `grammar`, into the sink that writes its output.
+// Run the program over the rule passes of one document, which `input`
+// gives, parsed with `grammar`, into the sink that writes its output: read
+// through a reader, a window of it at a time where the grammar declares
+// `lex.window`, and pruned where transduce verifies the grammar alike
+// pruned and not.
 function executePasses(
   grammar: translate.Format,
   sink: ParserSink,
   metrics: Metrics,
-  input: string,
+  input: translate.Document,
   limits: Limits,
 ): void {
   try {
-    grammar.passes(input).limits(limits).metrics(metrics).run(sink)
+    const { source, close } = grammar.passesOf(input)
+    try {
+      grammar.pruned(source).limits(limits).metrics(metrics).run(sink)
+    } finally {
+      close()
+    }
   } catch (err) {
     throw committed(err, metrics)
   }
@@ -411,14 +445,17 @@ function command(args: ReadonlyArray<string>): string {
       // read, so the refusal never waits on standard input or drains a
       // large file to say so.
       const metrics = new Metrics()
-      if (undefined === grammar) {
-        const sink = program.sink(new FdWriter(1), options.render, limits, metrics)
-        const input = read(options.input)
-        execute(sink, metrics, input, limits)
-      } else {
-        const sink = program.parserSink(new FdWriter(1), options.render, limits, metrics)
-        const input = read(options.input)
-        executePasses(grammar, sink, metrics, input, limits)
+      const input = document(options.input)
+      try {
+        if (undefined === grammar) {
+          const sink = program.sink(new FdWriter(1), options.render, limits, metrics)
+          execute(sink, metrics, input, limits)
+        } else {
+          const sink = program.parserSink(new FdWriter(1), options.render, limits, metrics)
+          executePasses(grammar, sink, metrics, input, limits)
+        }
+      } catch (err) {
+        throw unreadable(options.input, err)
       }
       return ''
     }
@@ -445,10 +482,15 @@ function command(args: ReadonlyArray<string>): string {
         limits,
       }
       // The composition is compiled before the input is read, so a route
-      // that cannot be composed never waits on standard input.
+      // that cannot be composed never waits on standard input. Standard
+      // input is read once, through a reader on the part's route, as a file
+      // is: nothing reads a document again.
       const compiled = translate.compile(request)
-      const input = read(options.input)
-      translate.runCompiled(request, compiled, input, new FdWriter(1), new Metrics())
+      try {
+        translate.runDocument(request, compiled, document(options.input), new FdWriter(1), new Metrics())
+      } catch (err) {
+        throw unreadable(options.input, err)
+      }
       return ''
     }
     case 'formats':

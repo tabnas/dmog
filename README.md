@@ -92,22 +92,23 @@ transducer part its documents are read through, null where it ships
 none), and its `loss` sentences: what a document written in it does not
 keep.
 
-The Rust command reads `INPUT` through a reader where the route allows
-it. `run` reads `INPUT`, a file or standard input, a window at a time,
-since the JSON grammar declares `lex.window` (tabnas/parser's admin
-ADR-30). The parser then holds a window of a long document rather than
-all of it, and the output streams as the parse goes. `run --grammar`
-reads `INPUT` the same way: a window at a time where the grammar declares
-it (JSON, JSONC, JSON Lines and CSV), and whole first otherwise.
-`translate` reads a file or standard input that way on the route through
-its format's transducer part, and whole on every other route, under
-`--whole` among them. On every route
-through a part, the engine's tree is emptied behind the stream for a
-grammar that transduce verifies alike pruned and not, so the tree holds
-no record the stream has passed. Bytes that are not
-UTF-8, met part way, fail as a file that cannot be read (status 2), after
-any output the document before them made. The TypeScript and Go commands
-read `INPUT` whole.
+Each command reads `INPUT` through a reader where the route allows it,
+in Rust, TypeScript and Go alike. `run` reads `INPUT`, a file or standard
+input, a window at a time where the JSON grammar declares `lex.window`
+(tabnas/parser's admin ADR-30). The parser then holds a window of a long
+document rather than all of it, and the output streams as the parse
+goes. `run --grammar` reads `INPUT` the same way: a window at a time
+where the grammar declares it, and whole first otherwise. Which grammars
+declare it is each package's to say, in each runtime: in Rust, JSON,
+JSONC, JSON Lines and CSV; in TypeScript and Go, those that declare it in
+the packages this build has. `translate` reads a file or standard input
+that way on the route through its format's transducer part, and whole on
+every other route, under `--whole` among them. On every route through a
+part, the engine's tree is emptied behind the stream for a grammar that
+transduce verifies alike pruned and not, so the tree holds no record the
+stream has passed. Bytes that are not UTF-8, met part way, fail as a file
+that cannot be read (status 2), after any output the document before
+them made.
 
 ## Install
 
