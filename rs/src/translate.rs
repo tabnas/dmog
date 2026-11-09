@@ -1650,11 +1650,11 @@ mod tests {
                 "{id}: not pruned"
             );
         }
-        let toml = format("toml").expect("toml is a format");
-        assert!(!capability::prunable("toml"));
-        let text = "a = 1\n[b]\nc = [1, 2, 3]\n";
-        assert_eq!(left(toml, text, true), left(toml, text, false));
-        assert!(left(toml, text, true) > 0);
+        let css = format("css").expect("css is a format");
+        assert!(!capability::prunable("css"));
+        let text = "a { color: red; }\nb { margin: 0 1px 2px; }\n";
+        assert_eq!(left(css, text, true), left(css, text, false));
+        assert!(left(css, text, true) > 0);
     }
 
     /// Every format with a parser answers its rule passes; one read as a
