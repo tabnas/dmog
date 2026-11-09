@@ -1840,85 +1840,22 @@ struct Bounds {
     every_otherwise_met: bool,
 }
 
-/// tabnas/yaml#138: an alias to an anchored sequence used as a key reads
-/// as the text of the sequence transduce has emptied behind the stream,
-/// `""` where the grammar's whole value gives `"1,2"`, so every target that
-/// writes the document writes the wrong key.
-const YAML_ALIAS_KEY_PRUNED: &str =
-    "tabnas/yaml#138: an alias key to an anchored sequence reads as the emptied sequence's text";
-
 /// The pairs of the release run that fail for a defect of their source's
 /// or target's package, outside this repository: by the name the matrix
 /// gives a pair, each with its defect (Go's matrix keeps the like,
 /// `divergent`). The matrix holds each to failing, so an entry cannot
 /// outlive the defect it records: one that passes, or that names no pair
 /// of the corpus, fails the test until it is deleted. Only the release run
-/// reads the documents. tabnas-ebnf 0.1.18 fixed the last target's defect,
-/// `abnf/alignment-abnf-ast.tsv:28 (abnf) -> ebnf`, whose bounded
-/// repetition (`*200"a"`) its render wrote as 200 nested optional groups,
-/// past what its own reader reads; the render now refuses such a
-/// repetition, as its loss list declares. Open: one source's defect,
-/// yaml's reading through its part over a pruned tree
-/// ([`YAML_ALIAS_KEY_PRUNED`]), which this runtime alone meets, since only
-/// its command empties the tree behind the stream.
-const DEFECTIVE_PAIRS: [(&str, &str); 14] = [
-    (
-        "yaml/anchors-aliases.tsv:37 (yaml) -> csv",
-        YAML_ALIAS_KEY_PRUNED,
-    ),
-    (
-        "yaml/anchors-aliases.tsv:37 (yaml) -> expr",
-        YAML_ALIAS_KEY_PRUNED,
-    ),
-    (
-        "yaml/anchors-aliases.tsv:37 (yaml) -> feed",
-        YAML_ALIAS_KEY_PRUNED,
-    ),
-    (
-        "yaml/anchors-aliases.tsv:37 (yaml) -> ini",
-        YAML_ALIAS_KEY_PRUNED,
-    ),
-    (
-        "yaml/anchors-aliases.tsv:37 (yaml) -> json",
-        YAML_ALIAS_KEY_PRUNED,
-    ),
-    (
-        "yaml/anchors-aliases.tsv:37 (yaml) -> json5",
-        YAML_ALIAS_KEY_PRUNED,
-    ),
-    (
-        "yaml/anchors-aliases.tsv:37 (yaml) -> jsonc",
-        YAML_ALIAS_KEY_PRUNED,
-    ),
-    (
-        "yaml/anchors-aliases.tsv:37 (yaml) -> jsonic",
-        YAML_ALIAS_KEY_PRUNED,
-    ),
-    (
-        "yaml/anchors-aliases.tsv:37 (yaml) -> jsonl",
-        YAML_ALIAS_KEY_PRUNED,
-    ),
-    (
-        "yaml/anchors-aliases.tsv:37 (yaml) -> markdown",
-        YAML_ALIAS_KEY_PRUNED,
-    ),
-    (
-        "yaml/anchors-aliases.tsv:37 (yaml) -> toml",
-        YAML_ALIAS_KEY_PRUNED,
-    ),
-    (
-        "yaml/anchors-aliases.tsv:37 (yaml) -> xml",
-        YAML_ALIAS_KEY_PRUNED,
-    ),
-    (
-        "yaml/anchors-aliases.tsv:37 (yaml) -> yaml",
-        YAML_ALIAS_KEY_PRUNED,
-    ),
-    (
-        "yaml/anchors-aliases.tsv:37 (yaml) -> zon",
-        YAML_ALIAS_KEY_PRUNED,
-    ),
-];
+/// reads the documents. None is open. tabnas-yaml 0.5.28 fixed the last
+/// source's defect, with transduce's hold on its pruning: the fourteen
+/// pairs of `yaml/anchors-aliases.tsv:37`, whose alias to an anchored
+/// sequence used as a key read through YAML's part as the text of the
+/// sequence emptied behind the stream (tabnas/yaml#138). tabnas-ebnf 0.1.18
+/// fixed the last target's, `abnf/alignment-abnf-ast.tsv:28 (abnf) ->
+/// ebnf`, whose bounded repetition (`*200"a"`) its render wrote as 200
+/// nested optional groups, past what its own reader reads; the render now
+/// refuses such a repetition, as its loss list declares.
+const DEFECTIVE_PAIRS: [(&str, &str); 0] = [];
 
 /// The cross product of `docs` and every format: each document read with
 /// its format's grammar, written in every format, and read back under the

@@ -29,17 +29,17 @@ use tabnas_transduce::{Code, Fail, Limits, Metrics};
 /// the defect, named as this test names an input: `spec/<file>.tsv:<line>`,
 /// or the YAML Test Suite case's id.
 ///
-/// The reader fixed the two defects the pilot found (tabnas/yaml#86, a
-/// quoted key at the start of a line after a block sequence read into the
-/// sequence; tabnas/yaml#88, a flow sequence first in an indented block
-/// sequence replacing it). One input tabnas/yaml 0.5.27 added reads
-/// otherwise through YAML's part, whose tree is emptied behind the stream:
-/// an alias to an anchored sequence used as a key resolves to the text of
-/// the emptied sequence, `""` where the whole read gives `"1,2"`
-/// (tabnas/yaml#138, which transduce's prune suite meets as well). The
-/// ledger stays, so that a defect a later checkout brings is recorded here
-/// rather than hidden.
-const READER_DEFECT: &[(&str, u32)] = &[("spec/anchors-aliases.tsv:37", 138)];
+/// Empty since the reader fixed the two defects the pilot found
+/// (tabnas/yaml#86, a quoted key at the start of a line after a block
+/// sequence read into the sequence; tabnas/yaml#88, a flow sequence first
+/// in an indented block sequence replacing it), and since tabnas/yaml
+/// 0.5.28 holds transduce's pruning while a value with an anchor is open
+/// (tabnas/yaml#138: an alias to an anchored sequence used as a key had
+/// read through YAML's part as the text of the sequence emptied behind the
+/// stream, `""` where the whole read gives `"1,2"`): every input comes back
+/// the same. The ledger stays, so that a defect a later checkout brings is
+/// recorded here rather than hidden.
+const READER_DEFECT: &[(&str, u32)] = &[];
 
 /// What a run wrote, shared with the test.
 #[derive(Clone, Default)]
