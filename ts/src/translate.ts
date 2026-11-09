@@ -118,7 +118,6 @@ type Reading =
 // A document's events, as a format reads it: the builder transduce's
 // ParserSource has, which TreeSource has too.
 interface DocumentSource {
-  grammar(name: string): DocumentSource
   limits(limits: Limits): DocumentSource
   metrics(metrics: Metrics): DocumentSource
   run(sink: Sink): Flow
@@ -133,10 +132,6 @@ class TreeSource implements DocumentSource {
   private sourceMetrics: Metrics = new Metrics()
 
   constructor(private readonly read: () => unknown) {}
-
-  grammar(_name: string): this {
-    return this
-  }
 
   limits(limits: Limits): this {
     this.sourceLimits = limits
@@ -174,11 +169,6 @@ class CheckedSource implements DocumentSource {
     private readonly check: () => void,
     private source: DocumentSource,
   ) {}
-
-  grammar(name: string): this {
-    this.source = this.source.grammar(name)
-    return this
-  }
 
   limits(limits: Limits): this {
     this.source = this.source.limits(limits)
@@ -614,7 +604,7 @@ export function runCompiled(
     const sink: Sink = 'tree' === composition.front ? new TreeContract(inner) : inner
     const path = request.path
     if (undefined === path) {
-      request.from.reader(input).grammar(request.from.id).limits(request.limits).metrics(metrics).run(sink)
+      request.from.reader(input).limits(request.limits).metrics(metrics).run(sink)
     } else {
       const value = read(request.from, input, request.limits)
       const selected = getPath(value, path)
@@ -651,7 +641,7 @@ class Collect implements Sink {
 // member keeps its last value, as the grammar's own value does.
 function read(format: Format, input: string, limits: Limits): Datum {
   const collect = new Collect()
-  format.reader(input).grammar(format.id).limits(limits).run(collect)
+  format.reader(input).limits(limits).run(collect)
   return collect.take()
 }
 

@@ -157,7 +157,7 @@ func (f *Format) run(input string, limits tt.Limits, metrics *tt.Metrics, sink t
 		}
 	}
 	if f.tree == nil {
-		return f.reader(input).Grammar(f.ID()).Limits(limits).Metrics(metrics).Run(sink)
+		return f.reader(input).Limits(limits).Metrics(metrics).Run(sink)
 	}
 	guarded := tt.NewGuarded(sink, limits, tt.NewAbortFlag(), metrics)
 	defer guarded.Flush()

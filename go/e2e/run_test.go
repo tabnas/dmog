@@ -513,7 +513,7 @@ func TestAScanEmitStateIsMeasuredAndCapped(t *testing.T) {
 		t.Fatal(f)
 	}
 	doc := `[{"k":"` + strings.Repeat("a", 500) + `"},{"k":"b"}]`
-	if _, f := tt.NewParserSource(tabnasjson.Make(), doc).Grammar("json").Metrics(metrics).Run(sink); f != nil {
+	if _, f := tt.NewParserSource(tabnasjson.Make(), doc).Metrics(metrics).Run(sink); f != nil {
 		t.Fatal(f)
 	}
 	if buffer.String() != "done" || metrics.RetainedBytesHigh.Load() < 500 {
@@ -557,7 +557,7 @@ func TestAScanEmitInitialStateIsMeasuredAndCapped(t *testing.T) {
 		if f != nil {
 			t.Fatal(f)
 		}
-		if _, f := tt.NewParserSource(tabnasjson.Make(), input).Grammar("json").Metrics(metrics).Run(sink); f != nil {
+		if _, f := tt.NewParserSource(tabnasjson.Make(), input).Metrics(metrics).Run(sink); f != nil {
 			t.Fatal(f)
 		}
 		if buffer.String() != "done" || metrics.RetainedBytesHigh.Load() < 1000 {
