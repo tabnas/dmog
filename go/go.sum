@@ -1,7 +1,7 @@
 github.com/tabnas/abnf/go v0.4.25 h1:eNri95GuxUziivzGnpHMzk8Ii0gxL2tCzhMdIMpuWJk=
 github.com/tabnas/abnf/go v0.4.25/go.mod h1:zgkhnKf6pBkUOrTDwNWgK5G6+Ju08MlWNmPgF2RsSO4=
-github.com/tabnas/alchemy/go v0.3.0 h1:Clg9K4M9UTzEDXfu0M+ik31YGaKzDccaTm+Ahz4q0Pw=
-github.com/tabnas/alchemy/go v0.3.0/go.mod h1:Iuq04pg0UCn5+HhGR4Y1tlkmQBcD+RKaW3qHwOncU5w=
+github.com/tabnas/alchemy/go v0.3.1 h1:3KIbHA61eecahEJjMOw9K5cMfgOqYnPoDFZdkDU1HmM=
+github.com/tabnas/alchemy/go v0.3.1/go.mod h1:xvryoA4eXZ04A9p88cVMlimzb5ue30GWd0QvoTIt/s4=
 github.com/tabnas/bnf/go v0.1.31 h1:cI/8ZfMQVKQT1lntd2W/ihbyoUrUUOR7crVyklQI9n8=
 github.com/tabnas/bnf/go v0.1.31/go.mod h1:JEiPdU/LKw8sJpxtFpswmOTN/RyBWEzE030yP4eRVBk=
 github.com/tabnas/c/go v0.5.15 h1:Iu4enjiKICzTQTG7kaKREpVa/acadSMKu8U+eykS2u8=
