@@ -63,10 +63,10 @@ in another (an ABNF grammar as GBNF), as far as that notation can say
 it: what it has no form for (a negated class in ABNF, the engine's own
 tokens in GBNF) it refuses, naming what it met. `--path` takes a JSON
 array of keys and indexes (`["people",0]`) and translates that value
-instead of the document; `--key` names the member a root is wrapped
-under for a format whose document must be an object (`items` by
-default); `--with` runs a program over the input first and writes its
-export's events or table.
+instead of the document, as a plain tree whatever the source's shapes;
+`--key` names the member a root is wrapped under for a format whose
+document must be an object (`items` by default); `--with` runs a program
+over the input first and writes its export's events or table.
 
 `translate` writes as it reads: through its format's transducer part a
 document's output streams from the first record, and nothing waits for
@@ -81,7 +81,15 @@ members, written before the entries (`STREAMABILITY_UNKNOWN`, status
 2). The failure's message ends by naming `--whole`, which reads such a
 document whole, as its grammar's value, and writes that: a YAML stream
 of several documents as the array of them, a repeated key as the
-grammar keeps it.
+grammar keeps it. A path's value streams as the root does: the document
+is read through the same part, and only the events of the value the path
+names are written, as they come, so a number keeps the lexeme the
+document spelled it with. The rest of the document is still read, and
+held to the same refusals, since which of two repeated members a path
+names is the grammar's value's to say; a path that names nothing fails
+(`INPUT_INVALID`, status 1) once the document has been read, with
+nothing written. Under `--whole`, the path selects in the grammar's
+value.
 
 `dmog formats` lists each format, as JSON:
 its `id`, the shapes it `reads` and `writes`, the `root` its render
@@ -104,8 +112,9 @@ calls in each runtime (`make()` in Rust and TypeScript, `Make()` in Go):
 JSON, JSON Lines, JSONC, CSV, XML, feeds and PGN do from the releases of
 2026-11-09, and jsonic's base constructor, which most relaxed grammars
 build on, does not. `translate` reads a file or standard input
-that way on the route through its format's transducer part, and whole on
-every other route, under `--whole` among them. On every route through a
+that way on the route through its format's transducer part, with or
+without `--path`, and whole on every other route, under `--whole` among
+them. On every route through a
 part, the engine's tree is emptied behind the stream for a grammar that
 transduce verifies alike pruned and not, so the tree holds no record the
 stream has passed. Bytes that are not UTF-8, met part way, fail as a file
