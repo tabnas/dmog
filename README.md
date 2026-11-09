@@ -74,8 +74,10 @@ the document's end (admin ADR-33). A document the part cannot stream
 fails with its code part way, after what it wrote, with `"output":
 "partial"` in the failure where bytes had left: a repeated key, which
 the grammar's value keeps once (`DUPLICATE_MEMBER`, status 1), and a
-YAML stream of several documents, a YAML merge key or alias to a
-collection, a TOML table or an INI section entered again after another,
+YAML stream of several documents, two plain `<<` keys in one YAML
+mapping (or a plain and a quoted one), a YAML merge source that repeats
+a key the grammar merged, a TOML table or an INI section entered again
+after another,
 and a feed's element after its first entry that changes the feed's own
 members, written before the entries (`STREAMABILITY_UNKNOWN`, status
 2). The failure's message ends by naming `--whole`, which reads such a

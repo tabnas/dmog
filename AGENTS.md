@@ -162,7 +162,8 @@ it met, and Semantic Versioning's embedding refuses a tree that is not a
 version. A pair refused otherwise, or written where a refusal is
 declared, fails. `translate` streams its output, so a document the
 source's part cannot stream (a repeated key, a stream of several YAML
-documents, a merge key) fails part way, naming `--whole` (admin ADR-33):
+documents, two plain `<<` in one YAML mapping, a YAML merge source that
+repeats a merged key) fails part way, naming `--whole` (admin ADR-33):
 the matrix then reads it with `--whole`, holds its pairs to what that
 writes, and counts it, each run with a ceiling on how many it reads so.
 A document is left out as a source where it is past

@@ -25,9 +25,9 @@
 // only the events of the value the path names are translated, as they
 // come (`runPath`). A document
 // whose events are not what the grammar's value holds, which the part
-// refuses part way (a YAML stream of several documents, a merge key, a
-// repeated member, which a part streams twice and `tree-contract`
-// refuses), fails with its code after what it wrote, since the output has
+// refuses part way (a YAML stream of several documents, two plain `<<` in
+// one mapping, a merge source that repeats a merged key, a repeated
+// member, which a part streams twice and `tree-contract` refuses), fails with its code after what it wrote, since the output has
 // left: `--whole` reads it whole, its grammar's value the document (admin
 // ADR-33). Where a package's parser
 // builds a value that is not yet the tree its parts declare, and the
@@ -70,7 +70,7 @@ import { parse as protoParse, translate as protoParts } from '@tabnas/proto'
 import { renderers } from '@tabnas/render'
 import type { Writer } from '@tabnas/render'
 import { Semver, translate as semverParts } from '@tabnas/semver'
-import { Toml, translate as tomlParts } from '@tabnas/toml'
+import { make as makeToml, translate as tomlParts } from '@tabnas/toml'
 import {
   AbortFlag,
   Datum,
@@ -485,7 +485,7 @@ function packages(): Array<[Described | undefined, Reading]> {
     [descriptor('tabnas-markdown', markdownParts()), () => new Tabnas().use(Markdown)],
     [descriptor('tabnas-proto', protoParts()), { tree: protoTree }],
     [descriptor('tabnas-semver', semverParts()), () => new Tabnas().use(Semver)],
-    [descriptor('tabnas-toml', tomlParts()), () => new Tabnas().use(jsonic).use(Toml)],
+    [descriptor('tabnas-toml', tomlParts()), () => makeToml()],
     [descriptor('tabnas-xml', xmlParts()), () => makeXml()],
     [descriptor('tabnas-yaml', yamlParts()), () => new Tabnas().use(jsonic).use(Yaml)],
     [descriptor('tabnas-zon', zonParts()), () => zonParser()],

@@ -25,9 +25,9 @@
 //! events of the value the path names are translated, as they come
 //! ([`run_document`]). A document
 //! whose events are not what the grammar's value holds, which the part
-//! refuses part way (a YAML stream of several documents, a merge key, a
-//! repeated member, which a part streams twice and `tree-contract`
-//! refuses), fails with its code after what it wrote, since the output has
+//! refuses part way (a YAML stream of several documents, two plain `<<` in
+//! one mapping, a merge source that repeats a merged key, a repeated
+//! member, which a part streams twice and `tree-contract` refuses), fails with its code after what it wrote, since the output has
 //! left: `--whole` reads it whole, its grammar's value the document (admin
 //! ADR-33). Where a package's parser builds a value that
 //! is not yet the tree its parts declare, and the package's API reads a

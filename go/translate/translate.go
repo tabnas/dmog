@@ -25,9 +25,9 @@
 // the module ships one, and only the events of the value the path names are
 // translated, as they come (runPath). The output is written as the run goes,
 // so a document whose events are not what the grammar's value holds, which
-// the part refuses part way (a YAML stream of several documents, a merge
-// key, a repeated member, which a part streams twice and tree-contract
-// refuses), fails with its code after what it wrote: --whole reads it whole,
+// the part refuses part way (a YAML stream of several documents, two plain
+// << in one mapping, a merge source that repeats a merged key, a repeated
+// member, which a part streams twice and tree-contract refuses), fails with its code after what it wrote: --whole reads it whole,
 // its grammar's value the document (admin ADR-33). Where a module's parser
 // builds a value that is not yet the tree its parts declare (an expression's
 // operators, proto's syntax tree, a typed feed or database, a grammar

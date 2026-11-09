@@ -60,10 +60,10 @@
     "@tabnas/proto": ">=0.6.11",
     "@tabnas/render": ">=0.2.6",
     "@tabnas/semver": ">=0.0.11",
-    "@tabnas/toml": ">=0.5.18",
+    "@tabnas/toml": ">=0.5.21",
     "@tabnas/transduce": ">=0.5.1",
     "@tabnas/xml": ">=0.7.20",
-    "@tabnas/yaml": ">=0.5.27",
+    "@tabnas/yaml": ">=0.5.30",
     "@tabnas/zon": ">=0.5.18"
   },
   "devDependencies": {

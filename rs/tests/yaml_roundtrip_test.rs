@@ -197,8 +197,9 @@ fn render(
 
 /// `text` written through `translate` as YAML: streamed through YAML's
 /// part, and read whole (`--whole`) where the part refuses it part way, a
-/// stream of several documents, a merge key or a repeated key, since the
-/// output streams and nothing reads a document again (admin ADR-33).
+/// stream of several documents, a repeated key, two plain `<<` in one
+/// mapping or a merge source that repeats a merged key, since the output
+/// streams and nothing reads a document again (admin ADR-33).
 fn written(
     (request, compiled): (&Request<'_>, &translate::Compiled),
     (whole, compiled_whole): (&Request<'_>, &translate::Compiled),
