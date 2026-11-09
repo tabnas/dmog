@@ -92,11 +92,13 @@ func mustTranslate(t *testing.T, from *Format, to, path string, program *alchemy
 // records target, and with a program over the input, but for a number's
 // lexeme, which the part keeps and the walk spells as the engine does; a
 // marking part given in the module's place shows the route ran. A path
-// keeps the document's value, the one route a path has. A repeated member,
-// which the part streams twice and the composition's tree-contract
+// selects a sub-stream of the same events, so its value keeps its lexemes
+// too, and read whole it is selected in the grammar's value. A repeated
+// member, which the part streams twice and the composition's tree-contract
 // refuses, fails with its code and names --whole, since the output streams
-// and is not written twice; read whole, it is the grammar's value, as a
-// format without a part writes it (admin ADR-33).
+// and is not written twice, under a path as at the root; read whole, it is
+// the grammar's value, as a format without a part writes it (admin
+// ADR-33).
 func TestATransducerPartReadsTheFormatAndTheWalkStandsInWhereItIsAsked(t *testing.T) {
 	plain := plainJSON(t)
 	through := Named("json")
@@ -137,10 +139,46 @@ func TestATransducerPartReadsTheFormatAndTheWalkStandsInWhereItIsAsked(t *testin
 	if got := mustTranslate(t, marking, "json", "", nil, tree); got != "{\"ran\":true}\n" {
 		t.Errorf("the marking part wrote %q", got)
 	}
-	// A path selects in the document's value, read whole, as it did: the
-	// materialized value spells a number as the engine does.
-	if got := mustTranslate(t, marking, "json", `["a",1]`, nil, tree); got != "2.5\n" {
-		t.Errorf("a path keeps the document's value: %q", got)
+	// A path selects a sub-stream of the part's events: its value keeps the
+	// lexeme the document spelled a number with, and the marking part's own
+	// events are what it selects in. Read whole, or without a part, a path
+	// selects in the grammar's value, which spells a number as the engine
+	// does; a path that names nothing fails at the document's end.
+	for _, c := range []struct {
+		from       *Format
+		path, want string
+		whole      bool
+	}{
+		{through, `["a",1]`, "2.50\n", false},
+		{through, `["a"]`, "[1,2.50,\"x\",{\"b\":null}]\n", false},
+		{through, `["a",3,"b"]`, "null\n", false},
+		{through, `[]`, tree + "\n", false},
+		{marking, `["ran"]`, "true\n", false},
+		{through, `["a",1]`, "2.5\n", true},
+		{plain, `["a",1]`, "2.5\n", false},
+	} {
+		if got, f := translatedAs(t, c.from, "json", c.path, nil, tree, c.whole); f != nil || got != c.want {
+			t.Errorf("%s (whole %v): got %q (%v), want %q", c.path, c.whole, got, f, c.want)
+		}
+	}
+	if got, want := mustTranslate(t, through, "csv", `["rows"]`, echo, `{"rows":`+records+`}`), mustTranslate(t, plain, "csv", "", echo, records); got != want {
+		t.Errorf("a path's records with a program: got %q, want %q", got, want)
+	}
+	for _, c := range []struct {
+		from *Format
+		path string
+	}{
+		{through, `["a",4]`},
+		{through, `["a","0"]`},
+		{through, `["c",0]`},
+		{through, `["f","g"]`},
+		{plain, `["z"]`},
+		{marking, `["a"]`},
+	} {
+		_, f := translated(t, c.from, "json", c.path, nil, tree)
+		if f == nil || f.Code != tt.CodeInputInvalid || f.Message != "the path "+c.path+" names nothing in the document" || f.CommittedOutput {
+			t.Errorf("%s: %v", c.path, f)
+		}
 	}
 	repeated := `{"a":1,"a":2}`
 	if _, f := translated(t, through, "json", "", nil, repeated); f == nil || f.Code != tt.CodeDuplicateMember || !strings.HasSuffix(f.Message, "; --whole reads the document whole") {
@@ -149,6 +187,21 @@ func TestATransducerPartReadsTheFormatAndTheWalkStandsInWhereItIsAsked(t *testin
 	whole, f := translatedAs(t, through, "json", "", nil, repeated, true)
 	if want := mustTranslate(t, plain, "json", "", nil, repeated); f != nil || whole != want || whole != "{\"a\":2}\n" {
 		t.Errorf("a repeated member, read whole: the transducer's format wrote %q (%v), the plain one %q", whole, f, want)
+	}
+	// Under a path, a repeated member fails as it does at the root, inside
+	// the value, on the way to it or past it, since the grammar's value
+	// decides which of the two a path names; read whole, the path selects in
+	// it.
+	around := `{"x":{"a":1,"a":2},"y":3}`
+	for _, path := range []string{`["x"]`, `["x","a"]`, `["y"]`} {
+		if _, f := translated(t, through, "json", path, nil, around); f == nil || f.Code != tt.CodeDuplicateMember || !strings.HasSuffix(f.Message, "; --whole reads the document whole") {
+			t.Errorf("%s, a repeated member, streamed: %v", path, f)
+		}
+	}
+	for path, want := range map[string]string{`["x"]`: "{\"a\":2}\n", `["x","a"]`: "2\n"} {
+		if got, f := translatedAs(t, through, "json", path, nil, around, true); f != nil || got != want {
+			t.Errorf("%s, a repeated member, read whole: got %q (%v), want %q", path, got, f, want)
+		}
 	}
 	if _, f := translated(t, through, "json", "", nil, "[1,"); f == nil || f.Code != tt.CodeInputInvalid {
 		t.Errorf("a refused document: %v", f)

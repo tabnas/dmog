@@ -81,12 +81,13 @@ describe('a transducer part', () => {
   // bytes for the same document, into a tree target, a records target, and
   // with a program over the input, but for a number's lexeme, which the
   // part keeps and the walk spells as the engine does; the part's own
-  // output shows the route ran. A path keeps the document's value, the one
-  // route a path has. A repeated member, which the part streams twice and
-  // the composition's tree-contract refuses, fails with its code and names
-  // --whole, since the output streams and is not written twice; read
-  // whole, it is the grammar's value, as a format without a part writes it
-  // (admin ADR-33).
+  // output shows the route ran. A path selects a sub-stream of the same
+  // events, so its value keeps its lexemes too, and read whole it is
+  // selected in the grammar's value. A repeated member, which the part
+  // streams twice and the composition's tree-contract refuses, fails with
+  // its code and names --whole, since the output streams and is not
+  // written twice, under a path as at the root; read whole, it is the
+  // grammar's value, as a format without a part writes it (admin ADR-33).
   it('reads the format, and the walk stands in where it is asked', () => {
     const plain = plainJson()
     const through = formatNamed('json')
@@ -125,9 +126,37 @@ describe('a transducer part', () => {
       assert.notEqual(marked, expected, `${to} from ${doc}: the part's route ran`)
     }
     assert.equal(translated(marking, 'json', undefined, undefined, tree), '{"ran":true}\n')
-    // A path selects in the document's value, read whole, as it did: the
-    // materialized value spells a number as the engine does.
-    assert.equal(translated(marking, 'json', '["a",1]', undefined, tree), '2.5\n')
+    // A path selects a sub-stream of the part's events: its value keeps the
+    // lexeme the document spelled a number with, and the marking part's own
+    // events are what it selects in. Read whole, or without a part, a path
+    // selects in the grammar's value, which spells a number as the engine
+    // does; a path that names nothing fails at the document's end.
+    assert.equal(translated(through, 'json', '["a",1]', undefined, tree), '2.50\n')
+    assert.equal(translated(through, 'json', '["a"]', undefined, tree), '[1,2.50,"x",{"b":null}]\n')
+    assert.equal(translated(through, 'json', '["a",3,"b"]', undefined, tree), 'null\n')
+    assert.equal(translated(through, 'json', '[]', undefined, tree), `${tree}\n`)
+    assert.equal(translated(marking, 'json', '["ran"]', undefined, tree), 'true\n')
+    assert.equal(translated(through, 'json', '["a",1]', undefined, tree, true), '2.5\n')
+    assert.equal(translated(plain, 'json', '["a",1]', undefined, tree), '2.5\n')
+    assert.equal(translated(through, 'csv', '["rows"]', echo, `{"rows":${records}}`), translated(plain, 'csv', undefined, echo, records))
+    for (const [from, path] of [
+      [through, '["a",4]'],
+      [through, '["a","0"]'],
+      [through, '["c",0]'],
+      [through, '["f","g"]'],
+      [plain, '["z"]'],
+      [marking, '["a"]'],
+    ] as Array<[Format, string]>) {
+      assert.throws(
+        () => translated(from, 'json', path, undefined, tree),
+        (err: unknown) =>
+          isFail(err) &&
+          'INPUT_INVALID' === err.code &&
+          `the path ${path} names nothing in the document` === err.message &&
+          !err.committedOutput,
+        path,
+      )
+    }
     const repeated = '{"a":1,"a":2}'
     assert.throws(
       () => translated(through, 'json', undefined, undefined, repeated),
@@ -139,6 +168,21 @@ describe('a transducer part', () => {
       translated(plain, 'json', undefined, undefined, repeated),
     )
     assert.equal(translated(through, 'json', undefined, undefined, repeated, true), '{"a":2}\n')
+    // Under a path, a repeated member fails as it does at the root, inside
+    // the value, on the way to it or past it, since the grammar's value
+    // decides which of the two a path names; read whole, the path selects
+    // in it.
+    const around = '{"x":{"a":1,"a":2},"y":3}'
+    for (const path of ['["x"]', '["x","a"]', '["y"]']) {
+      assert.throws(
+        () => translated(through, 'json', path, undefined, around),
+        (err: unknown) =>
+          isFail(err) && 'DUPLICATE_MEMBER' === err.code && err.message.endsWith('; --whole reads the document whole'),
+        path,
+      )
+    }
+    assert.equal(translated(through, 'json', '["x"]', undefined, around, true), '{"a":2}\n')
+    assert.equal(translated(through, 'json', '["x","a"]', undefined, around, true), '2\n')
     assert.throws(
       () => translated(through, 'json', undefined, undefined, '[1,'),
       (err: unknown) => isFail(err) && 'INPUT_INVALID' === err.code,

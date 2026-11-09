@@ -690,6 +690,8 @@ describe('cli translate', () => {
       // A YAML stream of several documents, which YAML's transducer part
       // cannot follow, is read with --whole, as the grammar's own value.
       [['--whole', '--from', 'yaml', '--to', 'json', '-'], 'a: 1\n---\nb: 2\n', '[{"a":1},{"b":2}]\n'],
+      // A path selects in that array.
+      [['--whole', '--from', 'yaml', '--to', 'json', '--path', '[1,"b"]', '-'], 'a: 1\n---\nb: 2\n', '2\n'],
       // A byte order mark is the document's, and its grammar's to read.
       [['--from', 'csv', '--to', 'json', '-'], '\ufeffa\n1\n', '[{"\ufeffa":"1"}]\n'],
     ] as Array<[string[], string, string]>) {
@@ -704,6 +706,9 @@ describe('cli translate', () => {
     for (const [args, stdin, code, status] of [
       [['--from', 'yaml', '--to', 'json', '-'], 'a: 1\n---\nb: 2\n', 'STREAMABILITY_UNKNOWN', 2],
       [['--from', 'json', '--to', 'yaml', '-'], '{"a":1,"a":2}', 'DUPLICATE_MEMBER', 1],
+      // Under a path as at the root.
+      [['--from', 'yaml', '--to', 'json', '--path', '["b"]', '-'], 'a: 1\n---\nb: 2\n', 'STREAMABILITY_UNKNOWN', 2],
+      [['--from', 'json', '--to', 'yaml', '--path', '["a"]', '-'], '{"a":1,"a":2}', 'DUPLICATE_MEMBER', 1],
     ] as Array<[string[], string, string, number]>) {
       out = dmog(['translate', ...args], stdin)
       assert.equal(out.status, status, `${args}: ${out.stderr}`)
@@ -724,12 +729,12 @@ describe('cli translate', () => {
       // A format whose document may be any value takes no key.
       [['--to', 'yaml', '--key', 'value', number], '42\n'],
       [['--to', 'toml', '--key', 'age', '--path', '["people",1,"age"]', input], '"age" = 7\n'],
-      // A selected value is read whole, so its numbers keep no lexeme.
-      [['--to', 'csv', '--path', '["people"]', input], '"name","age"\r\n"Ann","31.5"\r\n"Bo","7"\r\n'],
-      [
-        ['--to', 'json', '--path', '[]', input],
-        '{"people":[{"name":"Ann","age":31.5},{"name":"Bo","age":7}],"n":null}\n',
-      ],
+      // A selected value streams through the part, as the root does, so a
+      // number keeps the lexeme the document spelled it with.
+      [['--to', 'csv', '--path', '["people"]', input], '"name","age"\r\n"Ann","31.50"\r\n"Bo","7"\r\n'],
+      // Read whole, the path selects in the grammar's value.
+      [['--whole', '--to', 'csv', '--path', '["people"]', input], '"name","age"\r\n"Ann","31.5"\r\n"Bo","7"\r\n'],
+      [['--to', 'json', '--path', '[]', input], `${PEOPLE}\n`],
     ] as Array<[string[], string]>) {
       const out = dmog(['translate', '--from', 'json', ...args])
       assert.equal(out.status, 0, `${args}: ${out.stderr}`)
@@ -1067,6 +1072,43 @@ describe('cli reads INPUT through a reader', () => {
     }
   })
 
+  // Run `args` over standard input held open after `first`, which it must
+  // write from within 60 s; then `rest` follows, and the run must end with
+  // status 0. Resolves with everything it wrote.
+  async function writtenBeforeTheEnd(args: string[], first: Buffer, rest: Buffer): Promise<string> {
+    const child = spawn(process.execPath, [BIN, ...args, '-'], { stdio: ['pipe', 'pipe', 'pipe'] })
+    const chunks: Buffer[] = []
+    let errors = ''
+    child.stderr.on('data', (data: Buffer) => (errors += data.toString('utf8')))
+    const exited = new Promise<number | null>((resolve) => child.once('exit', (code) => resolve(code)))
+    const started = new Promise<void>((resolve, reject) => {
+      child.stdout.on('data', (data: Buffer) => {
+        chunks.push(data)
+        resolve()
+      })
+      exited.then((code) => reject(new Error(`${args.join(' ')} exited ${code} before it wrote: ${errors}`)))
+    })
+    let timer: NodeJS.Timeout | undefined
+    const late = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${args.join(' ')} wrote nothing in 60 s of half a document`)), 60000)
+    })
+    child.stdin.write(first)
+    try {
+      await Promise.race([started, late])
+    } catch (err) {
+      child.kill()
+      throw err
+    } finally {
+      clearTimeout(timer)
+    }
+    assert.ok(chunks.length > 0, args.join(' '))
+    const ended = new Promise<void>((resolve) => child.stdout.once('end', () => resolve()))
+    child.stdin.end(rest)
+    assert.equal(await exited, 0, `${args.join(' ')}: ${errors}`)
+    await ended
+    return Buffer.concat(chunks).toString('utf8')
+  }
+
   // A long document's output starts before its input ends: standard input
   // is held open after half the document, and the command has written by
   // then. The other half follows, and the run ends as it would have.
@@ -1075,37 +1117,24 @@ describe('cli reads INPUT through a reader', () => {
       t.skip('@tabnas/json declares no lex.window in this build')
       return
     }
-    const first = Buffer.from(`[${records}`)
-    const rest = Buffer.from(`,${records}]`)
     for (const command of commands) {
-      const child = spawn(process.execPath, [BIN, ...command, '-'], { stdio: ['pipe', 'pipe', 'pipe'] })
-      let written = 0
-      let errors = ''
-      child.stderr.on('data', (data: Buffer) => (errors += data.toString('utf8')))
-      const exited = new Promise<number | null>((resolve) => child.once('exit', (code) => resolve(code)))
-      const started = new Promise<void>((resolve, reject) => {
-        child.stdout.on('data', (data: Buffer) => {
-          written += data.length
-          resolve()
-        })
-        exited.then((code) => reject(new Error(`${command[0]} exited ${code} before it wrote: ${errors}`)))
-      })
-      let timer: NodeJS.Timeout | undefined
-      const late = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(`${command[0]} wrote nothing in 60 s of half a document`)), 60000)
-      })
-      child.stdin.write(first)
-      try {
-        await Promise.race([started, late])
-      } catch (err) {
-        child.kill()
-        throw err
-      } finally {
-        clearTimeout(timer)
-      }
-      assert.ok(written > 0, command[0])
-      child.stdin.end(rest)
-      assert.equal(await exited, 0, `${command[0]}: ${errors}`)
+      await writtenBeforeTheEnd(command, Buffer.from(`[${records}`), Buffer.from(`,${records}]`))
     }
+  })
+
+  // So does the value a path names below the root: a sub-stream of the
+  // document's events, written as they come, and all of the value.
+  it("a path's value is written before its input ends", async (t) => {
+    if (!windowed) {
+      t.skip('@tabnas/json declares no lex.window in this build')
+      return
+    }
+    const lines = Array.from({ length: 20000 }, (_, i) => `{"id":${i},"name":"n${i}"}`)
+    const written = await writtenBeforeTheEnd(
+      ['translate', '--from', 'json', '--to', 'jsonl', '--path', '["rows"]'],
+      Buffer.from(`{"meta":{"n":2},"rows":[${records}`),
+      Buffer.from(`,${records}],"after":true}`),
+    )
+    assert.equal(written, `${[...lines, ...lines].join('\n')}\n`)
   })
 })

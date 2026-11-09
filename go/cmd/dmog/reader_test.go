@@ -79,6 +79,69 @@ func TestALongDocumentWithBytesThatAreNotUTF8NearItsEndCannotBeRead(t *testing.T
 	}
 }
 
+// writtenBeforeTheEnd runs args over standard input held open after first,
+// which it must write from within 60 s; then rest follows, and the run must
+// end with status 0. It is everything the run wrote.
+func writtenBeforeTheEnd(t *testing.T, args []string, first, rest string) string {
+	t.Helper()
+	cmd := exec.Command(binary, append(append([]string{}, args...), "-")...)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	var written strings.Builder
+	started := make(chan struct{})
+	drained := make(chan error, 1)
+	go func() {
+		buf := make([]byte, 64*1024)
+		for {
+			n, err := stdout.Read(buf)
+			if n > 0 {
+				if written.Len() == 0 {
+					close(started)
+				}
+				written.Write(buf[:n])
+			}
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					err = nil
+				}
+				drained <- err
+				return
+			}
+		}
+	}()
+	if _, err := io.WriteString(stdin, first); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-started:
+	case <-time.After(60 * time.Second):
+		cmd.Process.Kill()
+		t.Fatalf("%s wrote nothing in 60 s of half a document: %s", strings.Join(args, " "), stderr.String())
+	}
+	if _, err := io.WriteString(stdin, rest); err != nil {
+		t.Fatal(err)
+	}
+	stdin.Close()
+	if err := <-drained; err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Wait(); err != nil {
+		t.Fatalf("%s: %v: %s", strings.Join(args, " "), err, stderr.String())
+	}
+	return written.String()
+}
+
 // A long document's output starts before its input ends: standard input is
 // held open after half the document, and the command has written by then.
 // The other half follows, and the run ends as it would have.
@@ -88,62 +151,23 @@ func TestALongDocumentIsWrittenBeforeItsInputEnds(t *testing.T) {
 	}
 	records := streamRecords()
 	for _, command := range streamCommands(t) {
-		cmd := exec.Command(binary, append(append([]string{}, command...), "-")...)
-		stdin, err := cmd.StdinPipe()
-		if err != nil {
-			t.Fatal(err)
-		}
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			t.Fatal(err)
-		}
-		var stderr strings.Builder
-		cmd.Stderr = &stderr
-		if err := cmd.Start(); err != nil {
-			t.Fatal(err)
-		}
-		started := make(chan int, 1)
-		drained := make(chan error, 1)
-		go func() {
-			buf := make([]byte, 64*1024)
-			first := true
-			for {
-				n, err := stdout.Read(buf)
-				if n > 0 && first {
-					first = false
-					started <- n
-				}
-				if err != nil {
-					if errors.Is(err, io.EOF) {
-						err = nil
-					}
-					drained <- err
-					return
-				}
-			}
-		}()
-		if _, err := io.WriteString(stdin, "["+records); err != nil {
-			t.Fatal(err)
-		}
-		select {
-		case n := <-started:
-			if n <= 0 {
-				t.Fatalf("%s: wrote nothing", command[0])
-			}
-		case <-time.After(60 * time.Second):
-			cmd.Process.Kill()
-			t.Fatalf("%s wrote nothing in 60 s of half a document: %s", command[0], stderr.String())
-		}
-		if _, err := io.WriteString(stdin, ","+records+"]"); err != nil {
-			t.Fatal(err)
-		}
-		stdin.Close()
-		if err := <-drained; err != nil {
-			t.Fatal(err)
-		}
-		if err := cmd.Wait(); err != nil {
-			t.Fatalf("%s: %v: %s", command[0], err, stderr.String())
-		}
+		writtenBeforeTheEnd(t, command, "["+records, ","+records+"]")
+	}
+}
+
+// So does the value a path names below the root: a sub-stream of the
+// document's events, written as they come, and all of the value.
+func TestAPathsValueIsWrittenBeforeItsInputEnds(t *testing.T) {
+	if !tabnasjson.Make().Config().Window {
+		t.Skip("github.com/tabnas/json/go declares no Lex.Window in this build")
+	}
+	records := streamRecords()
+	got := writtenBeforeTheEnd(t,
+		[]string{"translate", "--from", "json", "--to", "jsonl", "--path", `["rows"]`},
+		`{"meta":{"n":2},"rows":[`+records, ","+records+`],"after":true}`)
+	lines := strings.ReplaceAll(records, "},{", "}\n{")
+	if want := lines + "\n" + lines + "\n"; got != want {
+		t.Errorf("the path's value: %d bytes, want %d", len(got), len(want))
 	}
 }
 

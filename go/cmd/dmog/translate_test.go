@@ -260,23 +260,44 @@ func TestTranslateWritesADocumentInAnotherFormat(t *testing.T) {
 		}
 		wantSuccess(t, invoke(t, []string{"translate", "--whole", "--from", c.from, "--to", "json", "-"}, text(c.stdin)), c.want)
 	}
+	// Under a path as at the root; read whole, the path selects in the
+	// grammar's value.
+	for _, c := range []struct {
+		from, path, wholePath, stdin, code string
+		status                             int
+		want                               string
+	}{
+		{"yaml", `["b"]`, `[1,"b"]`, "a: 1\n---\nb: 2\n", "STREAMABILITY_UNKNOWN", 2, "2\n"},
+		{"json", `["b"]`, `["a"]`, `{"a":1,"a":2,"b":3}`, "DUPLICATE_MEMBER", 1, "2\n"},
+	} {
+		f := wantFailure(t, invoke(t, []string{"translate", "--from", c.from, "--to", "json", "--path", c.path, "-"}, text(c.stdin)), c.status, c.code, "")
+		if message, _ := f["message"].(string); !strings.HasSuffix(message, "; --whole reads the document whole") {
+			t.Errorf("%s at %s: %v", c.stdin, c.path, f)
+		}
+		wantSuccess(t, invoke(t, []string{"translate", "--whole", "--from", c.from, "--to", "json", "--path", c.wholePath, "-"}, text(c.stdin)), c.want)
+	}
 }
 
 // --key names the member a root is wrapped under for a format whose
-// document is an object; --path translates the value it names, read
-// whole, whatever the source's shapes.
+// document is an object; --path translates the value it names, whatever the
+// source's shapes: a sub-stream of the document's events, so a number keeps
+// the lexeme the document spelled it with, or, read whole with --whole, in
+// the grammar's value.
 func TestTranslateTakesAKeyAndAPath(t *testing.T) {
 	input := tempFile(t, "people.json", people)
 	translateTo := func(to string, flags ...string) output {
 		return invoke(t, append(append([]string{"translate", "--from", "json", "--to", to}, flags...), input), nil)
 	}
-	table := `[ { "name" = "Ann", "age" = 30.5 }, { "name" = "Bo", "age" = 7 } ]` + "\n"
+	table := `[ { "name" = "Ann", "age" = 30.50 }, { "name" = "Bo", "age" = 7 } ]` + "\n"
 	wantSuccess(t, translateTo("toml", "--path", `["people"]`), `"items" = `+table)
 	wantSuccess(t, translateTo("toml", "--key", "rows", "--path", `["people"]`), `"rows" = `+table)
-	wantSuccess(t, translateTo("csv", "--path", `["people"]`), "\"name\",\"age\"\r\n\"Ann\",\"30.5\"\r\n\"Bo\",\"7\"\r\n")
-	wantSuccess(t, translateTo("markdown", "--path", `["people"]`), "| name | age |\n| --- | --- |\n| Ann | 30.5 |\n| Bo | 7 |\n")
-	wantSuccess(t, translateTo("yaml", "--path", `["people",0]`), "\"name\": \"Ann\"\n\"age\": 30.5\n")
-	wantSuccess(t, translateTo("ini", "--path", `["n"]`), "\"items\" = 1.5\n")
+	wantSuccess(t, translateTo("csv", "--path", `["people"]`), "\"name\",\"age\"\r\n\"Ann\",\"30.50\"\r\n\"Bo\",\"7\"\r\n")
+	wantSuccess(t, translateTo("markdown", "--path", `["people"]`), "| name | age |\n| --- | --- |\n| Ann | 30.50 |\n| Bo | 7 |\n")
+	wantSuccess(t, translateTo("yaml", "--path", `["people",0]`), "\"name\": \"Ann\"\n\"age\": 30.50\n")
+	wantSuccess(t, translateTo("ini", "--path", `["n"]`), "\"items\" = 1.50\n")
+	wantSuccess(t, translateTo("json", "--path", `[]`), people+"\n")
+	// Read whole, the path selects in the grammar's value.
+	wantSuccess(t, translateTo("csv", "--whole", "--path", `["people"]`), "\"name\",\"age\"\r\n\"Ann\",\"30.5\"\r\n\"Bo\",\"7\"\r\n")
 	wantSuccess(t, invoke(t, []string{"translate", "--from", "json", "--to", "toml", "--key", "", "-"}, text("1.50")),
 		`"" = 1.50`+"\n")
 	// A path that names nothing is the document's failure, status 1.

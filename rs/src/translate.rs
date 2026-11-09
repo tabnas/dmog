@@ -19,8 +19,11 @@
 //! emptied behind the stream where transduce verifies the grammar alike
 //! pruned and not ([`Format::pruned`]), and the output written as the run
 //! goes. Any other format is parsed whole and its value walked, and so is
-//! a document when a path selects a value below the root, or when the
-//! request asks it read whole ([`Request::whole`], `--whole`). A document
+//! a document the request asks read whole ([`Request::whole`], `--whole`).
+//! A path below the root selects a sub-stream: the document is read as for
+//! the root, through its part where the package ships one, and only the
+//! events of the value the path names are translated, as they come
+//! ([`run_document`]). A document
 //! whose events are not what the grammar's value holds, which the part
 //! refuses part way (a YAML stream of several documents, a merge key, a
 //! repeated member, which a part streams twice and `tree-contract`
@@ -664,9 +667,10 @@ pub fn compile(request: &Request<'_>) -> Result<Compiled, Fail> {
     let routers = Arc::new(tabnas_transduce::routers());
     let renderers = Arc::new(tabnas_render::renderers());
     // The transducer the route reads the document through, where the
-    // source ships one and the whole document is asked, not read whole: a
-    // path selects a value below the root, which only the document's value
-    // has.
+    // source ships one and the whole document is asked, not read whole. A
+    // path's value is a plain tree's events, which the composition over a
+    // plain tree reads, and the run reads the document through the part on
+    // its own ([`Format::transducer_program`]) to select them.
     let transducer = match (&request.path, request.whole) {
         (None, false) => request.from.transducer(),
         _ => None,
@@ -830,8 +834,8 @@ pub fn run_document(
 }
 
 /// [`run_document`]'s one run: through the transducer part where the
-/// source ships one and the whole document is asked, and over the
-/// document's value otherwise.
+/// source ships one and the whole document is asked, its path's value where
+/// a path is asked ([`run_path`]), and over the document's value otherwise.
 fn run_once(
     request: &Request<'_>,
     compiled: &Compiled,
@@ -849,72 +853,234 @@ fn run_once(
         // part into the program, streamed whatever the grammar, from a file
         // or a stream through a reader.
         let sink = part.parser_sink(out, None, &request.limits, metrics.clone())?;
-        let passes = match document {
-            Document::Text(text) => request.from.passes(text),
-            Document::File(path) => {
-                #[cfg(test)]
-                READ_THROUGH_A_READER.with(|read| read.borrow_mut().push(path.into()));
-                std::fs::File::open(path)
-                    .map_err(cannot_read)
-                    .and_then(|file| request.from.passes_from(Box::new(file)))
-            }
-            Document::Reader(reader) => request.from.passes_from(reader),
-        }?;
-        return request
-            .from
-            .pruned(passes)
-            .limits(request.limits.clone())
-            .metrics(metrics)
-            .run_boxed(sink)
-            .0
-            .map(|_| ())
-            .map_err(|mut fail| {
-                if unfollowed(&fail) && request.program.is_none() {
-                    fail.message.push_str(WHOLE);
-                }
-                fail
-            });
+        return run_passes(request, document, sink, metrics);
     }
-    let owned;
-    let text = match document {
-        Document::Text(text) => text,
-        Document::File(path) => {
-            owned = read_file(path)?;
-            &owned
-        }
-        Document::Reader(mut reader) => {
-            let mut whole = String::new();
-            reader.read_to_string(&mut whole).map_err(cannot_read)?;
-            owned = whole;
-            &owned
-        }
-    };
+    if let Some(path) = &request.path {
+        return run_path(request, program, path, document, out, metrics);
+    }
+    let text = text_of(document)?;
     let sink = program.sink(out, None, &request.limits, metrics.clone())?;
     // The source's events reach a tree's render as the source made them,
     // so a stream that is no tree's is refused in front of it rather than
     // written half way.
-    let mut sink: Box<dyn Sink + Send> = match composition.front {
+    let sink: Box<dyn Sink + Send> = match composition.front {
         Front::Tree => Box::new(TreeContract::new(sink)),
         _ => sink,
     };
-    match &request.path {
-        None => {
-            source(request.from, text, &request.limits, metrics, sink).0?;
+    source(request.from, &text, &request.limits, metrics, sink).0?;
+    Ok(())
+}
+
+/// The value a path names, translated as it streams (admin ADR-33): the
+/// document is read as the root is, through its format's transducer part on
+/// its own ([`Format::transducer_program`]) where the package ships one and
+/// the request does not ask it whole, from a file or a stream through a
+/// reader, and otherwise its grammar's value is walked; [`AtPath`] passes
+/// on the events of the value and drops every other. The document's events
+/// are held to a tree's contract in front, as the route of the whole
+/// document holds them, so the value is the one the grammar's value holds
+/// at the path or the run fails: a repeated member, which the part streams
+/// twice where the grammar's value keeps one, and a second root, a YAML
+/// stream's next document, are refused with their codes, and `--whole`
+/// reads such a document whole.
+fn run_path(
+    request: &Request<'_>,
+    program: &Program,
+    path: &[Segment],
+    document: Document<'_>,
+    out: Box<dyn Write + Send>,
+    metrics: Arc<Metrics>,
+) -> Result<(), Fail> {
+    let inner = program.sink(out, None, &request.limits, metrics.clone())?;
+    let scope: Box<dyn Sink + Send> = Box::new(TreeContract::new(AtPath::new(path, inner)));
+    let part = match request.whole {
+        true => None,
+        false => request.from.transducer_program()?,
+    };
+    match part {
+        Some(part) => {
+            let head = part.parser_sink_into(scope, &request.limits, metrics.clone())?;
+            run_passes(request, document, head, metrics)
         }
-        Some(path) => {
-            let value = read(request.from, text, &request.limits)?;
-            let selected = value.get_path(path).ok_or_else(|| {
-                Fail::input(format!(
-                    "the path {} names nothing in the document",
-                    path_text(path)
-                ))
-            })?;
-            if walk_datum(selected, &mut sink)? == Flow::Continue {
-                sink.event(JsonEvent::End)?;
+        None => {
+            let text = text_of(document)?;
+            source(request.from, &text, &request.limits, metrics, scope).0?;
+            Ok(())
+        }
+    }
+}
+
+/// The document's rule passes, from a file or a stream through a reader,
+/// pushed into `head`, the engine's arrays emptied behind the stream where
+/// transduce verifies the grammar alike pruned and not. A refusal of a
+/// document the part cannot follow names `--whole`, where no program
+/// stands in the source's place.
+fn run_passes(
+    request: &Request<'_>,
+    document: Document<'_>,
+    head: Box<dyn tabnas_transduce::ParserSink + Send>,
+    metrics: Arc<Metrics>,
+) -> Result<(), Fail> {
+    let passes = match document {
+        Document::Text(text) => request.from.passes(text),
+        Document::File(path) => {
+            #[cfg(test)]
+            READ_THROUGH_A_READER.with(|read| read.borrow_mut().push(path.into()));
+            std::fs::File::open(path)
+                .map_err(cannot_read)
+                .and_then(|file| request.from.passes_from(Box::new(file)))
+        }
+        Document::Reader(reader) => request.from.passes_from(reader),
+    }?;
+    request
+        .from
+        .pruned(passes)
+        .limits(request.limits.clone())
+        .metrics(metrics)
+        .run_boxed(head)
+        .0
+        .map(|_| ())
+        .map_err(|mut fail| {
+            if unfollowed(&fail) && request.program.is_none() {
+                fail.message.push_str(WHOLE);
+            }
+            fail
+        })
+}
+
+/// A document's text, read whole: a file's, or a stream's to its end.
+fn text_of(document: Document<'_>) -> Result<std::borrow::Cow<'_, str>, Fail> {
+    match document {
+        Document::Text(text) => Ok(std::borrow::Cow::Borrowed(text)),
+        Document::File(path) => read_file(path).map(std::borrow::Cow::Owned),
+        Document::Reader(mut reader) => {
+            let mut whole = String::new();
+            reader.read_to_string(&mut whole).map_err(cannot_read)?;
+            Ok(std::borrow::Cow::Owned(whole))
+        }
+    }
+}
+
+/// One open container on the way to a path's value.
+struct Around {
+    /// An array, or an object.
+    array: bool,
+    /// The index of an array's next element.
+    next: usize,
+    /// Whether the member last named in an object is the path's segment at
+    /// its depth.
+    named: bool,
+    /// Whether the container is the value at the path's first segments, as
+    /// many as the containers open around it.
+    on_path: bool,
+}
+
+/// The events of the value a path names below a document's root, as a
+/// document of their own: every event outside the value is dropped, and
+/// the value's own are passed on as they come. The stream ends where the
+/// document does, which is read to its end, so a failure after the value is
+/// still the document's, and a path that names nothing fails there, with
+/// nothing written. The events are a tree's (a [`TreeContract`] holds them
+/// to it in front), so a value has one place and the path names at most
+/// one.
+struct AtPath {
+    path: Vec<Segment>,
+    inner: Box<dyn Sink + Send>,
+    around: Vec<Around>,
+    /// How deep the value is open while it is passed on, else 0.
+    depth: usize,
+    found: bool,
+}
+
+impl AtPath {
+    fn new(path: &[Segment], inner: Box<dyn Sink + Send>) -> AtPath {
+        AtPath {
+            path: path.to_vec(),
+            inner,
+            around: Vec::new(),
+            depth: 0,
+            found: false,
+        }
+    }
+
+    /// Whether the value starting now is at the path's first segments, as
+    /// many as the containers open around it; an element counts as its
+    /// array's next.
+    fn on_path(&mut self) -> bool {
+        let level = self.around.len();
+        let Some(top) = self.around.last_mut() else {
+            return true;
+        };
+        let index = top.next;
+        if top.array {
+            top.next += 1;
+        }
+        if !top.on_path || level > self.path.len() {
+            return false;
+        }
+        match top.array {
+            true => matches!(self.path[level - 1], Segment::Index(i) if i == index),
+            false => top.named,
+        }
+    }
+}
+
+impl Sink for AtPath {
+    fn event(&mut self, ev: JsonEvent<'_>) -> Result<Flow, Fail> {
+        if self.depth > 0 {
+            match ev {
+                JsonEvent::ObjectStart | JsonEvent::ArrayStart => self.depth += 1,
+                JsonEvent::ObjectEnd | JsonEvent::ArrayEnd => self.depth -= 1,
+                _ => {}
+            }
+            if self.depth == 0 {
+                self.found = true;
+            }
+            return self.inner.event(ev);
+        }
+        match ev {
+            JsonEvent::Key(key) => {
+                let level = self.around.len();
+                let path = &self.path;
+                if let Some(top) = self.around.last_mut() {
+                    top.named = top.on_path
+                        && level <= path.len()
+                        && matches!(&path[level - 1], Segment::Key(k) if &**k == key);
+                }
+                Ok(Flow::Continue)
+            }
+            JsonEvent::ObjectEnd | JsonEvent::ArrayEnd => {
+                self.around.pop();
+                Ok(Flow::Continue)
+            }
+            JsonEvent::End if !self.found => Err(Fail::input(format!(
+                "the path {} names nothing in the document",
+                path_text(&self.path)
+            ))),
+            JsonEvent::End => self.inner.event(ev),
+            _ => {
+                // A value starts: the root, an element or a member's value.
+                let on_path = self.on_path();
+                let container = matches!(ev, JsonEvent::ObjectStart | JsonEvent::ArrayStart);
+                if on_path && self.around.len() == self.path.len() {
+                    match container {
+                        true => self.depth = 1,
+                        false => self.found = true,
+                    }
+                    return self.inner.event(ev);
+                }
+                if container {
+                    self.around.push(Around {
+                        array: matches!(ev, JsonEvent::ArrayStart),
+                        next: 0,
+                        named: false,
+                        on_path,
+                    });
+                }
+                Ok(Flow::Continue)
             }
         }
     }
-    Ok(())
 }
 
 /// A file's text, read whole. A file that cannot be read, or that holds
@@ -1288,10 +1454,12 @@ mod tests {
     /// document, into a tree target, a records target, and with a program
     /// over the input, but for a number's lexeme, which the part keeps and
     /// the walk spells as the engine does; a marking part given in the
-    /// package's place shows the route ran. A path keeps the document's
-    /// value, the one route a path has. A repeated member, which the part
-    /// streams twice and the composition's tree-contract refuses, fails
-    /// with its code and names `--whole`, since the output streams and is
+    /// package's place shows the route ran. A path selects a sub-stream of
+    /// the same events, so its value keeps its lexemes too, and read whole
+    /// it is selected in the grammar's value. A repeated member, which the
+    /// part streams twice and the composition's tree-contract refuses,
+    /// fails with its code and names `--whole`, under a path as at the
+    /// root, since the output streams and is
     /// not written twice; read whole, it is the grammar's value, as a format
     /// without a part writes it (admin ADR-33).
     #[test]
@@ -1346,13 +1514,53 @@ mod tests {
             translated(&marking, "json", None, None, tree).unwrap(),
             "{\"ran\":true}\n"
         );
-        // A path selects in the document's value, read whole, as it did:
-        // the materialized value spells a number as the engine does.
+        // A path selects a sub-stream of the part's events: its value keeps
+        // the lexeme the document spelled a number with, and the marking
+        // part's own events are what it selects in. Read whole, or without
+        // a part, a path selects in the grammar's value, which spells a
+        // number as the engine does; a path that names nothing fails at the
+        // document's end.
+        for (from, path, whole, want) in [
+            (through, "[\"a\",1]", false, "2.50\n".to_string()),
+            (
+                through,
+                "[\"a\"]",
+                false,
+                "[1,2.50,\"x\",{\"b\":null}]\n".to_string(),
+            ),
+            (through, "[\"a\",3,\"b\"]", false, "null\n".to_string()),
+            (through, "[]", false, format!("{tree}\n")),
+            (&marking, "[\"ran\"]", false, "true\n".to_string()),
+            (through, "[\"a\",1]", true, "2.5\n".to_string()),
+            (&plain, "[\"a\",1]", false, "2.5\n".to_string()),
+        ] {
+            assert_eq!(
+                translated_as(from, "json", Some(path), None, tree, whole).unwrap(),
+                want,
+                "{path} (whole {whole})"
+            );
+        }
+        let rows = format!("{{\"rows\":{records}}}");
         assert_eq!(
-            translated(&marking, "json", Some("[\"a\",1]"), None, tree).unwrap(),
-            "2.5\n",
-            "a path keeps the document's value"
+            translated(through, "csv", Some("[\"rows\"]"), echo, &rows).unwrap(),
+            translated(&plain, "csv", None, echo, records).unwrap()
         );
+        for (from, path) in [
+            (through, "[\"a\",4]"),
+            (through, "[\"a\",\"0\"]"),
+            (through, "[\"c\",0]"),
+            (through, "[\"f\",\"g\"]"),
+            (&plain, "[\"z\"]"),
+            (&marking, "[\"a\"]"),
+        ] {
+            let fail = translated(from, "json", Some(path), None, tree).unwrap_err();
+            assert_eq!(fail.code, Code::InputInvalid, "{path}: {fail:?}");
+            assert_eq!(
+                fail.message,
+                format!("the path {path} names nothing in the document")
+            );
+            assert!(!fail.committed_output, "{path}: {fail:?}");
+        }
         let repeated = r#"{"a":1,"a":2}"#;
         let streamed = translated(through, "json", None, None, repeated).unwrap_err();
         assert_eq!(streamed.code, Code::DuplicateMember, "{streamed:?}");
@@ -1365,6 +1573,23 @@ mod tests {
             translated_as(through, "json", None, None, repeated, true).unwrap(),
             "{\"a\":2}\n"
         );
+        // Under a path, a repeated member fails as it does at the root,
+        // inside the value, on the way to it or past it, since the
+        // grammar's value decides which of the two a path names; read whole,
+        // the path selects in it.
+        let around = r#"{"x":{"a":1,"a":2},"y":3}"#;
+        for path in ["[\"x\"]", "[\"x\",\"a\"]", "[\"y\"]"] {
+            let streamed = translated(through, "json", Some(path), None, around).unwrap_err();
+            assert_eq!(streamed.code, Code::DuplicateMember, "{path}: {streamed:?}");
+            assert!(streamed.message.ends_with(WHOLE), "{path}: {streamed:?}");
+        }
+        for (path, want) in [("[\"x\"]", "{\"a\":2}\n"), ("[\"x\",\"a\"]", "2\n")] {
+            assert_eq!(
+                translated_as(through, "json", Some(path), None, around, true).unwrap(),
+                want,
+                "{path}"
+            );
+        }
         let refused = translated(through, "json", None, None, "[1,").unwrap_err();
         assert_eq!(refused.code, Code::InputInvalid);
     }
@@ -1464,8 +1689,9 @@ mod tests {
     /// reads it through a reader where the source ships a part and the
     /// whole document is asked, and a document the part refuses (a
     /// repeated member) fails as its text does, as do a byte-order mark, a
-    /// document json5's check refuses and one that does not parse. A path,
-    /// and a format whose package ships no part, read the file whole.
+    /// document json5's check refuses and one that does not parse. A
+    /// path's value is read through the part's route as the root is, and a
+    /// format whose package ships no part reads the file whole.
     #[test]
     fn a_file_translates_as_its_text_does() {
         let cases: &[(&str, &str, Option<&str>, &str)] = &[
@@ -1507,7 +1733,7 @@ mod tests {
             );
             assert_eq!(
                 read_through_a_reader(&file),
-                path.is_none() && source.transducer().is_some(),
+                source.transducer().is_some(),
                 "{from} {text:?} at {path:?}: the route"
             );
             let _ = std::fs::remove_file(&file);

@@ -19,8 +19,11 @@
 // passes stream through transduce's `ParserEventSource` into the program,
 // whatever the grammar, with nothing held but what the part keeps, and the
 // output is written as the run goes. Any other format is parsed whole and
-// its value walked, and so is a document when a path selects a value below
-// the root, or when the request asks it read whole (`--whole`). A document
+// its value walked, and so is a document the request asks read whole
+// (`--whole`). A path below the root selects a sub-stream: the document is
+// read as for the root, through its part where the package ships one, and
+// only the events of the value the path names are translated, as they
+// come (`runPath`). A document
 // whose events are not what the grammar's value holds, which the part
 // refuses part way (a YAML stream of several documents, a merge key, a
 // repeated member, which a part streams twice and `tree-contract`
@@ -81,11 +84,9 @@ import {
   ParserSource,
   TreeContract,
   engineFailure,
-  getPath,
   isPrunable,
   routers,
   toText,
-  walkDatum,
   walkValue,
 } from '@tabnas/transduce'
 import type { Flow, JsonEvent, Segment, Sink } from '@tabnas/transduce'
@@ -676,8 +677,10 @@ export type Compiled = {
 // The composition a request makes, and the program it compiles to.
 export function compile(request: Request): Compiled {
   // The transducer the route reads the document through, where the source
-  // ships one and the whole document is asked, not read whole: a path
-  // selects a value below the root, which only the document's value has.
+  // ships one and the whole document is asked, not read whole. A path's
+  // value is a plain tree's events, which the composition over a plain
+  // tree reads, and `runPath` reads the document through the part on its
+  // own (`transducerProgram`) to select them.
   const transducer = undefined === request.path && !request.whole ? request.from.transducer : undefined
   const given = request.program
   if (undefined !== given) {
@@ -771,26 +774,131 @@ export function runDocument(
       }
       return
     }
-    const input = textOf(document)
+    if (undefined !== request.path) {
+      runPath(request, program, request.path, document, out, metrics)
+      return
+    }
     const inner = program.sink(out, undefined, request.limits, metrics)
     // The source's events reach a tree's render as the source made them,
     // so a stream that is no tree's is refused in front of it rather than
     // written half way.
     const sink: Sink = 'tree' === composition.front ? new TreeContract(inner) : inner
-    const path = request.path
-    if (undefined === path) {
-      request.from.reader(input).limits(request.limits).metrics(metrics).run(sink)
-    } else {
-      const value = read(request.from, input, request.limits)
-      const selected = getPath(value, path)
-      if (undefined === selected) {
-        throw Fail.input(`the path ${pathText(path)} names nothing in the document`)
-      }
-      if ('continue' === walkDatum(selected, sink)) sink.event(Ev.end)
-    }
+    request.from.reader(textOf(document)).limits(request.limits).metrics(metrics).run(sink)
   } catch (err) {
     if (isFail(err) && metrics.output_bytes > 0 && !err.committedOutput) err.committed()
     throw err
+  }
+}
+
+// The value a path names, translated as it streams (admin ADR-33): the
+// document is read as the root is, through its format's transducer part
+// on its own (`transducerProgram`) where the package ships one and the
+// request does not ask it whole, from a file or a stream through a reader,
+// and otherwise its grammar's value is walked; `AtPath` passes on the
+// events of the value and drops every other. The document's events are
+// held to a tree's contract in front, as the route of the whole document
+// holds them, so the value is the one the grammar's value holds at the
+// path or the run fails: a repeated member, which the part streams twice
+// where the grammar's value keeps one, and a second root, a YAML stream's
+// next document, are refused with their codes, and `--whole` reads such a
+// document whole.
+function runPath(
+  request: Request,
+  program: Program,
+  path: ReadonlyArray<Segment>,
+  document: Document,
+  out: Writer,
+  metrics: Metrics,
+): void {
+  const scope = new TreeContract(new AtPath(path, program.sink(out, undefined, request.limits, metrics)))
+  const part = request.whole ? undefined : request.from.transducerProgram()
+  if (undefined === part) {
+    request.from.reader(textOf(document)).limits(request.limits).metrics(metrics).run(scope)
+    return
+  }
+  const head = part.parserSinkInto(scope, request.limits, metrics)
+  const { source, close } = request.from.passesOf(document)
+  try {
+    request.from.pruned(source).limits(request.limits).metrics(metrics).run(head)
+  } catch (err) {
+    if (unfollowed(err) && undefined === request.program) err.message += WHOLE
+    throw err
+  } finally {
+    close()
+  }
+}
+
+// One open container on the way to a path's value: an array, with the
+// index of its next element, or an object, with the key of the member
+// last named in it; and whether it is the value at the path's first
+// segments, as many as the containers open around it (`onPath`).
+type Around = { array: boolean; next: number; key: string | null; onPath: boolean }
+
+// The events of the value a path names below a document's root, as a
+// document of their own: every event outside the value is dropped, and the
+// value's own are passed on as they come. The stream ends where the
+// document does, which is read to its end, so a failure after the value is
+// still the document's, and a path that names nothing fails there, with
+// nothing written. The events are a tree's (a `TreeContract` holds them to
+// it in front), so a value has one place and the path names at most one.
+class AtPath implements Sink {
+  private readonly around: Around[] = []
+  // How deep the value is open while it is passed on, else 0.
+  private depth = 0
+  private found = false
+
+  constructor(
+    private readonly path: ReadonlyArray<Segment>,
+    private readonly inner: Sink,
+  ) {}
+
+  event(ev: JsonEvent): Flow {
+    if (0 < this.depth) {
+      if ('object_start' === ev.type || 'array_start' === ev.type) this.depth++
+      else if ('object_end' === ev.type || 'array_end' === ev.type) this.depth--
+      if (0 === this.depth) this.found = true
+      return this.inner.event(ev)
+    }
+    switch (ev.type) {
+      case 'key': {
+        const top = this.around[this.around.length - 1]
+        if (undefined !== top) top.key = ev.key
+        return 'continue'
+      }
+      case 'object_end':
+      case 'array_end':
+        this.around.pop()
+        return 'continue'
+      case 'end':
+        if (!this.found) throw Fail.input(`the path ${pathText(this.path)} names nothing in the document`)
+        return this.inner.event(ev)
+      default: {
+        // A value starts: the root, an element or a member's value.
+        const onPath = this.onPath()
+        const container = 'object_start' === ev.type || 'array_start' === ev.type
+        if (onPath && this.around.length === this.path.length) {
+          if (container) this.depth = 1
+          else this.found = true
+          return this.inner.event(ev)
+        }
+        if (container) {
+          this.around.push({ array: 'array_start' === ev.type, next: 0, key: null, onPath })
+        }
+        return 'continue'
+      }
+    }
+  }
+
+  // Whether the value starting now is at the path's first segments, as
+  // many as the containers open around it; an element counts as its
+  // array's next.
+  private onPath(): boolean {
+    const level = this.around.length
+    const top = this.around[level - 1]
+    if (undefined === top) return true
+    const at = top.array ? top.next++ : top.key
+    if (!top.onPath || level > this.path.length) return false
+    return at === this.path[level - 1]
   }
 }
 

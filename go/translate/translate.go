@@ -18,22 +18,24 @@
 // events of the parser's rule passes) is read through it: the route is
 // composed over the transducer (at.ComposeParsed), and the input's rule
 // passes stream through transduce's ParserEventSource into the program,
-// whatever the grammar, with nothing held but what the part keeps. Any
-// other format is parsed whole and its value walked, and so is a document
-// when a path selects a value below the root, or when the request asks it
-// read whole (--whole). The output is written as the run goes, so a
-// document whose events are not what the grammar's value holds, which the
-// part refuses part way (a YAML stream of several documents, a merge key, a
-// repeated member, which a part streams twice and tree-contract refuses),
-// fails with its code after what it wrote: --whole reads it whole, its
-// grammar's value the document (admin ADR-33). Where a module's parser
+// whatever the grammar, with nothing held but what the part keeps. Any other
+// format is parsed whole and its value walked, and so is a document the
+// request asks read whole (--whole). A path below the root selects a
+// sub-stream: the document is read as for the root, through its part where
+// the module ships one, and only the events of the value the path names are
+// translated, as they come (runPath). The output is written as the run goes,
+// so a document whose events are not what the grammar's value holds, which
+// the part refuses part way (a YAML stream of several documents, a merge
+// key, a repeated member, which a part streams twice and tree-contract
+// refuses), fails with its code after what it wrote: --whole reads it whole,
+// its grammar's value the document (admin ADR-33). Where a module's parser
 // builds a value that is not yet the tree its parts declare (an expression's
 // operators, proto's syntax tree, a typed feed or database, a grammar
 // notation's document, which compiles to a grammar spec), the tree the
-// module's API reads a document as is the document, read whole. Nothing
-// here knows a format by its name: a format is what its manifest says, and
-// a module whose manifest names no parts this host can take is not a
-// format here.
+// module's API reads a document as is the document, read whole. Nothing here
+// knows a format by its name: a format is what its manifest says, and a
+// module whose manifest names no parts this host can take is not a format
+// here.
 //
 // A document may be a text (TextDocument) or a stream (ReaderDocument: a
 // file, or standard input): the transducer part's route reads a stream
@@ -833,29 +835,6 @@ func (p *Path) String() string {
 	return tt.ArrayDatum(items...).String()
 }
 
-// find is the value at the path below d.
-func (p *Path) find(d *tt.Datum) (*tt.Datum, bool) {
-	here := d
-	for _, s := range p.Segments {
-		switch {
-		case s.IsIndex && here.Kind == tt.DatumArray:
-			if s.Index >= uint64(len(here.Items)) {
-				return nil, false
-			}
-			here = &here.Items[s.Index]
-		case !s.IsIndex && here.Kind == tt.DatumObject:
-			next, ok := here.Get(s.Key)
-			if !ok {
-				return nil, false
-			}
-			here = next
-		default:
-			return nil, false
-		}
-	}
-	return here, true
-}
-
 // Request is what a translation was asked.
 type Request struct {
 	// From is the format the input is read with.
@@ -903,9 +882,10 @@ type parsedRoute struct {
 func Compile(r *Request) (*Compiled, *tt.Fail) {
 	routers, renderers := tt.Routers(), tr.Renderers()
 	// The transducer the route reads the document through, where the
-	// source ships one and the whole document is asked, not read whole: a
-	// path selects a value below the root, which only the document's value
-	// has.
+	// source ships one and the whole document is asked, not read whole. A
+	// path's value is a plain tree's events, which the composition over a
+	// plain tree reads, and runPath reads the document through the part on
+	// its own (TransducerProgram) to select them.
 	transducer := r.From.Transducer
 	if r.Path != nil || r.Whole {
 		transducer = nil
@@ -1046,6 +1026,9 @@ func runOnce(r *Request, compiled *Compiled, d Document, out io.Writer, metrics 
 		}
 		return nil
 	}
+	if r.Path != nil {
+		return runPath(r, compiled, d, out, metrics)
+	}
 	input, f := d.text()
 	if f != nil {
 		return f
@@ -1060,28 +1043,157 @@ func runOnce(r *Request, compiled *Compiled, d Document, out io.Writer, metrics 
 	if compiled.Composition.Front == at.FrontTree {
 		sink = tt.NewTreeContract(sink)
 	}
-	if r.Path == nil {
-		_, f := r.From.run(input, r.Limits, metrics, sink)
-		return f
-	}
-	value, f := read(r.From, input, r.Limits)
+	_, f = r.From.run(input, r.Limits, metrics, sink)
+	return f
+}
+
+// runPath is the value a path names, translated as it streams (admin
+// ADR-33): the document is read as the root is, through its format's
+// transducer part on its own (TransducerProgram) where the module ships one
+// and the request does not ask it whole, from a stream through a reader,
+// and otherwise its grammar's value is walked; atPath passes on the events
+// of the value and drops every other. The document's events are held to a
+// tree's contract in front, as the route of the whole document holds them,
+// so the value is the one the grammar's value holds at the path or the run
+// fails: a repeated member, which the part streams twice where the
+// grammar's value keeps one, and a second root, a YAML stream's next
+// document, are refused with their codes, and --whole reads such a document
+// whole.
+func runPath(r *Request, compiled *Compiled, d Document, out io.Writer, metrics *tt.Metrics) *tt.Fail {
+	inner, f := compiled.Program.Sink(out, alchemy.RenderDefault, r.Limits, metrics)
 	if f != nil {
 		return f
 	}
-	selected, ok := r.Path.find(&value)
-	if !ok {
-		return tt.InputFail("the path " + r.Path.String() + " names nothing in the document")
-	}
-	flow, f := tt.WalkDatum(selected, sink)
-	if f != nil {
-		return f
-	}
-	if flow == tt.Continue {
-		if _, f := sink.Event(tt.EvEnd()); f != nil {
+	scope := tt.NewTreeContract(newAtPath(r.Path, inner))
+	var part *alchemy.Program
+	if !r.Whole {
+		if part, f = r.From.TransducerProgram(); f != nil {
 			return f
 		}
 	}
+	if part == nil {
+		input, f := d.text()
+		if f != nil {
+			return f
+		}
+		_, f = r.From.run(input, r.Limits, metrics, scope)
+		return f
+	}
+	head, f := part.ParserSinkInto(scope, r.Limits, metrics)
+	if f != nil {
+		return f
+	}
+	source, f := r.From.passesOf(d)
+	if f != nil {
+		return f
+	}
+	if _, f := r.From.Pruned(source).Limits(r.Limits).Metrics(metrics).Run(head); f != nil {
+		if unfollowed(f) && r.Program == nil {
+			f.Message += wholeHint
+		}
+		return f
+	}
 	return nil
+}
+
+// around is one open container on the way to a path's value: an array,
+// with the index of its next element, or an object, with the key of the
+// member last named in it; and whether it is the value at the path's first
+// segments, as many as the containers open around it (onPath).
+type around struct {
+	array  bool
+	next   uint64
+	key    string
+	onPath bool
+}
+
+// atPath is the events of the value a path names below a document's root,
+// as a document of their own: every event outside the value is dropped, and
+// the value's own are passed on as they come. The stream ends where the
+// document does, which is read to its end, so a failure after the value is
+// still the document's, and a path that names nothing fails there, with
+// nothing written. The events are a tree's (a TreeContract holds them to it
+// in front), so a value has one place and the path names at most one.
+type atPath struct {
+	path   *Path
+	inner  tt.Sink
+	around []around
+	// depth is how deep the value is open while it is passed on, else 0.
+	depth int
+	found bool
+}
+
+func newAtPath(path *Path, inner tt.Sink) *atPath {
+	return &atPath{path: path, inner: inner}
+}
+
+// Event passes on an event of the value, and drops any other.
+func (a *atPath) Event(ev tt.Event) (tt.Flow, *tt.Fail) {
+	if a.depth > 0 {
+		switch ev.Kind {
+		case tt.ObjectStart, tt.ArrayStart:
+			a.depth++
+		case tt.ObjectEnd, tt.ArrayEnd:
+			a.depth--
+		}
+		if a.depth == 0 {
+			a.found = true
+		}
+		return a.inner.Event(ev)
+	}
+	switch ev.Kind {
+	case tt.Key:
+		if n := len(a.around); n > 0 {
+			a.around[n-1].key = ev.Text
+		}
+		return tt.Continue, nil
+	case tt.ObjectEnd, tt.ArrayEnd:
+		a.around = a.around[:len(a.around)-1]
+		return tt.Continue, nil
+	case tt.End:
+		if !a.found {
+			return tt.Continue, tt.InputFail("the path " + a.path.String() + " names nothing in the document")
+		}
+		return a.inner.Event(ev)
+	}
+	// A value starts: the root, an element or a member's value.
+	onPath := a.onPath()
+	container := ev.Kind == tt.ObjectStart || ev.Kind == tt.ArrayStart
+	if onPath && len(a.around) == len(a.path.Segments) {
+		if container {
+			a.depth = 1
+		} else {
+			a.found = true
+		}
+		return a.inner.Event(ev)
+	}
+	if container {
+		a.around = append(a.around, around{array: ev.Kind == tt.ArrayStart, onPath: onPath})
+	}
+	return tt.Continue, nil
+}
+
+// onPath is whether the value starting now is at the path's first
+// segments, as many as the containers open around it; an element counts as
+// its array's next.
+func (a *atPath) onPath() bool {
+	level := len(a.around)
+	if level == 0 {
+		return true
+	}
+	top := &a.around[level-1]
+	index := top.next
+	if top.array {
+		top.next++
+	}
+	if !top.onPath || level > len(a.path.Segments) {
+		return false
+	}
+	s := a.path.Segments[level-1]
+	if top.array {
+		return s.IsIndex && s.Index == index
+	}
+	return !s.IsIndex && s.Key == top.key
 }
 
 // collect is the events of a document, collected into a value, which
