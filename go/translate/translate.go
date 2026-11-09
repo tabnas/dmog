@@ -35,6 +35,14 @@
 // a module whose manifest names no parts this host can take is not a
 // format here.
 //
+// A document may be a text (TextDocument) or a stream (ReaderDocument: a
+// file, or standard input): the transducer part's route reads a stream
+// through a reader (transduce's ParserEventSourceFromReader), a window of
+// it at a time where the source's grammar declares Lex.Window
+// (tabnas/parser's admin ADR-30), the engine's lists emptied behind the
+// stream where transduce verifies the grammar alike pruned and not, and
+// every other route reads it whole.
+//
 // Neither route needed transduce's rule-event adapter (the tabnas_nodecell
 // build tag), which transduce 0.5.0 retired, so every build reads a document
 // as every other does.
@@ -51,6 +59,7 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+	"unicode/utf8"
 
 	tabnasabnf "github.com/tabnas/abnf/go"
 	alchemy "github.com/tabnas/alchemy/go"
@@ -95,6 +104,10 @@ type Format struct {
 	// reads (a transducer part, run --grammar). It is nil where the module
 	// has no parser here.
 	passes func(text string) *tt.ParserEventSource
+	// passesFrom is passes over a document read through a reader, a window
+	// of it at a time where the grammar declares Lex.Window. It is nil
+	// where passes is.
+	passesFrom func(r io.Reader) *tt.ParserEventSource
 	// tree is a document as the tree the format's module reads it as with
 	// its own API, where its parser's value is not yet the tree its parts
 	// declare (an expression's operators, or a typed value): a whole read
@@ -136,7 +149,7 @@ func (f *Format) Parses() bool { return f.passes != nil }
 // parser, and refuses.
 func (f *Format) Passes(text string) (*tt.ParserEventSource, *tt.Fail) {
 	if f.passes == nil {
-		return nil, tt.InputFail(f.ID() + " is read as a tree, not parsed: it has no rule passes for a program to read")
+		return nil, f.noPasses()
 	}
 	if f.check != nil {
 		if fail := f.check(text); fail != nil {
@@ -144,6 +157,116 @@ func (f *Format) Passes(text string) (*tt.ParserEventSource, *tt.Fail) {
 		}
 	}
 	return f.passes(text), nil
+}
+
+// PassesFrom is the parser's rule passes over a document read through r, a
+// window of it at a time where the grammar declares Lex.Window; a read that
+// fails, or bytes that are not UTF-8, fail the run where the parse meets
+// them, with the engine's unreadable (Unreadable). The check the module's
+// parse makes first, where it makes one, reads the document whole, and the
+// parser then reads the text it passed.
+func (f *Format) PassesFrom(r io.Reader) (*tt.ParserEventSource, *tt.Fail) {
+	if f.passes == nil {
+		return nil, f.noPasses()
+	}
+	if f.check == nil {
+		return f.passesFrom(r), nil
+	}
+	text, fail := ReaderDocument(r).text()
+	if fail != nil {
+		return nil, fail
+	}
+	return f.Passes(text)
+}
+
+// passesOf is the rule passes over a document, from its text or through
+// its reader.
+func (f *Format) passesOf(d Document) (*tt.ParserEventSource, *tt.Fail) {
+	if d.reader == nil {
+		return f.Passes(d.whole)
+	}
+	return f.PassesFrom(d.reader)
+}
+
+// Pruned is source, pruned where transduce verifies the format's grammar
+// alike pruned and not (tt.Prunable, by the format's id): the engine's
+// lists are emptied behind the stream, so its tree holds no record the
+// stream has passed. Any other grammar's source is left as it is, since a
+// run that prunes an unlisted grammar is refused before the parse.
+func (f *Format) Pruned(source *tt.ParserEventSource) *tt.ParserEventSource {
+	if tt.Prunable(f.ID()) {
+		return source.Grammar(f.ID()).Prune()
+	}
+	return source
+}
+
+// noPasses is the refusal of a format read as a tree, which has no rule
+// passes.
+func (f *Format) noPasses() *tt.Fail {
+	return tt.InputFail(f.ID() + " is read as a tree, not parsed: it has no rule passes for a program to read")
+}
+
+// Document is what a translation reads: a text, read whole, or a stream,
+// such as a file or standard input, read once, which the transducer part's
+// route reads through a reader, a window of it at a time where the source's
+// grammar declares Lex.Window, so that the run holds a window of the
+// document rather than all of it, and every other route reads whole.
+type Document struct {
+	whole  string
+	reader io.Reader
+}
+
+// TextDocument is a document given as its text.
+func TextDocument(text string) Document { return Document{whole: text} }
+
+// ReaderDocument is a document read from r, once. A read that fails, or
+// bytes that are not UTF-8, fail the run where they are met, with the
+// engine's unreadable (Unreadable).
+func ReaderDocument(r io.Reader) Document { return Document{reader: r} }
+
+// text is the document's text, read whole.
+func (d Document) text() (string, *tt.Fail) {
+	if d.reader == nil {
+		return d.whole, nil
+	}
+	data, err := io.ReadAll(d.reader)
+	if err != nil {
+		return "", cannotRead(err.Error())
+	}
+	// A Go string holds any bytes, so malformed UTF-8 is refused here, as
+	// the engine refuses it in a parse from a reader.
+	if !utf8.Valid(data) {
+		return "", cannotRead("stream did not contain valid UTF-8")
+	}
+	return string(data), nil
+}
+
+// cannotRead is a document that could not be read, failed as the engine's
+// unreadable fails a parse from a reader once transduce reports it:
+// INPUT_INVALID, the code and why (Unreadable reads it back).
+func cannotRead(reason string) *tt.Fail {
+	return tt.InputFail("unreadable: " + reason)
+}
+
+// Unreadable is why a run's document could not be read, where that is why
+// it failed: a read that failed, or bytes that are not UTF-8, which a parse
+// from a reader meets where they are (the engine's unreadable, which
+// transduce reports as INPUT_INVALID, the engine's code before its
+// message), and a document read whole that could not be. A host reports
+// such a document as a file it could not read, not as one that does not
+// parse.
+func Unreadable(f *tt.Fail) (string, bool) {
+	if f == nil || f.Code != tt.CodeInputInvalid {
+		return "", false
+	}
+	reason, ok := strings.CutPrefix(f.Message, "unreadable: ")
+	if !ok {
+		return "", false
+	}
+	if engine, ok := strings.CutPrefix(reason, "the source could not be read: "); ok {
+		return engine, true
+	}
+	return reason, true
 }
 
 // run drives sink with a document's events as the format reads it whole,
@@ -632,6 +755,7 @@ func Formats() []*Format {
 				parser := m.parser
 				f.reader = func(text string) *tt.ParserSource { return tt.NewParserSource(parser(), text) }
 				f.passes = func(text string) *tt.ParserEventSource { return tt.NewParserEventSource(parser(), text) }
+				f.passesFrom = func(r io.Reader) *tt.ParserEventSource { return tt.ParserEventSourceFromReader(parser(), r) }
 			}
 			// A transducer the manifest and the module disagree on is none
 			// here; the translation-parts test holds the two together.
@@ -885,10 +1009,17 @@ func Run(r *Request, input string, out io.Writer, metrics *tt.Metrics) *tt.Fail 
 // (bad input after the rows) knows nothing of the output, and the writer's
 // count does.
 func RunCompiled(r *Request, compiled *Compiled, input string, out io.Writer, metrics *tt.Metrics) *tt.Fail {
+	return RunDocument(r, compiled, TextDocument(input), out, metrics)
+}
+
+// RunDocument is RunCompiled over a document, which may be a text or a
+// stream (Document). A document that cannot be read fails as one a reader
+// gives up on part way does, with the engine's unreadable (Unreadable).
+func RunDocument(r *Request, compiled *Compiled, d Document, out io.Writer, metrics *tt.Metrics) *tt.Fail {
 	if metrics == nil {
 		metrics = tt.NewMetrics()
 	}
-	f := runOnce(r, compiled, input, out, metrics)
+	f := runOnce(r, compiled, d, out, metrics)
 	if f != nil && metrics.OutputBytes.Load() > 0 && !f.CommittedOutput {
 		f.Committed()
 	}
@@ -898,25 +1029,30 @@ func RunCompiled(r *Request, compiled *Compiled, input string, out io.Writer, me
 // runOnce is RunCompiled's one run: through the transducer part where the
 // source ships one and the whole document is asked, and over the
 // document's value otherwise.
-func runOnce(r *Request, compiled *Compiled, input string, out io.Writer, metrics *tt.Metrics) *tt.Fail {
+func runOnce(r *Request, compiled *Compiled, d Document, out io.Writer, metrics *tt.Metrics) *tt.Fail {
 	if compiled.parsed != nil {
 		// The transducer's route: the document's rule passes through the
-		// part into the program, streamed whatever the grammar.
+		// part into the program, streamed whatever the grammar, from a
+		// stream through a reader.
 		sink, f := compiled.parsed.program.ParserSink(out, alchemy.RenderDefault, r.Limits, metrics)
 		if f != nil {
 			return f
 		}
-		source, f := r.From.Passes(input)
+		source, f := r.From.passesOf(d)
 		if f != nil {
 			return f
 		}
-		if _, f := source.Limits(r.Limits).Metrics(metrics).Run(sink); f != nil {
+		if _, f := r.From.Pruned(source).Limits(r.Limits).Metrics(metrics).Run(sink); f != nil {
 			if unfollowed(f) && r.Program == nil {
 				f.Message += wholeHint
 			}
 			return f
 		}
 		return nil
+	}
+	input, f := d.text()
+	if f != nil {
+		return f
 	}
 	sink, f := compiled.Program.Sink(out, alchemy.RenderDefault, r.Limits, metrics)
 	if f != nil {

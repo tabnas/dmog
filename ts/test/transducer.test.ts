@@ -8,10 +8,10 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
 
-import { translate as alchemyTranslate } from '@tabnas/alchemy'
+import { isFail, translate as alchemyTranslate } from '@tabnas/alchemy'
 import { make as makeJson } from '@tabnas/json'
 import { BytesWriter } from '@tabnas/render'
-import { Fail, Limits, Metrics } from '@tabnas/transduce'
+import { Limits, Metrics } from '@tabnas/transduce'
 
 import { Format, format as formatNamed, formats, parsePath, parserNames, run } from '../dist/translate'
 
@@ -132,7 +132,7 @@ describe('a transducer part', () => {
     assert.throws(
       () => translated(through, 'json', undefined, undefined, repeated),
       (err: unknown) =>
-        err instanceof Fail && 'DUPLICATE_MEMBER' === err.code && err.message.endsWith('; --whole reads the document whole'),
+        isFail(err) && 'DUPLICATE_MEMBER' === err.code && err.message.endsWith('; --whole reads the document whole'),
     )
     assert.equal(
       translated(through, 'json', undefined, undefined, repeated, true),
@@ -141,7 +141,7 @@ describe('a transducer part', () => {
     assert.equal(translated(through, 'json', undefined, undefined, repeated, true), '{"a":2}\n')
     assert.throws(
       () => translated(through, 'json', undefined, undefined, '[1,'),
-      (err: unknown) => err instanceof Fail && 'INPUT_INVALID' === err.code,
+      (err: unknown) => isFail(err) && 'INPUT_INVALID' === err.code,
     )
   })
 
@@ -166,7 +166,7 @@ describe('a transducer part', () => {
       if (repeats) {
         assert.throws(
           () => translated(yaml, 'json', undefined, undefined, doc),
-          (err: unknown) => err instanceof Fail && 'DUPLICATE_MEMBER' === err.code,
+          (err: unknown) => isFail(err) && 'DUPLICATE_MEMBER' === err.code,
           JSON.stringify(doc),
         )
       }
@@ -194,13 +194,13 @@ describe('a transducer part', () => {
     assert.equal(abnf.parses(), false)
     assert.throws(
       () => abnf.passes('x = "y"'),
-      (err: unknown) => err instanceof Fail && 'INPUT_INVALID' === err.code && err.message.startsWith('abnf is read as a tree'),
+      (err: unknown) => isFail(err) && 'INPUT_INVALID' === err.code && err.message.startsWith('abnf is read as a tree'),
     )
     const json5 = formatNamed('json5')
     assert.ok(json5)
     assert.throws(
       () => json5.passes('// only a comment'),
-      (err: unknown) => err instanceof Fail && 'INPUT_INVALID' === err.code,
+      (err: unknown) => isFail(err) && 'INPUT_INVALID' === err.code,
     )
     let passes = 0
     json5.passes('{a: 1}').run({

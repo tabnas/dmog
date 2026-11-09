@@ -22,6 +22,7 @@ import { translate as exprParts } from '@tabnas/expr'
 import { translate as feedParts } from '@tabnas/feed'
 import { translate as gbnfParts } from '@tabnas/gbnf'
 import { translate as iniParts } from '@tabnas/ini'
+import { make as makeJson } from '@tabnas/json'
 import { translate as markdownParts } from '@tabnas/markdown'
 import { translate as protoParts } from '@tabnas/proto'
 import { translate as semverParts } from '@tabnas/semver'
@@ -1012,5 +1013,99 @@ describe('cli translate', () => {
     assert.deepStrictEqual(fail.limit, { name: 'max_output_bytes', value: 10 })
     out = dmog(['translate', '--from', 'json', '--to', 'yaml', '--max-output-bytes', '1000', input])
     assert.equal(out.status, 0, out.stderr)
+  })
+})
+
+// `run` and `translate` read INPUT through a reader, as the Rust binary
+// does: a file opened, or standard input, read once. Where the source's
+// grammar declares `lex.window` the engine reads it a window at a time, so
+// the output streams before the input ends; JSON's does from the release
+// of @tabnas/json that declares it, and before that release the engine
+// reads the reader to its end first. Each test is held to the package this
+// build has, whichever side of that release.
+describe('cli reads INPUT through a reader', () => {
+  const windowed = true === (makeJson() as any).options?.lex?.window
+  const records = Array.from({ length: 20000 }, (_, i) => `{"id":${i},"name":"n${i}"}`).join(',')
+  const echo = tempFile('stream-echo.alc', 'def export [input] input\n')
+  const commands = [
+    ['run', echo],
+    ['translate', '--from', 'json', '--to', 'json'],
+  ]
+
+  // Bytes that are not UTF-8 near the end of a long document fail the run
+  // as a file that cannot be read, from a file and from standard input
+  // alike: after the output of the document before them, which the failure
+  // calls partial, where the grammar reads a window at a time, and before
+  // any output where the engine reads the whole document first.
+  it('a long document with bytes that are not UTF-8 near its end cannot be read', () => {
+    const good = tempFile('stream-good.json', `[${records}]`)
+    const bytes = Buffer.concat([Buffer.from(`[${records},"`), Buffer.from([0xff]), Buffer.from('"]')])
+    const bad = join(TMP, 'stream-bad.json')
+    writeFileSync(bad, bytes)
+    for (const command of commands) {
+      const whole = dmog([...command, good])
+      assert.equal(whole.status, 0, whole.stderr)
+      for (const [input, stdin] of [
+        [bad, undefined],
+        ['-', bytes],
+      ] as const) {
+        const at = `${command[0]} ${input}`
+        const out = dmog([...command, input], stdin)
+        assert.equal(out.status, 2, `${at}: ${out.stderr}`)
+        const fail = failJson(out)
+        assert.equal(fail.code, 'INPUT_INVALID', at)
+        assert.equal(fail.message, `cannot read ${input}: stream did not contain valid UTF-8`, at)
+        if (windowed) {
+          assert.equal(fail.output, 'partial', at)
+          assert.ok(out.stdout.length >= 32 * 1024, `${at}: ${out.stdout.length} bytes`)
+          assert.ok(whole.stdout.startsWith(out.stdout), at)
+        } else {
+          assert.equal(fail.output, 'none', at)
+          assert.equal(out.stdout, '', at)
+        }
+      }
+    }
+  })
+
+  // A long document's output starts before its input ends: standard input
+  // is held open after half the document, and the command has written by
+  // then. The other half follows, and the run ends as it would have.
+  it('a long document is written before its input ends', async (t) => {
+    if (!windowed) {
+      t.skip('@tabnas/json declares no lex.window in this build')
+      return
+    }
+    const first = Buffer.from(`[${records}`)
+    const rest = Buffer.from(`,${records}]`)
+    for (const command of commands) {
+      const child = spawn(process.execPath, [BIN, ...command, '-'], { stdio: ['pipe', 'pipe', 'pipe'] })
+      let written = 0
+      let errors = ''
+      child.stderr.on('data', (data: Buffer) => (errors += data.toString('utf8')))
+      const exited = new Promise<number | null>((resolve) => child.once('exit', (code) => resolve(code)))
+      const started = new Promise<void>((resolve, reject) => {
+        child.stdout.on('data', (data: Buffer) => {
+          written += data.length
+          resolve()
+        })
+        exited.then((code) => reject(new Error(`${command[0]} exited ${code} before it wrote: ${errors}`)))
+      })
+      let timer: NodeJS.Timeout | undefined
+      const late = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${command[0]} wrote nothing in 60 s of half a document`)), 60000)
+      })
+      child.stdin.write(first)
+      try {
+        await Promise.race([started, late])
+      } catch (err) {
+        child.kill()
+        throw err
+      } finally {
+        clearTimeout(timer)
+      }
+      assert.ok(written > 0, command[0])
+      child.stdin.end(rest)
+      assert.equal(await exited, 0, `${command[0]}: ${errors}`)
+    }
   })
 })
