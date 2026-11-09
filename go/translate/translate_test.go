@@ -1640,10 +1640,11 @@ func feedObject(d tt.Datum, position int) []tt.Member {
 // feedReading is what a feed reads back as, by its loss list: an Atom 1.0
 // feed of its members and its entries as feedObject writes them, and an
 // author, named by the feed's title where that is text and not empty and
-// unknown otherwise, where the feed has none, unless the render held its
-// entries (a tree whose entries come before its other members, as the
-// reader builds one) and each of them has one. Go's feed reader is a
-// registered defect, so no feed is a source here until it is repaired.
+// unknown otherwise, where the feed has none, though every entry may have
+// one: the render writes a feed's elements before its entries, each entry
+// as it comes, so it cannot see them first (feed v0.6.19). Go's feed
+// reader is a registered defect, so no feed is a source here until it is
+// repaired.
 func feedReading(d tt.Datum) tt.Datum {
 	var entries []tt.Datum
 	given, hasEntries := d.Get("entries")
@@ -1660,28 +1661,7 @@ func feedReading(d tt.Datum) tt.Datum {
 		out = append(out, tt.Member{Key: "entries", Value: tt.ArrayDatum(entries...)})
 	}
 	out = append(out, feedObject(d, -1)...)
-	index := func(key string) int {
-		for i, m := range d.Members {
-			if m.Key == key {
-				return i
-			}
-		}
-		return -1
-	}
-	held := false
-	if at := index("entries"); at >= 0 {
-		for _, m := range []string{"id", "title", "subtitle", "rights", "updated", "authors", "contributors",
-			"categories", "links", "generator", "icon", "logo"} {
-			if i := index(m); i < 0 || i > at {
-				held = true
-			}
-		}
-	}
-	allAuthored := held && len(entries) > 0
-	for i := range entries {
-		allAuthored = allAuthored && feedHasAuthor(&entries[i])
-	}
-	if !feedHasAuthor(&d) && !allAuthored {
+	if !feedHasAuthor(&d) {
 		name := tt.StringDatum("unknown")
 		if title, ok := d.Get("title"); ok && title.Kind == tt.DatumObject {
 			typ, _ := title.Get("type")
