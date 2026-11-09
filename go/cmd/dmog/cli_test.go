@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	alchemy "github.com/tabnas/alchemy/go"
-	tt "github.com/tabnas/transduce/go"
 )
 
 var binary string
@@ -36,9 +35,6 @@ func TestMain(m *testing.M) {
 	}
 	binary = filepath.Join(dir, "dmog")
 	args := []string{"build", "-o", binary}
-	if tt.AdapterBuilt() {
-		args = append(args, "-tags", "tabnas_nodecell")
-	}
 	build := exec.Command("go", append(args, ".")...)
 	build.Stdout, build.Stderr = os.Stderr, os.Stderr
 	if err := build.Run(); err != nil {

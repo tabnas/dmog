@@ -1101,9 +1101,9 @@ function feedObject(d: Datum, position: number | undefined): Array<[string, Datu
 // What a feed reads back as, by its loss list: an Atom 1.0 feed of its
 // members and its entries as `feedObject` writes them, and an author, named
 // by the feed's title where that is text and not empty and `unknown`
-// otherwise, where the feed has none, unless the render held its entries (a
-// tree whose entries come before its other members, as the reader builds
-// one) and each of them has one.
+// otherwise, where the feed has none, though every entry may have one: the
+// render writes a feed's elements before its entries, each entry as it
+// comes, so it cannot see them first (@tabnas/feed 0.6.19).
 function feedReading(d: Datum): Datum {
   if ('object' !== d.type) throw new Error('a feed is an object')
   const members = d.members
@@ -1116,11 +1116,7 @@ function feedReading(d: Datum): Datum {
   ]
   if (members.has('entries')) out.push(['entries', arr(entries)])
   out.push(...feedObject(d, undefined))
-  const keys = [...members.keys()]
-  const entriesAt = keys.indexOf('entries')
-  const feedMembers = ['id', 'title', 'subtitle', 'rights', 'updated', 'authors', 'contributors', 'categories', 'links', 'generator', 'icon', 'logo']
-  const held = 0 <= entriesAt && feedMembers.some((m) => keys.indexOf(m) < 0 || keys.indexOf(m) > entriesAt)
-  if (!feedHasAuthor(d) && !(held && 0 < entries.length && entries.every(feedHasAuthor))) {
+  if (!feedHasAuthor(d)) {
     const title = members.get('title')
     let name: Datum = { type: 'string', value: 'unknown' }
     if (undefined !== title && 'object' === title.type) {
