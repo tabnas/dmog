@@ -29,7 +29,7 @@ dmog run [--grammar FORMAT] [--render csv|json] [--max-output-bytes N] PROGRAM I
                       run the program over the JSON document INPUT; with --grammar, over
                       the rule passes of INPUT parsed as FORMAT (a transducer part's input)
 dmog translate --from FORMAT --to FORMAT [--path PATH] [--key KEY]
-               [--with PROGRAM] [--max-output-bytes N] INPUT
+               [--with PROGRAM] [--whole] [--max-output-bytes N] INPUT
                       write INPUT, read as FORMAT, in another format
 dmog formats          print the formats translate reads and writes, as JSON
 ```
@@ -66,7 +66,22 @@ array of keys and indexes (`["people",0]`) and translates that value
 instead of the document; `--key` names the member a root is wrapped
 under for a format whose document must be an object (`items` by
 default); `--with` runs a program over the input first and writes its
-export's events or table. `dmog formats` lists each format, as JSON:
+export's events or table.
+
+`translate` writes as it reads: through its format's transducer part a
+document's output streams from the first record, and nothing waits for
+the document's end (admin ADR-33). A document the part cannot stream
+fails with its code part way, after what it wrote, with `"output":
+"partial"` in the failure where bytes had left: a repeated key, which
+the grammar's value keeps once (`DUPLICATE_MEMBER`, status 1), and a
+YAML stream of several documents, a YAML merge key or alias to a
+collection, a TOML table or an INI section entered again after another
+(`STREAMABILITY_UNKNOWN`, status 2). The failure's message ends by
+naming `--whole`, which reads such a document whole, as its grammar's
+value, and writes that: a YAML stream of several documents as the array
+of them, a repeated key as the grammar keeps it.
+
+`dmog formats` lists each format, as JSON:
 its `id`, the shapes it `reads` and `writes`, the `root` its render
 needs, its `schema`, `whole` (why its documents are read whole, never
 streamed, where the format says so, and null where it does not), its
@@ -82,9 +97,9 @@ ADR-30). The parser then holds a window of a long document rather than
 all of it, and the output streams as the parse goes. `run --grammar`
 reads `INPUT` the same way: a window at a time where the grammar declares
 it (JSON, JSONC, JSON Lines and CSV), and whole first otherwise.
-`translate` reads a file that way on the route through its format's
-transducer part, and whole on every other route. It reads standard input
-whole, since a stream the part refuses is read again. On every route
+`translate` reads a file or standard input that way on the route through
+its format's transducer part, and whole on every other route, under
+`--whole` among them. On every route
 through a part, the engine's tree is emptied behind the stream for a
 grammar that transduce verifies alike pruned and not, so the tree holds
 no record the stream has passed. Bytes that are not

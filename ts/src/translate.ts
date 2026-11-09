@@ -17,13 +17,16 @@
 // JSON events of the parser's rule passes) is read through it: the route
 // is composed over the transducer (`composeParsed`), and the input's rule
 // passes stream through transduce's `ParserEventSource` into the program,
-// whatever the grammar, with nothing held but what the part keeps. Any
-// other format is parsed whole and its value walked, and so is a document
-// when a path selects a value below the root, and one whose events are not
-// what the grammar's value holds, which the part refuses part way (a YAML
-// stream of several documents, a merge key, a repeated member, which a
-// part streams twice and `tree-contract` refuses): the grammar's own value
-// is the document, so it is read again whole. Where a package's parser
+// whatever the grammar, with nothing held but what the part keeps, and the
+// output is written as the run goes. Any other format is parsed whole and
+// its value walked, and so is a document when a path selects a value below
+// the root, or when the request asks it read whole (`--whole`). A document
+// whose events are not what the grammar's value holds, which the part
+// refuses part way (a YAML stream of several documents, a merge key, a
+// repeated member, which a part streams twice and `tree-contract`
+// refuses), fails with its code after what it wrote, since the output has
+// left: `--whole` reads it whole, its grammar's value the document (admin
+// ADR-33). Where a package's parser
 // builds a value that is not yet the tree its parts declare, and the
 // package's API reads a document as that tree (expr's simplified form,
 // proto's descriptor, and the grammar spec a grammar notation's document
@@ -51,7 +54,7 @@ import { make as makeJsonl, translate as jsonlParts } from '@tabnas/jsonl'
 import { Markdown, translate as markdownParts } from '@tabnas/markdown'
 import { Tabnas } from '@tabnas/parser'
 import { parse as protoParse, translate as protoParts } from '@tabnas/proto'
-import { BytesWriter, renderers } from '@tabnas/render'
+import { renderers } from '@tabnas/render'
 import type { Writer } from '@tabnas/render'
 import { Semver, translate as semverParts } from '@tabnas/semver'
 import { Toml, translate as tomlParts } from '@tabnas/toml'
@@ -505,14 +508,18 @@ export type Request = {
   // A program, as its file name and its text, whose export stands in the
   // source's place: its JSON events a tree, its table records.
   readonly program?: { readonly file: string; readonly text: string }
+  // Whether the document is read whole, as its grammar's value, rather
+  // than streamed through its format's transducer part (`--whole`): the
+  // route for a document the part refuses part way.
+  readonly whole?: boolean
   readonly limits: Limits
 }
 
 // A request's composition, and the program it compiles to: the
 // composition over the source's events, the route every format has, and,
 // where the source ships a transducer part and the whole document is
-// asked, the composition over its parser's rule passes, which
-// `runCompiled` runs first.
+// asked, not read whole, the composition over its parser's rule passes,
+// which `runCompiled` then runs in its place.
 export type Compiled = {
   readonly composition: translate.Composition
   readonly program: Program
@@ -522,9 +529,9 @@ export type Compiled = {
 // The composition a request makes, and the program it compiles to.
 export function compile(request: Request): Compiled {
   // The transducer the route reads the document through, where the source
-  // ships one and the whole document is asked: a path selects a value
-  // below the root, which only the document's value has.
-  const transducer = undefined === request.path ? request.from.transducer : undefined
+  // ships one and the whole document is asked, not read whole: a path
+  // selects a value below the root, which only the document's value has.
+  const transducer = undefined === request.path && !request.whole ? request.from.transducer : undefined
   const given = request.program
   if (undefined !== given) {
     const { file, text } = given
@@ -554,32 +561,30 @@ export function compile(request: Request): Compiled {
 // grammar's value is not what the passes showed: the part's own refusal
 // (`fail :unstreamable`), a second root, or a repeated member, which the
 // part streams twice and the composition's policy refuses, since the
-// grammar's value may keep the last or merge the two. The grammar's own
-// value is the document, so it is read again whole.
-function unfollowed(err: unknown): boolean {
+// grammar's value may keep the last or merge the two. The output streams
+// as the run goes, so such a document is not read again: it fails with its
+// code, and `--whole` (the request's `whole`) reads it whole, as its
+// grammar's value (admin ADR-33).
+function unfollowed(err: unknown): err is Fail {
   return isFail(err) && ('STREAMABILITY_UNKNOWN' === err.code || 'DUPLICATE_MEMBER' === err.code)
 }
 
-// One run of a request over its source's parser's rule passes, through
-// the composition over the source's transducer part: what it wrote, held
-// until the run has succeeded, as `runCompiled`'s other attempts hold it.
-function attemptParsed(request: Request, program: Program, input: string, metrics: Metrics): Buffer {
-  const held = new BytesWriter()
-  const sink = program.parserSink(held, undefined, request.limits, metrics)
-  request.from.passes(input).limits(request.limits).metrics(metrics).run(sink)
-  return held.bytes()
-}
+// What a refusal of the transducer part's route adds to its message, where
+// no program stands in the source's place, whose own events could make
+// such a refusal: the route that reads the document.
+const WHOLE = '; --whole reads the document whole'
 
 // Run a request over `input`, writing the document to `out` (render's
-// `Writer`, the counterpart of Rust's `io::Write`) once the run has
-// succeeded; `metrics` collects what the stages report, the output's bytes
-// among it.
+// `Writer`, the counterpart of Rust's `io::Write`) as the run goes;
+// `metrics` collects what the stages report, the output's bytes among it.
 export function run(request: Request, input: string, out: Writer, metrics: Metrics): void {
   runCompiled(request, compile(request), input, out, metrics)
 }
 
 // `run`, with the request's composition compiled already (`compile`), so
-// that one compiled composition serves many inputs.
+// that one compiled composition serves many inputs. A failure after bytes
+// have left says so (`committedOutput`): the source's failure (bad input
+// after the rows) knows nothing of the output, and the writer's count does.
 export function runCompiled(
   request: Request,
   compiled: Compiled,
@@ -588,12 +593,21 @@ export function runCompiled(
   metrics: Metrics,
 ): void {
   const { composition, program, parsed } = compiled
-  // What a run writes is held until the run has succeeded, so that a run a
-  // transducer part gives up part way is run again whole from the start
-  // rather than written twice.
-  const attempt = (metrics: Metrics): Buffer => {
-    const held = new BytesWriter()
-    const inner = program.sink(held, undefined, request.limits, metrics)
+  try {
+    if (undefined !== parsed) {
+      // The transducer's route, where the source ships a part and the
+      // whole document is asked: its rule passes through the part into the
+      // program, streamed whatever the grammar.
+      const sink = parsed.program.parserSink(out, undefined, request.limits, metrics)
+      try {
+        request.from.passes(input).limits(request.limits).metrics(metrics).run(sink)
+      } catch (err) {
+        if (unfollowed(err) && undefined === request.program) err.message += WHOLE
+        throw err
+      }
+      return
+    }
+    const inner = program.sink(out, undefined, request.limits, metrics)
     // The source's events reach a tree's render as the source made them,
     // so a stream that is no tree's is refused in front of it rather than
     // written half way.
@@ -609,55 +623,10 @@ export function runCompiled(
       }
       if ('continue' === walkDatum(selected, sink)) sink.event(Ev.end)
     }
-    return held.bytes()
-  }
-  // The transducer's route first, where the source ships a part and the
-  // whole document is asked: its rule passes through the part into the
-  // program, streamed whatever the grammar. A document whose events are
-  // not what the grammar's value holds (a repeated member, streamed twice,
-  // which the composition's tree-contract refuses) is read again whole
-  // below: the grammar's own value is the document.
-  let transduced: Buffer | undefined
-  if (undefined !== parsed) {
-    const own = new Metrics()
-    try {
-      transduced = attemptParsed(request, parsed.program, input, own)
-      absorb(metrics, own)
-    } catch (err) {
-      if (!unfollowed(err)) throw err
-    }
-  }
-  const bytes = undefined !== transduced ? transduced : attempt(metrics)
-  let written = 0
-  try {
-    let rest: Uint8Array = bytes
-    while (0 < rest.length) {
-      const n = out.write(rest)
-      if (n <= 0) throw new Error('failed to write whole buffer')
-      written += n
-      rest = rest.subarray(n)
-    }
-    out.flush?.()
   } catch (err) {
-    const why = err instanceof Error ? err.message : String(err)
-    const fail = new Fail('OUTPUT_FAILED', `the output could not be written: ${why}`)
-    // Bytes the writer took before it failed have left.
-    throw 0 < written ? fail.committed() : fail
+    if (isFail(err) && metrics.output_bytes > 0 && !err.committedOutput) err.committed()
+    throw err
   }
-}
-
-// What an attempt counted, added to the caller's metrics: the counts
-// summed and the high-water marks raised, so that the metrics a run hands
-// back are those of the attempt whose output was written.
-function absorb(into: Metrics, from: Metrics): void {
-  into.events += from.events
-  into.keys += from.keys
-  into.scalars += from.scalars
-  into.rows += from.rows
-  into.captured_bytes += from.captured_bytes
-  into.output_bytes += from.output_bytes
-  into.captured_bytes_high = Math.max(into.captured_bytes_high, from.captured_bytes_high)
-  into.retained_bytes_high = Math.max(into.retained_bytes_high, from.retained_bytes_high)
 }
 
 // The events of a document, collected into a value, which keeps the last

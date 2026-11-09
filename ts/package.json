@@ -63,7 +63,7 @@
     "@tabnas/toml": ">=0.5.18",
     "@tabnas/transduce": ">=0.4.0",
     "@tabnas/xml": ">=0.7.19",
-    "@tabnas/yaml": ">=0.5.26",
+    "@tabnas/yaml": ">=0.5.27",
     "@tabnas/zon": ">=0.5.18"
   },
   "devDependencies": {

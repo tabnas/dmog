@@ -160,7 +160,12 @@ the grammar notations) refuses another format's tree, a grammar
 notation's render refuses a grammar spec it has no form for, naming what
 it met, and Semantic Versioning's embedding refuses a tree that is not a
 version. A pair refused otherwise, or written where a refusal is
-declared, fails. A document is left out as a source where it is past
+declared, fails. `translate` streams its output, so a document the
+source's part cannot stream (a repeated key, a stream of several YAML
+documents, a merge key) fails part way, naming `--whole` (admin ADR-33):
+the matrix then reads it with `--whole`, holds its pairs to what that
+writes, and counts it, each run with a ceiling on how many it reads so.
+A document is left out as a source where it is past
 what every format takes: nested deeper than 100 levels, or holding more
 values than the run's size bound (10,000 by default, which leaves out the
 larger GBNF examples and RFC 3986's URI grammar, whose spec holds 513,409;

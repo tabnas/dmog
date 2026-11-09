@@ -16,7 +16,7 @@ dmog explain FILE     print the plan report
 dmog run [--render csv|json] [--max-output-bytes N] PROGRAM INPUT
                       run the program over the JSON document INPUT
 dmog translate --from FORMAT --to FORMAT [--path PATH] [--key KEY]
-               [--with PROGRAM] [--max-output-bytes N] INPUT
+               [--with PROGRAM] [--whole] [--max-output-bytes N] INPUT
                       write INPUT, read as FORMAT, in another format
 dmog formats          print the formats translate reads and writes, as JSON
 ```

@@ -20,12 +20,14 @@
 // passes stream through transduce's ParserEventSource into the program,
 // whatever the grammar, with nothing held but what the part keeps. Any
 // other format is parsed whole and its value walked, and so is a document
-// when a path selects a value below the root, and one whose events are not
-// what the grammar's value holds, which the part refuses part way (a YAML
-// stream of several documents, a merge key, a repeated member, which a part
-// streams twice and tree-contract refuses): the grammar's own value is the
-// document, so it is read again whole. Where a module's parser builds a
-// value that is not yet the tree its parts declare (an expression's
+// when a path selects a value below the root, or when the request asks it
+// read whole (--whole). The output is written as the run goes, so a
+// document whose events are not what the grammar's value holds, which the
+// part refuses part way (a YAML stream of several documents, a merge key, a
+// repeated member, which a part streams twice and tree-contract refuses),
+// fails with its code after what it wrote: --whole reads it whole, its
+// grammar's value the document (admin ADR-33). Where a module's parser
+// builds a value that is not yet the tree its parts declare (an expression's
 // operators, proto's syntax tree, a typed feed or database, a grammar
 // notation's document, which compiles to a grammar spec), the tree the
 // module's API reads a document as is the document, read whole. Nothing
@@ -38,7 +40,6 @@
 package translate
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -48,7 +49,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"unicode"
 
 	tabnasabnf "github.com/tabnas/abnf/go"
@@ -744,14 +744,19 @@ type Request struct {
 	// stands in the source's place: its JSON events a tree, its table
 	// records. Nil for none.
 	Program *alchemy.Source
-	Limits  tt.Limits
+	// Whole is whether the document is read whole, as its grammar's value,
+	// rather than streamed through its format's transducer part (--whole):
+	// the route for a document the part refuses part way.
+	Whole  bool
+	Limits tt.Limits
 }
 
 // Compiled is the composition a request makes, and the program it compiles
 // to: one compiled composition serves many inputs. It is the composition
 // over the source's events, the route every format has, and, where the
-// source ships a transducer part and the whole document is asked, the
-// composition over its parser's rule passes, which RunCompiled runs first.
+// source ships a transducer part and the whole document is asked, not read
+// whole, the composition over its parser's rule passes, which RunCompiled
+// then runs in its place.
 type Compiled struct {
 	Composition *at.Composition
 	Program     *alchemy.Program
@@ -770,10 +775,11 @@ type parsedRoute struct {
 func Compile(r *Request) (*Compiled, *tt.Fail) {
 	routers, renderers := tt.Routers(), tr.Renderers()
 	// The transducer the route reads the document through, where the
-	// source ships one and the whole document is asked: a path selects a
-	// value below the root, which only the document's value has.
+	// source ships one and the whole document is asked, not read whole: a
+	// path selects a value below the root, which only the document's value
+	// has.
 	transducer := r.From.Transducer
-	if r.Path != nil {
+	if r.Path != nil || r.Whole {
 		transducer = nil
 	}
 	if r.Program != nil {
@@ -837,39 +843,26 @@ func Compile(r *Request) (*Compiled, *tt.Fail) {
 	return result, nil
 }
 
-// attemptParsed is one run of a request over its source's parser's rule
-// passes, through the composition over the source's transducer part: what
-// it wrote, held until the run has succeeded, as RunCompiled's other
-// attempts hold it.
-func attemptParsed(r *Request, program *alchemy.Program, input string, metrics *tt.Metrics) ([]byte, *tt.Fail) {
-	var held bytes.Buffer
-	sink, f := program.ParserSink(&held, alchemy.RenderDefault, r.Limits, metrics)
-	if f != nil {
-		return nil, f
-	}
-	source, f := r.From.Passes(input)
-	if f != nil {
-		return nil, f
-	}
-	if _, f := source.Limits(r.Limits).Metrics(metrics).Run(sink); f != nil {
-		return nil, f
-	}
-	return held.Bytes(), nil
-}
-
 // unfollowed is whether a transducer part's route refused a document
 // because the grammar's value is not what the passes showed: the part's own
 // refusal (fail :unstreamable), a second root, or a repeated member, which
 // the part streams twice and the composition's policy refuses, since the
-// grammar's value may keep the last or merge the two. The grammar's own
-// value is the document, so it is read again whole.
+// grammar's value may keep the last or merge the two. The output streams as
+// the run goes, so such a document is not read again: it fails with its
+// code, and --whole (the request's Whole) reads it whole, as its grammar's
+// value (admin ADR-33).
 func unfollowed(f *tt.Fail) bool {
 	return f.Code == tt.CodeStreamabilityUnknown || f.Code == tt.CodeDuplicateMember
 }
 
-// Run runs a request over input, writing the document to out once the run
-// has succeeded; metrics (a fresh set when nil) collects what the stages
-// report, the output's bytes among it.
+// wholeHint is what a refusal of the transducer part's route adds to its
+// message, where no program stands in the source's place, whose own events
+// could make such a refusal: the route that reads the document.
+const wholeHint = "; --whole reads the document whole"
+
+// Run runs a request over input, writing the document to out as the run
+// goes; metrics (a fresh set when nil) collects what the stages report, the
+// output's bytes among it.
 func Run(r *Request, input string, out io.Writer, metrics *tt.Metrics) *tt.Fail {
 	compiled, f := Compile(r)
 	if f != nil {
@@ -879,115 +872,76 @@ func Run(r *Request, input string, out io.Writer, metrics *tt.Metrics) *tt.Fail 
 }
 
 // RunCompiled is Run, with the request's composition compiled already
-// (Compile), so that one compiled composition serves many inputs.
-//
-// What a run writes is held until the run has succeeded, so that a run a
-// transducer part gives up part way is run again whole from the start
-// rather than written twice.
+// (Compile), so that one compiled composition serves many inputs. A failure
+// after bytes have left says so (CommittedOutput): the source's failure
+// (bad input after the rows) knows nothing of the output, and the writer's
+// count does.
 func RunCompiled(r *Request, compiled *Compiled, input string, out io.Writer, metrics *tt.Metrics) *tt.Fail {
 	if metrics == nil {
 		metrics = tt.NewMetrics()
 	}
-	attempt := func(metrics *tt.Metrics) ([]byte, *tt.Fail) {
-		var held bytes.Buffer
-		sink, f := compiled.Program.Sink(&held, alchemy.RenderDefault, r.Limits, metrics)
-		if f != nil {
-			return nil, f
-		}
-		// The source's events reach a tree's render as the source made
-		// them, so a stream that is no tree's is refused in front of it
-		// rather than written half way.
-		if compiled.Composition.Front == at.FrontTree {
-			sink = tt.NewTreeContract(sink)
-		}
-		if r.Path == nil {
-			_, f := r.From.run(input, r.Limits, metrics, sink)
-			if f != nil {
-				return nil, f
-			}
-			return held.Bytes(), nil
-		}
-		value, f := read(r.From, input, r.Limits)
-		if f != nil {
-			return nil, f
-		}
-		selected, ok := r.Path.find(&value)
-		if !ok {
-			return nil, tt.InputFail("the path " + r.Path.String() + " names nothing in the document")
-		}
-		flow, f := tt.WalkDatum(selected, sink)
-		if f != nil {
-			return nil, f
-		}
-		if flow == tt.Continue {
-			if _, f := sink.Event(tt.EvEnd()); f != nil {
-				return nil, f
-			}
-		}
-		return held.Bytes(), nil
+	f := runOnce(r, compiled, input, out, metrics)
+	if f != nil && metrics.OutputBytes.Load() > 0 && !f.CommittedOutput {
+		f.Committed()
 	}
-	var written []byte
-	var f *tt.Fail
-	// The transducer's route first, where the source ships a part and the
-	// whole document is asked: its rule passes through the part into the
-	// program, streamed whatever the grammar. A document whose events are
-	// not what the grammar's value holds (a repeated member, streamed
-	// twice, which the composition's tree-contract refuses) is read again
-	// whole below: the grammar's own value is the document.
-	transduced := false
+	return f
+}
+
+// runOnce is RunCompiled's one run: through the transducer part where the
+// source ships one and the whole document is asked, and over the
+// document's value otherwise.
+func runOnce(r *Request, compiled *Compiled, input string, out io.Writer, metrics *tt.Metrics) *tt.Fail {
 	if compiled.parsed != nil {
-		own := tt.NewMetrics()
-		written, f = attemptParsed(r, compiled.parsed.program, input, own)
-		switch {
-		case f == nil:
-			absorb(metrics, own)
-			transduced = true
-		case !unfollowed(f):
+		// The transducer's route: the document's rule passes through the
+		// part into the program, streamed whatever the grammar.
+		sink, f := compiled.parsed.program.ParserSink(out, alchemy.RenderDefault, r.Limits, metrics)
+		if f != nil {
 			return f
 		}
+		source, f := r.From.Passes(input)
+		if f != nil {
+			return f
+		}
+		if _, f := source.Limits(r.Limits).Metrics(metrics).Run(sink); f != nil {
+			if unfollowed(f) && r.Program == nil {
+				f.Message += wholeHint
+			}
+			return f
+		}
+		return nil
 	}
-	if !transduced {
-		written, f = attempt(metrics)
-	}
+	sink, f := compiled.Program.Sink(out, alchemy.RenderDefault, r.Limits, metrics)
 	if f != nil {
 		return f
 	}
-	if len(written) == 0 {
-		return nil
+	// The source's events reach a tree's render as the source made them, so
+	// a stream that is no tree's is refused in front of it rather than
+	// written half way.
+	if compiled.Composition.Front == at.FrontTree {
+		sink = tt.NewTreeContract(sink)
 	}
-	if n, err := out.Write(written); err != nil {
-		f := tt.NewFail(tt.CodeOutputFailed, "the output could not be written: "+err.Error())
-		// Bytes the writer took before it failed have left.
-		if n > 0 {
-			f.Committed()
-		}
+	if r.Path == nil {
+		_, f := r.From.run(input, r.Limits, metrics, sink)
 		return f
 	}
-	return nil
-}
-
-// absorb adds what an attempt counted to the caller's metrics: the counts
-// summed and the high-water marks raised, so that the metrics a run hands
-// back are those of the attempt whose output was written.
-func absorb(into, from *tt.Metrics) {
-	into.Events.Add(from.Events.Load())
-	into.Keys.Add(from.Keys.Load())
-	into.Scalars.Add(from.Scalars.Load())
-	into.Rows.Add(from.Rows.Load())
-	into.CapturedBytes.Add(from.CapturedBytes.Load())
-	into.OutputBytes.Add(from.OutputBytes.Load())
-	raise(&into.CapturedBytesHigh, from.CapturedBytesHigh.Load())
-	raise(&into.RetainedBytesHigh, from.RetainedBytesHigh.Load())
-}
-
-// raise lifts a high-water mark to v when v is higher.
-func raise(high *atomic.Uint64, v uint64) {
-	for {
-		now := high.Load()
-		if v <= now || high.CompareAndSwap(now, v) {
-			return
+	value, f := read(r.From, input, r.Limits)
+	if f != nil {
+		return f
+	}
+	selected, ok := r.Path.find(&value)
+	if !ok {
+		return tt.InputFail("the path " + r.Path.String() + " names nothing in the document")
+	}
+	flow, f := tt.WalkDatum(selected, sink)
+	if f != nil {
+		return f
+	}
+	if flow == tt.Continue {
+		if _, f := sink.Event(tt.EvEnd()); f != nil {
+			return f
 		}
 	}
+	return nil
 }
 
 // collect is the events of a document, collected into a value, which

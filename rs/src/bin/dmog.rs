@@ -8,7 +8,7 @@
 //! dmog run [--grammar FORMAT] [--render csv|json] [--max-output-bytes N] PROGRAM INPUT
 //!                       run the program over the JSON document INPUT
 //! dmog translate --from FORMAT --to FORMAT [--path PATH] [--key KEY]
-//!                [--with PROGRAM] [--max-output-bytes N] INPUT
+//!                [--with PROGRAM] [--whole] [--max-output-bytes N] INPUT
 //!                       write INPUT, read as FORMAT, in another format
 //! dmog formats          print the formats translate reads and writes, as JSON
 //! ```
@@ -59,10 +59,12 @@
 //! the document; `--key` names the member a root is wrapped under for a
 //! format whose document must be an object (`items` by default); `--with`
 //! runs a program over the input first, as `run` does, and writes its
-//! export's events or table in `--to`. A file `INPUT` is read through a
-//! reader on the route through the source's transducer part, and whole
-//! on every other route ([`translate::Document`]); standard input is read
-//! whole, since a stream the part refuses is read again.
+//! export's events or table in `--to`. `INPUT`, a file or standard input,
+//! is read through a reader on the route through the source's transducer
+//! part, and whole on every other route ([`translate::Document`]), and the
+//! output is written as the run goes: a document the part refuses part way
+//! fails with its code after what it wrote, and `--whole` reads it whole,
+//! as its grammar's value (admin ADR-33).
 //!
 //! The command is where alchemy, transduce and render meet: every program
 //! is compiled with transduce's routers and render's renderers, which make
@@ -83,7 +85,7 @@ use tabnas_transduce::{Code, Fail, Limits, Metrics, ParserSink, Sink};
 /// `rs/tests/version_test.rs` fails the build if they drift.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-const USAGE: &str = "usage: dmog canon|format|check|explain FILE\n       dmog run [--grammar FORMAT] [--render csv|json] [--max-output-bytes N] PROGRAM INPUT\n       dmog translate --from FORMAT --to FORMAT [--path PATH] [--key KEY] [--with PROGRAM] [--max-output-bytes N] INPUT\n       dmog formats\n       (a FILE may be - for standard input)";
+const USAGE: &str = "usage: dmog canon|format|check|explain FILE\n       dmog run [--grammar FORMAT] [--render csv|json] [--max-output-bytes N] PROGRAM INPUT\n       dmog translate --from FORMAT --to FORMAT [--path PATH] [--key KEY] [--with PROGRAM] [--whole] [--max-output-bytes N] INPUT\n       dmog formats\n       (a FILE may be - for standard input)";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -336,16 +338,17 @@ fn run(args: &[String]) -> Result<String, Exit> {
                     key: options.key.unwrap_or_else(|| Options::default().key),
                 },
                 program: program.as_ref().map(|(file, text)| (*file, text.as_str())),
+                whole: options.whole,
                 limits,
             };
             // The composition is compiled before the input is read, so a
             // route that cannot be composed never waits on standard input,
             // and once.
             let compiled = translate::compile(&request)?;
-            let text;
+            // Standard input is read once, through a reader on the part's
+            // route, as a file is: nothing reads a document again.
             let document = if options.input == "-" {
-                text = read(&options.input)?;
-                Document::Text(&text)
+                Document::Reader(Box::new(io::stdin()))
             } else {
                 Document::File(Path::new(&options.input))
             };
@@ -375,6 +378,7 @@ struct TranslateOptions {
     path: Option<String>,
     key: Option<String>,
     program: Option<String>,
+    whole: bool,
     max_output_bytes: Option<u64>,
     input: String,
 }
@@ -389,11 +393,17 @@ impl TranslateOptions {
         };
         let (mut from, mut to, mut path, mut key, mut program, mut max_output_bytes) =
             (None, None, None, None, None, None);
+        let mut whole = false;
         let mut files = Vec::new();
         let mut i = 0;
         while i < args.len() {
             let value = || args.get(i + 1).cloned().ok_or_else(usage);
             match args[i].as_str() {
+                "--whole" => {
+                    whole = true;
+                    i += 1;
+                    continue;
+                }
                 "--from" => from = Some(named("--from", &value()?)?),
                 "--to" => to = Some(named("--to", &value()?)?),
                 "--path" => path = Some(value()?),
@@ -432,6 +442,7 @@ impl TranslateOptions {
             path,
             key,
             program,
+            whole,
             max_output_bytes,
             input: input.clone(),
         })

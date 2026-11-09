@@ -529,7 +529,7 @@ fn semver_version(d: &Datum) -> bool {
 }
 
 /// A pair's source, target and program, by id and text.
-type PairKey = (String, String, Option<String>);
+type PairKey = (String, String, Option<String>, bool);
 
 /// A pair's composition, compiled.
 type Compiled = Rc<translate::Compiled>;
@@ -548,15 +548,33 @@ fn translate_text(
     text: &str,
     program: Option<(&str, &str)>,
 ) -> Result<String, Fail> {
-    translate_document(from, to, Document::Text(text), program)
+    translate_document(from, to, Document::Text(text), program, false)
 }
 
-/// [`translate_text`] over a document, which may be a file.
+/// [`translate_text`], read whole, as `--whole` reads it.
+fn translate_whole(from: &Format, to: &Format, text: &str) -> Result<String, Fail> {
+    translate_document(from, to, Document::Text(text), None, true)
+}
+
+/// Whether a translation failed because the source's transducer part cannot
+/// stream the document (a repeated member, a stream of several YAML
+/// documents, a merge key): its code, and the route that reads it named,
+/// since the output streams and is never written twice (admin ADR-33).
+fn unstreamed(fail: &Fail) -> bool {
+    matches!(
+        fail.code,
+        Code::StreamabilityUnknown | Code::DuplicateMember
+    ) && fail.message.ends_with("; --whole reads the document whole")
+}
+
+/// [`translate_text`] over a document, which may be a file, read whole
+/// where `whole` is asked.
 fn translate_document(
     from: &Format,
     to: &Format,
     document: Document<'_>,
     program: Option<(&str, &str)>,
+    whole: bool,
 ) -> Result<String, Fail> {
     let request = Request {
         from,
@@ -564,12 +582,14 @@ fn translate_document(
         path: None,
         options: Options::default(),
         program,
+        whole,
         limits: Limits::default(),
     };
     let key = (
         from.id().to_string(),
         to.id().to_string(),
         program.map(|(_, text)| text.to_string()),
+        whole,
     );
     let compiled = match COMPILED.with(|c| c.borrow().get(&key).cloned()) {
         Some(compiled) => compiled,
@@ -1808,6 +1828,9 @@ struct Bounds {
     too_deep: usize,
     size: usize,
     too_large: usize,
+    /// The documents a source's part refuses part way, at most: each is
+    /// read with `--whole`, and its pairs are held to what that writes.
+    whole: usize,
     refusals: usize,
     grammars_written: usize,
     defective_pairs: &'static [(&'static str, &'static str)],
@@ -1817,19 +1840,85 @@ struct Bounds {
     every_otherwise_met: bool,
 }
 
-/// The pairs of the release run that fail for a defect of their target's
-/// package, outside this repository: by the name the matrix gives a pair,
-/// each with its defect (Go's matrix keeps the like, `divergent`). The
-/// matrix holds each to failing, so an entry cannot outlive the defect it
-/// records: one that passes, or that names no pair of the corpus, fails the
-/// test until it is deleted. Every runtime would fail them alike, the
-/// renders being the same alchemy files; only the release run reads the
-/// documents. None is open: tabnas-ebnf 0.1.18 fixed the last,
+/// tabnas/yaml#138: an alias to an anchored sequence used as a key reads
+/// as the text of the sequence transduce has emptied behind the stream,
+/// `""` where the grammar's whole value gives `"1,2"`, so every target that
+/// writes the document writes the wrong key.
+const YAML_ALIAS_KEY_PRUNED: &str =
+    "tabnas/yaml#138: an alias key to an anchored sequence reads as the emptied sequence's text";
+
+/// The pairs of the release run that fail for a defect of their source's
+/// or target's package, outside this repository: by the name the matrix
+/// gives a pair, each with its defect (Go's matrix keeps the like,
+/// `divergent`). The matrix holds each to failing, so an entry cannot
+/// outlive the defect it records: one that passes, or that names no pair
+/// of the corpus, fails the test until it is deleted. Only the release run
+/// reads the documents. tabnas-ebnf 0.1.18 fixed the last target's defect,
 /// `abnf/alignment-abnf-ast.tsv:28 (abnf) -> ebnf`, whose bounded
 /// repetition (`*200"a"`) its render wrote as 200 nested optional groups,
 /// past what its own reader reads; the render now refuses such a
-/// repetition, as its loss list declares.
-const DEFECTIVE_PAIRS: [(&str, &str); 0] = [];
+/// repetition, as its loss list declares. Open: one source's defect,
+/// yaml's reading through its part over a pruned tree
+/// ([`YAML_ALIAS_KEY_PRUNED`]), which this runtime alone meets, since only
+/// its command empties the tree behind the stream.
+const DEFECTIVE_PAIRS: [(&str, &str); 14] = [
+    (
+        "yaml/anchors-aliases.tsv:37 (yaml) -> csv",
+        YAML_ALIAS_KEY_PRUNED,
+    ),
+    (
+        "yaml/anchors-aliases.tsv:37 (yaml) -> expr",
+        YAML_ALIAS_KEY_PRUNED,
+    ),
+    (
+        "yaml/anchors-aliases.tsv:37 (yaml) -> feed",
+        YAML_ALIAS_KEY_PRUNED,
+    ),
+    (
+        "yaml/anchors-aliases.tsv:37 (yaml) -> ini",
+        YAML_ALIAS_KEY_PRUNED,
+    ),
+    (
+        "yaml/anchors-aliases.tsv:37 (yaml) -> json",
+        YAML_ALIAS_KEY_PRUNED,
+    ),
+    (
+        "yaml/anchors-aliases.tsv:37 (yaml) -> json5",
+        YAML_ALIAS_KEY_PRUNED,
+    ),
+    (
+        "yaml/anchors-aliases.tsv:37 (yaml) -> jsonc",
+        YAML_ALIAS_KEY_PRUNED,
+    ),
+    (
+        "yaml/anchors-aliases.tsv:37 (yaml) -> jsonic",
+        YAML_ALIAS_KEY_PRUNED,
+    ),
+    (
+        "yaml/anchors-aliases.tsv:37 (yaml) -> jsonl",
+        YAML_ALIAS_KEY_PRUNED,
+    ),
+    (
+        "yaml/anchors-aliases.tsv:37 (yaml) -> markdown",
+        YAML_ALIAS_KEY_PRUNED,
+    ),
+    (
+        "yaml/anchors-aliases.tsv:37 (yaml) -> toml",
+        YAML_ALIAS_KEY_PRUNED,
+    ),
+    (
+        "yaml/anchors-aliases.tsv:37 (yaml) -> xml",
+        YAML_ALIAS_KEY_PRUNED,
+    ),
+    (
+        "yaml/anchors-aliases.tsv:37 (yaml) -> yaml",
+        YAML_ALIAS_KEY_PRUNED,
+    ),
+    (
+        "yaml/anchors-aliases.tsv:37 (yaml) -> zon",
+        YAML_ALIAS_KEY_PRUNED,
+    ),
+];
 
 /// The cross product of `docs` and every format: each document read with
 /// its format's grammar, written in every format, and read back under the
@@ -1855,6 +1944,7 @@ fn matrix(docs: Vec<(String, &'static str, String)>, bounds: Bounds) {
     let mut repaired = Vec::new();
     let mut met = HashSet::new();
     let mut pairs = 0;
+    let mut read_whole: Vec<(String, Code)> = Vec::new();
     let started = Instant::now();
     let mut reported = Instant::now();
     for (n, (name, from, text)) in docs.iter().enumerate() {
@@ -1883,7 +1973,19 @@ fn matrix(docs: Vec<(String, &'static str, String)>, bounds: Bounds) {
             let source = source.as_ref().expect("a document read");
             pairs += 1;
             let pair = format!("{name} ({}) -> {}", from.id(), to.id());
-            let written = translate_text(from, to, text, None);
+            let mut written = translate_text(from, to, text, None);
+            // A document the source's part cannot stream fails, naming
+            // --whole; read whole, the pair is held to what that writes, and
+            // the document is counted.
+            if let Err(f) = &written {
+                if unstreamed(f) {
+                    let doc = format!("{name} ({})", from.id());
+                    if !read_whole.iter().any(|(d, _)| *d == doc) {
+                        read_whole.push((doc, f.code));
+                    }
+                    written = translate_whole(from, to, text);
+                }
+            }
             let outcome = match (expect(from, to, source), written) {
                 (Expect::Refused(code, reason), Err(f))
                     if f.code == code && f.message.starts_with(&reason) =>
@@ -1982,6 +2084,9 @@ fn matrix(docs: Vec<(String, &'static str, String)>, bounds: Bounds) {
              test/notation-samples.json registers: {line} holding white space"
         );
     }
+    for (doc, code) in &read_whole {
+        eprintln!("read with --whole, which its part cannot stream: {doc}: {code:?}");
+    }
     for line in &diverged {
         eprintln!("defective, as registered: {line}");
     }
@@ -2002,8 +2107,9 @@ fn matrix(docs: Vec<(String, &'static str, String)>, bounds: Bounds) {
         .count();
     eprintln!(
         "matrix: {pairs} pairs of {} documents; {} refused by their own reader, {} too deep, \
-         {} too large, {} left out for a registered reader defect, {} defective as registered; {} \
-         pairs refused as their target declares \
+         {} too large, {} left out for a registered reader defect, {} defective as registered, {} \
+         read with --whole, which their parts cannot stream; {} pairs refused as their target \
+         declares \
          ({schema_only} by a schema-only target, {unwritable} by a grammar notation's render, \
          {expr_refused} by expr's render, {} by Semantic Versioning's embedding); \
          {grammars_written} grammars written in a grammar notation, {samples_compared} of their \
@@ -2014,6 +2120,7 @@ fn matrix(docs: Vec<(String, &'static str, String)>, bounds: Bounds) {
         too_large.len(),
         defective.len(),
         diverged.len(),
+        read_whole.len(),
         refusals.len(),
         refusals.len() - schema_only - unwritable - expr_refused,
         declared_otherwise.len(),
@@ -2028,6 +2135,12 @@ fn matrix(docs: Vec<(String, &'static str, String)>, bounds: Bounds) {
         too_deep.len() <= bounds.too_deep,
         "{} documents are deeper than every format reads (above)",
         too_deep.len()
+    );
+    assert!(
+        read_whole.len() <= bounds.whole,
+        "{} documents are read with --whole, more than the {} the corpora give (above)",
+        read_whole.len(),
+        bounds.whole
     );
     assert!(
         too_large.len() <= bounds.too_large,
@@ -2107,6 +2220,7 @@ fn every_document_translates_into_every_format() {
         too_deep: 0,
         size: DEFAULT_SIZE_BOUND,
         too_large: 0,
+        whole: 12,
         refusals: 1000,
         grammars_written: 0,
         defective_pairs: &[],
@@ -2136,6 +2250,7 @@ fn every_fixture_of_every_format_translates_into_every_format() {
         too_deep: 2,
         size: SIZE_BOUND,
         too_large: 1,
+        whole: 90,
         refusals: 29898,
         grammars_written: 132,
         defective_pairs: &DEFECTIVE_PAIRS,
@@ -2152,8 +2267,8 @@ fn every_fixture_of_every_format_translates_into_every_format() {
 /// through the transducer part's route where its format's package ships a
 /// part: through a reader, a window at a time where the grammar declares
 /// `lex.window` (JSON, JSONC, JSON Lines and CSV), and whole first
-/// otherwise. A stream the part refuses reads the file again whole, as
-/// every other route reads it.
+/// otherwise. A document the part refuses fails from its file as from its
+/// text, since nothing reads a document again.
 #[test]
 fn every_document_translates_from_its_file_as_from_its_text() {
     let dir = std::env::temp_dir().join(format!("dmog-{}-files", std::process::id()));
@@ -2168,7 +2283,7 @@ fn every_document_translates_from_its_file_as_from_its_text() {
             for to in ["json", "csv"] {
                 let to = format(to);
                 let whole = translate_text(from, to, text, None).map_err(|f| format!("{f:?}"));
-                let read = translate_document(from, to, Document::File(file), None)
+                let read = translate_document(from, to, Document::File(file), None, false)
                     .map_err(|f| format!("{f:?}"));
                 assert_eq!(read, whole, "{name} into {}", to.id());
                 compared += 1;
@@ -2189,6 +2304,7 @@ fn request<'f>(from: &'f Format, to: &'f Format) -> Request<'f> {
         path: None,
         options: Options::default(),
         program: None,
+        whole: false,
         limits: Limits::default(),
     }
 }
@@ -2213,26 +2329,40 @@ fn a_zon_integer_no_double_holds_is_the_big_object() {
     );
 }
 
-/// The metrics a run is given are its own, whether the transducer part's
-/// attempt wrote the output or one it gave up was read again whole.
+/// The metrics a run is given count what it wrote, whether it streamed
+/// through the transducer part or read the document whole (`--whole`),
+/// and a run the part gives up writes nothing twice: it fails, its metrics
+/// what it had written.
 #[test]
-fn a_runs_metrics_are_those_of_the_attempt_that_wrote_the_output() {
+fn a_runs_metrics_are_its_own() {
     let json = format("json");
-    for text in [r#"{"a": [1, 2]}"#, r#"{"a": 1, "a": 2}"#] {
+    for (text, whole) in [(r#"{"a": [1, 2]}"#, false), (r#"{"a": 1, "a": 2}"#, true)] {
         let out = Buffer::default();
         let metrics = Metrics::new();
-        translate::run(
-            &request(json, json),
-            text,
-            Box::new(out.clone()),
-            metrics.clone(),
-        )
-        .unwrap();
+        let request = Request {
+            whole,
+            ..request(json, json)
+        };
+        translate::run(&request, text, Box::new(out.clone()), metrics.clone()).unwrap();
         let written = out.0.lock().unwrap().len() as u64;
         assert!(written > 0, "{text}");
         assert_eq!(Metrics::get(&metrics.output_bytes), written, "{text}");
         assert!(Metrics::get(&metrics.events) > 0, "{text}");
     }
+    let out = Buffer::default();
+    let metrics = Metrics::new();
+    let fail = translate::run(
+        &request(json, json),
+        r#"{"a": 1, "a": 2}"#,
+        Box::new(out.clone()),
+        metrics.clone(),
+    )
+    .unwrap_err();
+    assert_eq!(fail.code, Code::DuplicateMember, "{fail:?}");
+    assert_eq!(
+        Metrics::get(&metrics.output_bytes),
+        out.0.lock().unwrap().len() as u64
+    );
 }
 
 /// A writer that fails once it has taken some of the output: the failure
