@@ -10,7 +10,7 @@ go 1.24.7
 // v0.2.0.
 require (
 	github.com/tabnas/abnf/go v0.4.25
-	github.com/tabnas/alchemy/go v0.3.1
+	github.com/tabnas/alchemy/go v0.4.0
 	github.com/tabnas/c/go v0.5.15
 	github.com/tabnas/chess/go v0.1.19
 	github.com/tabnas/css/go v0.5.19
@@ -27,10 +27,10 @@ require (
 	github.com/tabnas/jsonl/go v0.1.20
 	github.com/tabnas/markdown/go v0.7.14
 	github.com/tabnas/proto/go v0.6.13
-	github.com/tabnas/render/go v0.2.6
+	github.com/tabnas/render/go v0.2.7
 	github.com/tabnas/semver/go v0.0.11
 	github.com/tabnas/toml/go v0.5.21
-	github.com/tabnas/transduce/go v0.5.1
+	github.com/tabnas/transduce/go v0.6.0
 	github.com/tabnas/xml/go v0.7.20
 	github.com/tabnas/yaml/go v0.5.31
 	github.com/tabnas/zon/go v0.5.19
