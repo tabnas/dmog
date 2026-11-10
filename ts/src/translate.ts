@@ -32,10 +32,13 @@
 // ADR-33). Where a package's parser
 // builds a value that is not yet the tree its parts declare, and the
 // package's API reads a document as that tree (expr's simplified form,
-// proto's descriptor, and the grammar spec a grammar notation's document
-// compiles to), that tree is the document, read whole. Nothing here knows
-// a format by its name: a format is what its manifest says, and a package
-// whose manifest names no parts this host can take is not a format here.
+// and the grammar spec a grammar notation's document compiles to), that
+// tree is the document, read whole; where such a package ships a
+// transducer part too (proto, whose parser's value is its CST), the part
+// reads the parser's rule passes, and a document read whole is that tree.
+// Nothing here knows a format by its name: a format is what its manifest
+// says, and a package whose manifest names no parts this host can take is
+// not a format here.
 //
 // A document may be a file (`{ file }`) or a stream (`{ reader }`,
 // standard input): the transducer part's route reads it through a reader
@@ -52,21 +55,26 @@ import { Program, compile as compileProgram, compileSources, isFail, translate }
 import type { CompileOptions } from '@tabnas/alchemy'
 import { C, translate as cParts } from '@tabnas/c'
 import { make as makeChess, translate as chessParts } from '@tabnas/chess'
-import { Css, translate as cssParts } from '@tabnas/css'
+import { make as makeCss, translate as cssParts } from '@tabnas/css'
 import { make as makeCsv, translate as csvParts } from '@tabnas/csv'
 import { ebnfConvert, translate as ebnfParts } from '@tabnas/ebnf'
 import { Expr, parseSimplified, translate as exprParts } from '@tabnas/expr'
 import { make as makeFeed, translate as feedParts } from '@tabnas/feed'
 import { gbnfConvert, translate as gbnfParts } from '@tabnas/gbnf'
-import { Ini, translate as iniParts } from '@tabnas/ini'
+import { make as makeIni, translate as iniParts } from '@tabnas/ini'
 import { make as makeJson, translate as jsonParts } from '@tabnas/json'
-import { Json5, translate as json5Parts } from '@tabnas/json5'
+import { make as makeJson5, translate as json5Parts } from '@tabnas/json5'
 import { make as makeJsonc, translate as jsoncParts } from '@tabnas/jsonc'
 import { jsonic, translate as jsonicParts } from '@tabnas/jsonic'
 import { make as makeJsonl, translate as jsonlParts } from '@tabnas/jsonl'
-import { Markdown, translate as markdownParts } from '@tabnas/markdown'
+import { make as makeMarkdown, translate as markdownParts } from '@tabnas/markdown'
 import { Tabnas } from '@tabnas/parser'
-import { parse as protoParse, translate as protoParts } from '@tabnas/proto'
+import {
+  make as makeProto,
+  parseTree as protoParseTree,
+  preflight as protoPreflight,
+  translate as protoParts,
+} from '@tabnas/proto'
 import { renderers } from '@tabnas/render'
 import type { Writer } from '@tabnas/render'
 import { Semver, translate as semverParts } from '@tabnas/semver'
@@ -92,7 +100,7 @@ import {
 import type { Flow, JsonEvent, Segment, Sink } from '@tabnas/transduce'
 import { make as makeXml, translate as xmlParts } from '@tabnas/xml'
 import { Yaml, translate as yamlParts } from '@tabnas/yaml'
-import { Zon, translate as zonParts } from '@tabnas/zon'
+import { make as makeZon, translate as zonParts } from '@tabnas/zon'
 
 // What every composition is compiled with: transduce's routers and
 // render's renderers.
@@ -118,13 +126,21 @@ type Described = {
 }
 
 // How a format's documents are read: with its grammar's parser, a fresh
-// one per source (a source owns its parser), after a check its package's
-// own parse makes first where the source would skip it; or as the tree its
-// package's own API reads a document as, where its parser's value is not
-// yet the tree its parts declare.
+// one per source (a source owns its parser), which makes any check its
+// package's parse makes first in its own `parse` and `parseReader` (json5's
+// requireValue rule, from json5 0.5.18); or as the tree its package's own
+// API reads a document as, where its parser's value is not yet the tree its
+// parts declare; or both, where such a package ships a transducer part
+// (proto): the part reads the rule passes of its parser, after a check its
+// package's own parse makes first, which the parser does not make itself,
+// and a document read whole is the tree.
 type Reading =
   | (() => Tabnas)
-  | { readonly parser: () => Tabnas; readonly check: (text: string) => void }
+  | {
+      readonly parser: () => Tabnas
+      readonly check: (text: string) => void
+      readonly tree: (text: string) => unknown
+    }
   | { readonly tree: (text: string) => unknown }
 
 // A synchronous pull reader of bytes, as the engine's `parseReader` and
@@ -268,35 +284,6 @@ class TreeSource implements DocumentSource {
   }
 }
 
-// A ParserSource run after a check its package's own parse makes first,
-// which the source skips; a document the check refuses is not parsed, and
-// the refusal is reported as the ParserSource reports an engine error.
-class CheckedSource implements DocumentSource {
-  constructor(
-    private readonly check: () => void,
-    private source: DocumentSource,
-  ) {}
-
-  limits(limits: Limits): this {
-    this.source = this.source.limits(limits)
-    return this
-  }
-
-  metrics(metrics: Metrics): this {
-    this.source = this.source.metrics(metrics)
-    return this
-  }
-
-  run(sink: Sink): Flow {
-    try {
-      this.check()
-    } catch (err) {
-      throw engineFailure(err, new AbortFlag())
-    }
-    return this.source.run(sink)
-  }
-}
-
 // One format this command reads and writes: its parts, as its package's
 // manifest names them, how its documents are read, and the transducer
 // part its package ships (its manifest's `translate.transduce`: the
@@ -324,24 +311,22 @@ export class Format {
   // package's API makes of a document has no parser here.
   parses(): boolean {
     const reading = this.reading
-    return 'function' === typeof reading || !('tree' in reading)
+    return 'function' === typeof reading || 'parser' in reading
   }
 
   // The parser's rule passes over `text`: transduce's source of
   // `ParserEvents/1` with a fresh parser of the format's grammar, for a
   // program over parser events, a transducer part's or `run --grammar`'s.
-  // The check the package's parse makes first, where it makes one, runs
-  // first, and its refusal is thrown as the source reports an engine
-  // error; a format read as a tree has no parser, and refuses.
+  // The check the package's parse makes first runs in the parser's own
+  // parse where the parser makes it (json5's), its refusal the run's, and
+  // first otherwise (proto's), its refusal thrown here, as the package's
+  // API reports it (`refusal`); a format read as a tree has no parser, and
+  // refuses.
   passes(text: string): ParserEventSource {
     const reading = this.reading
     if ('function' === typeof reading) return new ParserEventSource(reading(), text)
-    if ('tree' in reading) throw this.noPasses()
-    try {
-      reading.check(text)
-    } catch (err) {
-      throw engineFailure(err, new AbortFlag())
-    }
+    if (!('parser' in reading)) throw this.noPasses()
+    checked(reading.check, text)
     return new ParserEventSource(reading.parser(), text)
   }
 
@@ -349,18 +334,17 @@ export class Format {
   // window of it at a time where the grammar declares `lex.window`; a read
   // that fails, or bytes that are not UTF-8, fail the run where the parse
   // meets them, with the engine's `unreadable` (`unreadable`). The check
-  // the package's parse makes first, where it makes one, reads the
+  // the package's parse makes first runs in the parser's own `parseReader`
+  // where the parser makes it (json5's), which reads only as far as the
+  // check needs before the parse reads on; a check made first otherwise
+  // (proto's nesting cap, which counts the whole document) reads the
   // document whole, and the parser then reads the text it passed.
   passesFrom(reader: Reader): ParserEventSource {
     const reading = this.reading
     if ('function' === typeof reading) return ParserEventSource.fromReader(reading(), reader)
-    if ('tree' in reading) throw this.noPasses()
+    if (!('parser' in reading)) throw this.noPasses()
     const text = readAll(reader)
-    try {
-      reading.check(text)
-    } catch (err) {
-      throw engineFailure(err, new AbortFlag())
-    }
+    checked(reading.check, text)
     return new ParserEventSource(reading.parser(), text)
   }
 
@@ -398,12 +382,13 @@ export class Format {
     return Fail.input(`${this.id} is read as a tree, not parsed: it has no rule passes for a program to read`)
   }
 
-  // A source over `text`, read as this format reads a document.
+  // A source over `text`, read whole as this format reads a document: its
+  // parser's value, or the tree its package's API reads a document as,
+  // where it has one.
   reader(text: string): DocumentSource {
     const reading = this.reading
     if ('function' === typeof reading) return new ParserSource(reading(), text)
-    if ('tree' in reading) return new TreeSource(() => reading.tree(text))
-    return new CheckedSource(() => reading.check(text), new ParserSource(reading.parser(), text))
+    return new TreeSource(() => reading.tree(text))
   }
 
   // The transducer part compiled on its own, over the parser's rule
@@ -464,54 +449,33 @@ function descriptor(pkg: string, parts: Parts | undefined): Described | undefine
 // read: each one's default parser, as the Rust crate's `make()` builds it
 // (the relaxed grammars on jsonic's base), or, where its parser's value is
 // not yet the tree its parts declare, the tree its own API reads a
-// document as.
+// document as, and, for proto, which ships a transducer part, both, with
+// the nesting check its parse makes first.
 function packages(): Array<[Described | undefined, Reading]> {
   return [
     [descriptor('tabnas-abnf', abnfParts()), { tree: abnfTree }],
     [descriptor('tabnas-c', cParts()), () => new Tabnas().use(jsonic).use(C)],
     [descriptor('tabnas-chess', chessParts()), () => makeChess()],
-    [descriptor('tabnas-css', cssParts()), () => new Tabnas().use(jsonic).use(Css)],
+    [descriptor('tabnas-css', cssParts()), () => makeCss()],
     [descriptor('tabnas-csv', csvParts()), () => makeCsv()],
     [descriptor('tabnas-ebnf', ebnfParts()), { tree: ebnfTree }],
     [descriptor('tabnas-expr', exprParts()), { tree: exprTree }],
     [descriptor('tabnas-feed', feedParts()), () => makeFeed()],
     [descriptor('tabnas-gbnf', gbnfParts()), { tree: gbnfTree }],
-    [descriptor('tabnas-ini', iniParts()), () => new Tabnas().use(jsonic).use(Ini)],
+    [descriptor('tabnas-ini', iniParts()), () => makeIni()],
     [descriptor('tabnas-json', jsonParts()), () => makeJson()],
-    [descriptor('tabnas-json5', json5Parts()), { parser: json5Parser, check: json5Check }],
+    [descriptor('tabnas-json5', json5Parts()), () => makeJson5()],
     [descriptor('tabnas-jsonc', jsoncParts()), () => makeJsonc()],
     [descriptor('tabnas-jsonic', jsonicParts()), () => new Tabnas().use(jsonic)],
     [descriptor('tabnas-jsonl', jsonlParts()), () => makeJsonl()],
-    [descriptor('tabnas-markdown', markdownParts()), () => new Tabnas().use(Markdown)],
-    [descriptor('tabnas-proto', protoParts()), { tree: protoTree }],
+    [descriptor('tabnas-markdown', markdownParts()), () => makeMarkdown()],
+    [descriptor('tabnas-proto', protoParts()), { parser: () => makeProto(), check: protoPreflight, tree: protoTree }],
     [descriptor('tabnas-semver', semverParts()), () => new Tabnas().use(Semver)],
     [descriptor('tabnas-toml', tomlParts()), () => makeToml()],
     [descriptor('tabnas-xml', xmlParts()), () => makeXml()],
     [descriptor('tabnas-yaml', yamlParts()), () => new Tabnas().use(jsonic).use(Yaml)],
     [descriptor('tabnas-zon', zonParts()), () => zonParser()],
   ]
-}
-
-// json5's parser with its default options, on jsonic's.
-function json5Parser(): Tabnas {
-  return new Tabnas().use(jsonic).use(Json5)
-}
-
-// What json5's parse checks before its rules run, which the ParserSource
-// skips (configuring the parser for a run rebuilds the engine the plugin
-// put its check on): a document holding no value is refused as json5_empty
-// or json5_no_value, rather than as the engine's unexpected. Only a
-// document that may hold none, one that is empty or opens, after
-// whitespace, with a comment, is put to the package's parse.
-function json5Check(text: string): void {
-  const rest = text.replace(/^[\s\uFEFF]+/, '')
-  if ('' !== rest && !rest.startsWith('/')) return
-  try {
-    json5Parser().parse(text)
-  } catch (err) {
-    const code = (err as { code?: unknown }).code
-    if ('json5_empty' === code || 'json5_no_value' === code) throw err
-  }
 }
 
 // What a package's API throws for a document it refuses, as the input's
@@ -521,6 +485,17 @@ function json5Check(text: string): void {
 function refusal(err: unknown): unknown {
   if (isFail(err) || 'string' === typeof (err as { code?: unknown })?.code) return err
   return Fail.input(String((err as { message?: unknown })?.message ?? err))
+}
+
+// A check a package's own parse makes before its parser runs, over `text`:
+// a document it refuses is not parsed, and the refusal is the input's
+// failure, as the package's API reports it (`refusal`).
+function checked(check: (text: string) => void, text: string): void {
+  try {
+    check(text)
+  } catch (err) {
+    throw engineFailure(refusal(err), new AbortFlag())
+  }
 }
 
 // The tree a package's API reads a document as, or the refusal it throws.
@@ -540,12 +515,13 @@ function exprTree(text: string): unknown {
   return treeOf(() => parseSimplified(new Tabnas().use(jsonic).use(Expr), text))
 }
 
-// A .proto file as proto's package reads one, the descriptor its parts
-// declare (its parse, which makes the check the parser does not: a
-// document nesting deeper than its cap is refused before the engine
-// runs). The parser's own value is the grammar's syntax tree.
+// A .proto file read whole as proto's package reads one, the tree its
+// parts declare: its declarations in source order (parseTree, which makes
+// the check the parser does not, `preflight`: a document nesting deeper
+// than its cap is refused before the engine runs). The parser's own value
+// is the grammar's syntax tree.
 function protoTree(text: string): unknown {
-  return treeOf(() => protoParse(text))
+  return treeOf(() => protoParseTree(text))
 }
 
 // A grammar notation's document as its package's compiler writes it for a
@@ -583,22 +559,19 @@ function gbnfTree(text: string): unknown {
   return specTree(() => toJsonic(toPureSpec(gbnfConvert(text, { builtins: true })), { strict: true }))
 }
 
-// ZON's parser, with an integer no double holds exactly as the object
-// `{"$big": "<digits>"}`, the digits after a minus sign when it is
-// negative: the reader's big integer as ZON's translation part declares it
-// and its Rust reader builds it. The TypeScript reader builds a bigint,
-// which transduce writes as the nearest double, so the token's value is
-// replaced as it is read, before a rule takes it, and the value and the
-// events hold the object.
+// ZON's parser as its package's `make()` builds it, with an integer no
+// double holds exactly as the object `{"$big": "<digits>"}`, the digits
+// after a minus sign when it is negative: the reader's big integer as ZON's
+// translation part declares it and its Rust reader builds it. The
+// TypeScript reader builds a bigint, which transduce writes as the nearest
+// double, so the token's value is replaced as it is read, before a rule
+// takes it, and the value and the events hold the object.
 function zonParser(): Tabnas {
-  return new Tabnas()
-    .use(jsonic)
-    .use(Zon)
-    .sub({
-      lex: (tkn: { val: unknown }) => {
-        if ('bigint' === typeof tkn.val) tkn.val = { $big: tkn.val.toString() }
-      },
-    })
+  return makeZon().sub({
+    lex: (tkn: { val: unknown }) => {
+      if ('bigint' === typeof tkn.val) tkn.val = { $big: tkn.val.toString() }
+    },
+  })
 }
 
 let registry: ReadonlyArray<Format> | undefined

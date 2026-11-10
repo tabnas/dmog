@@ -31,12 +31,14 @@
 //! left: `--whole` reads it whole, its grammar's value the document (admin
 //! ADR-33). Where a package's parser builds a value that
 //! is not yet the tree its parts declare, and the package's API reads a
-//! document as that tree (expr's simplified form, proto's descriptor, C's
-//! realized syntax tree, and the grammar spec a grammar notation's
-//! document compiles to), that tree is the document, read whole. Nothing
-//! here knows a format by its name: a format is what its manifest says,
-//! and a package whose manifest names no parts this host can take is not
-//! a format here.
+//! document as that tree (expr's simplified form, C's realized syntax
+//! tree, and the grammar spec a grammar notation's document compiles to),
+//! that tree is the document, read whole; where such a package ships a
+//! transducer part too (proto, whose parser's value is its syntax tree),
+//! the part reads the parser's rule passes, and a document read whole is
+//! that tree. Nothing here knows a format by its name: a format is what
+//! its manifest says, and a package whose manifest names no parts this host
+//! can take is not a format here.
 //!
 //! A document may be a file ([`Document::File`]) or a stream
 //! ([`Document::Reader`], standard input): the transducer part's route
@@ -80,11 +82,32 @@ enum Reader {
     /// With the grammar's parser, after a check the package's own parse
     /// makes before the parser runs, which the parser does not make
     /// itself: a document the check refuses is not parsed.
-    Checked(fn(&str) -> Result<(), Fail>, Parsing),
+    Checked(Check, Parsing),
     /// As the tree the package's own API reads a document as, where its
     /// parser's value is not yet the tree its parts declare: read whole,
     /// and walked as a parser's value is.
     Tree(fn(&str) -> Result<Datum, Fail>),
+    /// Both, where such a package ships a transducer part (proto, whose
+    /// parser's value is its syntax tree): the part reads the rule passes
+    /// of the grammar's parser, after the check, as [`Reader::Checked`]
+    /// reads them, and a document read whole is the tree, as
+    /// [`Reader::Tree`] reads it.
+    CheckedTree(Check, Parsing, fn(&str) -> Result<Datum, Fail>),
+}
+
+/// A document read through a reader, once.
+type Bytes = Box<dyn Read + Send>;
+
+/// A check a package's own parse makes before its parser runs, over a
+/// document's text and over a document read through a reader.
+#[derive(Clone, Copy)]
+struct Check {
+    /// The check of a document's text.
+    text: fn(&str) -> Result<(), Fail>,
+    /// The check of a document read through a reader, which reads it only
+    /// as far as the check needs: what comes back gives every byte the
+    /// reader gives, the ones the check read first, for the parser.
+    reader: fn(Bytes) -> Result<Bytes, Fail>,
 }
 
 /// One format this command reads and writes: its parts, as its package's
@@ -130,7 +153,9 @@ impl Format {
     pub fn passes<'s>(&self, text: &'s str) -> Result<ParserEventSource<'s>, Fail> {
         match self.reader {
             Reader::Parser(parsing) => Ok((parsing.passes)(text)),
-            Reader::Checked(check, parsing) => check(text).map(|()| (parsing.passes)(text)),
+            Reader::Checked(check, parsing) | Reader::CheckedTree(check, parsing, _) => {
+                (check.text)(text).map(|()| (parsing.passes)(text))
+            }
             Reader::Tree(_) => Err(self.no_passes()),
         }
     }
@@ -141,21 +166,16 @@ impl Format {
     /// otherwise. A reader that fails, or bytes that are not UTF-8, end the
     /// run where the parser meets them, with the engine's `unreadable`
     /// ([`unreadable`]). The check the package's parse makes first, where
-    /// it makes one, reads the document whole, and the parser then reads
-    /// the text it passed.
+    /// it makes one, reads only as far as it needs, and the parser then
+    /// reads what it read and the rest.
     pub fn passes_from(
         &self,
-        mut reader: Box<dyn Read + Send>,
+        reader: Box<dyn Read + Send>,
     ) -> Result<ParserEventSource<'static>, Fail> {
         match self.reader {
             Reader::Parser(parsing) => Ok((parsing.reads)(reader)),
-            Reader::Checked(check, parsing) => {
-                let mut text = String::new();
-                reader.read_to_string(&mut text).map_err(cannot_read)?;
-                check(&text)?;
-                Ok((parsing.reads)(Box::new(std::io::Cursor::new(
-                    text.into_bytes(),
-                ))))
+            Reader::Checked(check, parsing) | Reader::CheckedTree(check, parsing, _) => {
+                Ok((parsing.reads)((check.reader)(reader)?))
             }
             Reader::Tree(_) => Err(self.no_passes()),
         }
@@ -350,9 +370,29 @@ fn json5_value_check(text: &str) -> Result<(), Fail> {
     }
 }
 
-/// The reader of json5's grammar, run after [`json5_value_check`].
+/// [`json5_value_check`] over a document read through a reader, as the
+/// package's `parse_reader_with` makes it (`check_reader`): the reader is
+/// read only as far as the document's leading whitespace and comments and
+/// the character after them, and what comes back gives what was read and
+/// then the rest, so that the parser reads the document a window at a time
+/// after the check.
+fn json5_reader_check(reader: Bytes) -> Result<Bytes, Fail> {
+    match tabnas_json5::check_reader(&tabnas_json5::make(), reader) {
+        Ok(checked) => Ok(Box::new(checked)),
+        Err(error) => Err(Fail::from_tabnas(&error)),
+    }
+}
+
+/// The reader of json5's grammar, run after [`json5_value_check`], or
+/// [`json5_reader_check`] through a reader.
 fn read_json5() -> Reader {
-    Reader::Checked(json5_value_check, parsing!(tabnas_json5::make()))
+    Reader::Checked(
+        Check {
+            text: json5_value_check,
+            reader: json5_reader_check,
+        },
+        parsing!(tabnas_json5::make()),
+    )
 }
 
 /// An engine error as transduce's parser source reports one: the input's,
@@ -383,21 +423,58 @@ fn read_expr(text: &str) -> Result<Datum, Fail> {
         .map_err(|error| engine_failure(&error))
 }
 
-/// A `.proto` document as proto's API reads one, the tree its parts
-/// declare: the FileDescriptorProto the canonical parse returns, every
-/// member named and ordered as its object has them (`parse_value`). Its
-/// parse makes the check the parser does not, before the engine runs: a
-/// document nesting deeper than its cap (`tabnas_proto::MAX_NESTING_DEPTH`)
-/// is refused before the engine builds a tree that deep, whose drop could
-/// abort the process. The parser's own value is the grammar's syntax tree,
-/// which only the package's API reads.
+/// A `.proto` document read whole as proto's API reads one, the tree its
+/// parts declare: its declarations in source order (`parse_tree`, which
+/// makes the check the parser does not, [`proto_preflight`], before the
+/// engine runs). The parser's own value is the grammar's syntax tree, so a
+/// whole read reads this; the transducer part reads the parser's rule
+/// passes.
 fn read_proto(text: &str) -> Result<Datum, Fail> {
-    tabnas_proto::parse_value(text, None)
+    tabnas_proto::parse_tree(text)
         .map(|tree| Datum::from_tabnas(&tree))
-        .map_err(|error| match error {
-            tabnas_proto::ProtoError::Parse(error) => engine_failure(&error),
-            refused => Fail::input(refused.to_string()),
-        })
+        .map_err(proto_failure)
+}
+
+/// What proto's API refuses, as the input's failure: the engine's error as
+/// transduce's parser source reports one, and a refusal of the package's
+/// own with its message.
+fn proto_failure(error: tabnas_proto::ProtoError) -> Fail {
+    match error {
+        tabnas_proto::ProtoError::Parse(error) => engine_failure(&error),
+        refused => Fail::input(refused.to_string()),
+    }
+}
+
+/// proto's check before its parser runs, which its parse makes and its
+/// parser does not (`preflight`): a document nesting deeper than its cap
+/// (`tabnas_proto::MAX_NESTING_DEPTH`) is refused before the engine builds
+/// a tree that deep, whose drop could abort the process.
+fn proto_preflight(text: &str) -> Result<(), Fail> {
+    tabnas_proto::preflight(text).map_err(proto_failure)
+}
+
+/// [`proto_preflight`] over a document read through a reader. The cap is
+/// counted over the whole document, so the reader is read to its end
+/// first, as the parser reads it anyway (proto declares no `lex.window`),
+/// and the parser reads the text that passed.
+fn proto_reader_check(mut reader: Bytes) -> Result<Bytes, Fail> {
+    let mut text = String::new();
+    reader.read_to_string(&mut text).map_err(cannot_read)?;
+    proto_preflight(&text)?;
+    Ok(Box::new(std::io::Cursor::new(text.into_bytes())))
+}
+
+/// The reader of proto's grammar, its rule passes after
+/// [`proto_preflight`], and its tree, [`read_proto`], read whole.
+fn read_proto_parsed() -> Reader {
+    Reader::CheckedTree(
+        Check {
+            text: proto_preflight,
+            reader: proto_reader_check,
+        },
+        parsing!(tabnas_proto::make()),
+        read_proto,
+    )
 }
 
 /// A C translation unit as c's API reads one, the tree its parts declare
@@ -546,12 +623,12 @@ fn packages() -> Vec<(Option<Described>, Reader)> {
             reader!(tabnas_jsonl),
         ),
         (
-            descriptor!("tabnas-markdown", tabnas_markdown, embed),
+            descriptor!("tabnas-markdown", tabnas_markdown, embed, transduce),
             reader!(tabnas_markdown),
         ),
         (
-            descriptor!("tabnas-proto", tabnas_proto, embed),
-            Reader::Tree(read_proto),
+            descriptor!("tabnas-proto", tabnas_proto, embed, transduce),
+            read_proto_parsed(),
         ),
         (
             descriptor!("tabnas-semver", tabnas_semver, embed),
@@ -1170,14 +1247,14 @@ fn source<S: Sink + Send + 'static>(
             .limits(limits.clone())
             .metrics(metrics)
             .run_owned(sink),
-        Reader::Checked(check, parsing) => match check(input) {
+        Reader::Checked(check, parsing) => match (check.text)(input) {
             Err(refused) => (Err(refused), sink),
             Ok(()) => (parsing.events)(input)
                 .limits(limits.clone())
                 .metrics(metrics)
                 .run_owned(sink),
         },
-        Reader::Tree(read) => {
+        Reader::Tree(read) | Reader::CheckedTree(_, _, read) => {
             let mut guarded = Guarded::new(sink, limits, AbortFlag::new(), metrics);
             let outcome = read(input).and_then(|tree| match walk_datum(&tree, &mut guarded)? {
                 Flow::Continue => guarded.event(JsonEvent::End),
@@ -1438,7 +1515,9 @@ mod tests {
                 ("jsonc", "jsonc-transduce"),
                 ("jsonic", "jsonic-transduce"),
                 ("jsonl", "jsonl-transduce"),
+                ("markdown", "markdown-transduce"),
                 ("pgn", "pgn-transduce"),
+                ("proto", "proto-transduce"),
                 ("toml", "toml-transduce"),
                 ("xml", "xml-transduce"),
                 ("yaml", "yaml-transduce"),
@@ -1885,7 +1964,8 @@ mod tests {
     }
 
     /// Every format with a parser answers its rule passes; one read as a
-    /// tree has none and refuses; json5's check runs first.
+    /// tree has none and refuses; json5's check runs first, over a text and
+    /// through a reader.
     #[test]
     fn a_format_with_a_parser_gives_its_rule_passes() {
         let parsed: Vec<&str> = formats()
@@ -1897,13 +1977,13 @@ mod tests {
             parsed,
             [
                 "css", "csv", "feed", "ini", "json", "json5", "jsonc", "jsonic", "jsonl",
-                "markdown", "pgn", "semver", "toml", "xml", "yaml", "zon"
+                "markdown", "pgn", "proto", "semver", "toml", "xml", "yaml", "zon"
             ]
         );
         assert_eq!(
             parser_names(),
-            "css, csv, feed, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, semver, toml, \
-             xml, yaml or zon"
+            "css, csv, feed, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, \
+             toml, xml, yaml or zon"
         );
         let abnf = format("abnf").expect("abnf is a format");
         assert!(!abnf.parses());
@@ -1921,6 +2001,11 @@ mod tests {
             .passes("// only a comment")
             .err()
             .expect("the check refuses");
+        assert_eq!(empty.code, Code::InputInvalid);
+        let empty = json5
+            .passes_from(Box::new(&b"// only a comment"[..]))
+            .err()
+            .expect("the check refuses through a reader");
         assert_eq!(empty.code, Code::InputInvalid);
         let (outcome, passes) = json5
             .passes("{a: 1}")

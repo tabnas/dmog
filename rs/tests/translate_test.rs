@@ -309,37 +309,14 @@ fn format(id: &str) -> &'static Format {
 /// document, comparing what the command reads with what the package's own
 /// API builds of it, so an entry fails once its reader is repaired, and
 /// must then be deleted. None is registered: proto's, the last, was
-/// repaired when tabnas-proto gave the descriptor as a tree
-/// (`tabnas_proto::parse_value`), and
-/// `a_proto_file_reads_as_the_descriptor_its_package_builds` holds it so.
+/// repaired when tabnas-proto gave its document as a tree, and
+/// `a_proto_file_reads_as_the_tree_its_package_builds` holds it so.
 const READER_DEFECTS: [(&str, &str); 0] = [];
 
 /// Whether documents of `id` are left out as sources for a registered
 /// reader defect.
 fn registered_defect(id: &str) -> bool {
     READER_DEFECTS.iter().any(|(defective, _)| *defective == id)
-}
-
-/// A value as serde_json holds it, as a `Datum`: what a package's own API
-/// builds, for the comparisons here.
-fn datum_of_json(j: &serde_json::Value) -> Datum {
-    use serde_json::Value as J;
-    match j {
-        J::Null => Datum::Null,
-        J::Bool(b) => Datum::Bool(*b),
-        J::Number(n) => Datum::Number {
-            value: n.as_f64().unwrap_or(f64::NAN),
-            lexeme: None,
-        },
-        J::String(s) => Datum::String(s.as_str().into()),
-        J::Array(items) => Datum::Array(items.iter().map(datum_of_json).collect()),
-        J::Object(members) => Datum::Object(
-            members
-                .iter()
-                .map(|(k, v)| (k.as_str().into(), datum_of_json(v)))
-                .collect(),
-        ),
-    }
 }
 
 /// Each registered reader defect still stands: the tree this command reads
@@ -367,22 +344,22 @@ fn defect_example(id: &str) -> (&'static str, Datum) {
     panic!("{id}: a registered defect needs an example here")
 }
 
-/// A .proto file reads as the FileDescriptorProto tabnas-proto's parse
-/// builds of it, the tree proto's parts declare, with its members in the
-/// order the canonical parse gives them, and so is written back by
-/// proto's render, where its reader once walked the syntax tree, which the
-/// render refused.
+/// A .proto file reads as the tree tabnas-proto's `parse_tree` builds of
+/// it, the tree proto's parts declare, its declarations in source order
+/// with their members in the order the statements spell them: through the
+/// transducer part over the parser's rule passes, and read whole, where
+/// its reader once walked the syntax tree, which the render refused. So it
+/// is written back by proto's render.
 #[test]
-fn a_proto_file_reads_as_the_descriptor_its_package_builds() {
+fn a_proto_file_reads_as_the_tree_its_package_builds() {
     let text =
         "syntax = \"proto3\";\npackage p;\nmessage M { int32 a = 1; optional string b = 2; }\n";
-    let read = format("proto").read(text, &Limits::default()).unwrap();
-    let descriptor = tabnas_proto::parse(text, None).unwrap();
-    let declared = datum_of_json(&serde_json::to_value(&descriptor).unwrap());
-    assert!(same(&read, &declared), "{read} is not {declared}");
-    let tree = Datum::from_tabnas(&tabnas_proto::parse_value(text, None).unwrap());
-    assert_eq!(read.to_string(), tree.to_string());
     let proto = format("proto");
+    let declared = Datum::from_tabnas(&tabnas_proto::parse_tree(text).unwrap());
+    let read = proto.read(text, &Limits::default()).unwrap();
+    assert_eq!(read.to_string(), declared.to_string());
+    let whole = translate_whole(proto, format("json"), text).unwrap();
+    assert_eq!(whole.trim_end(), declared.to_string());
     assert_eq!(
         translate_text(proto, proto, text, None).unwrap(),
         "syntax = \"proto3\";\npackage p;\nmessage M {\n  int32 a = 1;\n  optional string b = 2;\n}\n"
@@ -2168,7 +2145,7 @@ fn every_fixture_of_every_format_translates_into_every_format() {
         size: SIZE_BOUND,
         too_large: 1,
         whole: 85,
-        refusals: 29898,
+        refusals: 30697,
         grammars_written: 132,
         defective_pairs: &DEFECTIVE_PAIRS,
         samples,

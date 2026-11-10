@@ -70,9 +70,13 @@ over the input first and writes its export's events or table.
 
 `translate` writes as it reads: through its format's transducer part a
 document's output streams from the first record, and nothing waits for
-the document's end (admin ADR-33). A document the part cannot stream
-fails with its code part way, after what it wrote, with `"output":
-"partial"` in the failure where bytes had left: a repeated key, which
+the document's end (admin ADR-33). A `.proto` file streams a declaration
+at a time, its tree the file's declarations in source order (the schema
+`proto-ast`), after the check of its nesting that proto's own parse makes
+first; read whole, it is the same tree, which proto's package builds,
+since its grammar's own value is the syntax tree. A document the part
+cannot stream fails with its code part way, after what it wrote, with
+`"output": "partial"` in the failure where bytes had left: a repeated key, which
 the grammar's value keeps once (`DUPLICATE_MEMBER`, status 1), and a
 YAML stream of several documents, two plain `<<` keys in one YAML
 mapping (or a plain and a quoted one), a YAML merge source that repeats
@@ -110,10 +114,13 @@ document rather than all of it, and the output streams as the parse
 goes. `run --grammar` reads `INPUT` the same way: a window at a time
 where the grammar declares it, and whole first otherwise. Which grammars
 declare it is each package's to say, in the constructor this command
-calls in each runtime (`make()` in Rust and TypeScript, `Make()` in Go):
-JSON, JSON Lines, JSONC, CSV, XML, feeds and PGN do from the releases of
-2026-11-09, and jsonic's base constructor, which most relaxed grammars
-build on, does not. `translate` reads a file or standard input
+calls in each runtime (`make()` in Rust and TypeScript, `Make()` or
+`MakeJsonic()` in Go): JSON, JSON Lines, JSONC, JSON5, CSV, CSS, INI,
+TOML, XML, ZON, feeds and PGN do from the releases of 2026-11-09, and
+Markdown from its release of 2026-11-10, while jsonic's base
+constructor, which most relaxed grammars build on, does not. JSON5's check that a document holds a value reads only its leading
+white space and comments, so a JSON5 document is read a window at a time
+after them. `translate` reads a file or standard input
 that way on the route through its format's transducer part, with or
 without `--path`, and whole on every other route, under `--whole` among
 them. On every route through a

@@ -528,7 +528,7 @@ func TestRunTakesAGrammarWhoseRulePassesTheProgramReads(t *testing.T) {
 	for _, name := range []string{"abnf", "nope"} {
 		o := invoke(t, []string{"run", "--grammar", name, programPath, "-"}, text(doc))
 		f := failJSON(t, o)
-		want := "--grammar takes a format whose documents are parsed (c, css, csv, feed, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, semver, toml, xml, yaml or zon), not " + fmt.Sprintf("%q", name)
+		want := "--grammar takes a format whose documents are parsed (c, css, csv, feed, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, toml, xml, yaml or zon), not " + fmt.Sprintf("%q", name)
 		if o.status != 2 || f["code"] != "INPUT_INVALID" || f["message"] != want {
 			t.Errorf("%s: %+v", name, o)
 		}

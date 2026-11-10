@@ -219,7 +219,8 @@ describe('a transducer part', () => {
   })
 
   // Every format with a parser answers its rule passes; one read as a tree
-  // has none and refuses; json5's check runs first.
+  // has none and refuses; json5's parser checks a document holds a value
+  // in its own parse, so the run refuses one that holds none.
   it('every format with a parser gives its rule passes', () => {
     const parsed = formats()
       .filter((f) => f.parses())
@@ -227,11 +228,11 @@ describe('a transducer part', () => {
     // C is parsed here, where the Rust crate reads it as its realized tree.
     assert.deepStrictEqual(parsed, [
       'c', 'css', 'csv', 'feed', 'ini', 'json', 'json5', 'jsonc', 'jsonic', 'jsonl', 'markdown', 'pgn',
-      'semver', 'toml', 'xml', 'yaml', 'zon',
+      'proto', 'semver', 'toml', 'xml', 'yaml', 'zon',
     ])
     assert.equal(
       parserNames(),
-      'c, css, csv, feed, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, semver, toml, xml, yaml or zon',
+      'c, css, csv, feed, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, toml, xml, yaml or zon',
     )
     const abnf = formatNamed('abnf')
     assert.ok(abnf)
@@ -242,9 +243,11 @@ describe('a transducer part', () => {
     )
     const json5 = formatNamed('json5')
     assert.ok(json5)
+    const none = json5.passes('// only a comment')
     assert.throws(
-      () => json5.passes('// only a comment'),
-      (err: unknown) => isFail(err) && 'INPUT_INVALID' === err.code,
+      () => none.run({ event: () => 'continue' }),
+      (err: unknown) =>
+        isFail(err) && 'INPUT_INVALID' === err.code && err.message.startsWith('json5_no_value: '),
     )
     let passes = 0
     json5.passes('{a: 1}').run({

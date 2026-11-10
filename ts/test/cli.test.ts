@@ -23,8 +23,6 @@ import { translate as feedParts } from '@tabnas/feed'
 import { translate as gbnfParts } from '@tabnas/gbnf'
 import { translate as iniParts } from '@tabnas/ini'
 import { make as makeJson } from '@tabnas/json'
-import { translate as markdownParts } from '@tabnas/markdown'
-import { translate as protoParts } from '@tabnas/proto'
 import { translate as semverParts } from '@tabnas/semver'
 import { translate as tomlParts } from '@tabnas/toml'
 
@@ -474,7 +472,7 @@ describe('cli', () => {
       assert.equal(
         fail.message,
         '--grammar takes a format whose documents are parsed (c, css, csv, feed, ini, json, json5, jsonc, ' +
-          `jsonic, jsonl, markdown, pgn, semver, toml, xml, yaml or zon), not ${JSON.stringify(name)}`,
+          `jsonic, jsonl, markdown, pgn, proto, semver, toml, xml, yaml or zon), not ${JSON.stringify(name)}`,
       )
     }
     const events = tempFile('events.alc', 'def export [input] (json input)\n')
@@ -594,7 +592,9 @@ describe('cli translate', () => {
         ['jsonc', 'jsonc-transduce'],
         ['jsonic', 'jsonic-transduce'],
         ['jsonl', 'jsonl-transduce'],
+        ['markdown', 'markdown-transduce'],
         ['pgn', 'pgn-transduce'],
+        ['proto', 'proto-transduce'],
         ...shipped('toml', tomlParts()),
         ['xml', 'xml-transduce'],
         ['yaml', 'yaml-transduce'],
@@ -625,25 +625,25 @@ describe('cli translate', () => {
       ['pgn-database', 'semver-embed', 'feed-embed', 'expr-embed'],
     )
     // Why a format's documents are read whole, where its manifest says:
-    // every format transduce does not stream, and Markdown, which it
-    // streams only once the last line is in, each in the sentence its
+    // every format transduce does not stream, each in the sentence its
     // manifest gives; none for a format read through its transducer part,
-    // PGN's among them, which streams a game at a time.
+    // PGN's among them, which streams a game at a time, proto's, a
+    // declaration at a time, and Markdown's, a block at a time.
     for (const [id, parts] of [
       ['abnf', abnfParts()],
       ['c', cParts()],
       ['ebnf', ebnfParts()],
       ['expr', exprParts()],
       ['gbnf', gbnfParts()],
-      ['markdown', markdownParts()],
-      ['proto', protoParts()],
       ['semver', semverParts()],
     ] as const) {
       const whole = JSON.parse(String(parts?.manifest)).translate.whole
       assert.ok('string' === typeof whole && '' !== whole, id)
       assert.strictEqual(byId(id).whole, whole, id)
     }
+    assert.strictEqual(byId('markdown').whole, null)
     assert.strictEqual(byId('pgn').whole, null)
+    assert.strictEqual(byId('proto').whole, null)
     // CSS, INI, TOML and feed give the sentence up with the part they ship
     // from their next release: each is held to the package this build has,
     // and has one of the two, never both or neither.
@@ -805,25 +805,35 @@ describe('cli translate', () => {
 
   // What a package's own parse checks before its rules run, the command
   // checks too, status 1, writing nothing: a JSON5 document holding no
-  // value is refused with json5's own codes, not the engine's unexpected, as
-  // the Rust and Go commands refuse it (json5's TypeScript error carries no
-  // position, theirs 1:1); a .proto file nesting past proto's cap is refused
-  // before the engine runs (its parse's preflight); and a grammar
-  // notation's document its compiler refuses is refused with the compiler's
-  // message.
+  // value is refused with json5's own codes, not the engine's unexpected,
+  // from a file and from standard input, as the Rust and Go commands refuse
+  // it (json5's TypeScript error carries no position, theirs 1:1); a .proto
+  // file nesting past proto's cap is refused before the engine runs (its
+  // parse's preflight); and a grammar notation's document its compiler
+  // refuses is refused with the compiler's message.
   it('translate checks what a package checks before its parse', () => {
     for (const [input, code] of [
       ['', 'json5_empty'],
       ['// c\n', 'json5_no_value'],
     ]) {
-      const out = dmog(['translate', '--from', 'json5', '--to', 'json', '-'], input)
-      assert.equal(out.status, 1, out.stderr)
-      assert.equal(out.stdout, '')
-      assert.deepStrictEqual(failJson(out), {
-        code: 'INPUT_INVALID',
-        message: `${code}: JSON5 input must contain a value`,
-        output: 'none',
-      })
+      const file = tempFile(`${code}.json5`, input)
+      for (const [path, stdin] of [
+        [file, undefined],
+        ['-', input],
+      ] as const) {
+        const out = dmog(['translate', '--from', 'json5', '--to', 'json', path], stdin)
+        assert.equal(out.status, 1, `${path}: ${out.stderr}`)
+        assert.equal(out.stdout, '', path)
+        assert.deepStrictEqual(
+          failJson(out),
+          {
+            code: 'INPUT_INVALID',
+            message: `${code}: JSON5 input must contain a value`,
+            output: 'none',
+          },
+          path,
+        )
+      }
     }
     let out = dmog(['translate', '--from', 'json5', '--to', 'json', '-'], '// c\n{a:1}\n')
     assert.equal(out.status, 0, out.stderr)
@@ -1119,6 +1129,22 @@ describe('cli reads INPUT through a reader', () => {
     }
     for (const command of commands) {
       await writtenBeforeTheEnd(command, Buffer.from(`[${records}`), Buffer.from(`,${records}]`))
+    }
+  })
+
+  // So is a JSON5 document, whose parser reads only as far as its leading
+  // comment to check it holds a value, and a ZON document: their packages'
+  // `make()` declares `lex.window` too.
+  it('a JSON5 or ZON document is written before its input ends', async () => {
+    const each = (item: (i: number) => string, separator: string): string =>
+      Array.from({ length: 20000 }, (_, i) => item(i)).join(separator)
+    const json5 = each((i) => `{id:${i},name:'n${i}'}`, ',')
+    const zon = each((i) => `.{ .id = ${i}, .name = "n${i}" }`, ', ')
+    for (const [from, first, rest] of [
+      ['json5', `// records\n[${json5}`, `,${json5},]`],
+      ['zon', `.{ ${zon}`, `, ${zon} }`],
+    ]) {
+      await writtenBeforeTheEnd(['translate', '--from', from, '--to', 'json'], Buffer.from(first), Buffer.from(rest))
     }
   })
 
