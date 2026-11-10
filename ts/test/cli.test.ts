@@ -1133,16 +1133,18 @@ describe('cli reads INPUT through a reader', () => {
   })
 
   // So is a JSON5 document, whose parser reads only as far as its leading
-  // comment to check it holds a value, and a ZON document: their packages'
-  // `make()` declares `lex.window` too.
-  it('a JSON5 or ZON document is written before its input ends', async () => {
+  // comment to check it holds a value, a ZON document and a YAML document:
+  // their packages' `make()` declares `lex.window` too.
+  it('a JSON5, ZON or YAML document is written before its input ends', async () => {
     const each = (item: (i: number) => string, separator: string): string =>
       Array.from({ length: 20000 }, (_, i) => item(i)).join(separator)
     const json5 = each((i) => `{id:${i},name:'n${i}'}`, ',')
     const zon = each((i) => `.{ .id = ${i}, .name = "n${i}" }`, ', ')
+    const yaml = each((i) => `- id: ${i}\n  name: n${i}\n`, '')
     for (const [from, first, rest] of [
       ['json5', `// records\n[${json5}`, `,${json5},]`],
       ['zon', `.{ ${zon}`, `, ${zon} }`],
+      ['yaml', `# records\n${yaml}`, yaml],
     ]) {
       await writtenBeforeTheEnd(['translate', '--from', from, '--to', 'json'], Buffer.from(first), Buffer.from(rest))
     }
