@@ -31,10 +31,9 @@
 //! left: `--whole` reads it whole, its grammar's value the document (admin
 //! ADR-33). Where a package's parser builds a value that
 //! is not yet the tree its parts declare, and the package's API reads a
-//! document as that tree (expr's simplified form, C's realized syntax
-//! tree, and the grammar spec a grammar notation's document compiles to),
-//! that tree is the document, read whole; where such a package ships a
-//! transducer part too (proto, whose parser's value is its syntax tree),
+//! document as that tree (expr's simplified form and C's realized syntax
+//! tree), that tree is the document, read whole; where such a package ships
+//! a transducer part too (proto, whose parser's value is its syntax tree),
 //! the part reads the parser's rule passes, and a document read whole is
 //! that tree. Nothing here knows a format by its name: a format is what
 //! its manifest says, and a package whose manifest names no parts this host
@@ -561,84 +560,12 @@ fn read_c(text: &str) -> Result<Datum, Fail> {
         .map_err(|error| engine_failure(&error))
 }
 
-/// A grammar spec's strict JSON text, which a notation's compiler writes, as
-/// the tree it holds, read with the JSON grammar.
-fn spec_tree(json: &str) -> Result<Datum, Fail> {
-    tabnas_json::parse(json)
-        .map(|spec| Datum::from_tabnas(&spec))
-        .map_err(|error| engine_failure(&error))
-}
-
-/// An ABNF document as abnf's API reads one for a host, the tree its parts
-/// declare: the pure-data grammar spec its compiler writes (`abnf_compile`,
-/// recognition off, so that the tree builders stay, as strict JSON), read
-/// as JSON. The grammar spec is the schema grammar-spec, which the EBNF and
-/// GBNF compilers emit too.
-fn read_abnf(text: &str) -> Result<Datum, Fail> {
-    let options = tabnas_abnf::AbnfCompileOptions {
-        start: None,
-        tag: None,
-        recognition: false,
-        strict: true,
-        indent: None,
-    };
-    let compiled = tabnas_abnf::abnf_compile(text, &options)
-        .map_err(|error| Fail::input(error.to_string()))?;
-    spec_tree(&compiled)
-}
-
-/// A notation's conversion, converted with the builtins on, as the
-/// shared compiler writes it for a host: the pure-data grammar spec, with
-/// its tree builders (`compile_spec` with recognition off, which is
-/// `to_jsonic` over `to_pure_spec`), as strict JSON, read as JSON. The
-/// compiler is tabnas-bnf, whose serializers tabnas-abnf re-exports, so
-/// reading a notation takes no package beyond the notations'.
-fn compiled_tree(spec: &tabnas_abnf::GrammarSpec) -> Result<Datum, Fail> {
-    let pure = tabnas_abnf::to_pure_spec(spec).map_err(|error| Fail::input(error.to_string()))?;
-    let json = tabnas_abnf::to_jsonic(
-        &pure,
-        tabnas_abnf::JsonicOptions {
-            strict: true,
-            indent: None,
-        },
-    );
-    spec_tree(&json)
-}
-
-/// An EBNF document as ebnf's API reads one for a host, the tree its parts
-/// declare: the grammar spec the shared compiler writes of `ebnf_convert`
-/// with the builtins on ([`compiled_tree`]).
-fn read_ebnf(text: &str) -> Result<Datum, Fail> {
-    let convert = tabnas_ebnf::EbnfConvertOptions {
-        builtins: true,
-        ..tabnas_ebnf::EbnfConvertOptions::default()
-    };
-    let spec = tabnas_ebnf::ebnf_convert(text, Some(&convert))
-        .map_err(|error| Fail::input(error.to_string()))?;
-    compiled_tree(&spec)
-}
-
-/// A GBNF document as gbnf's API reads one for a host, the tree its parts
-/// declare: the grammar spec the shared compiler writes of `gbnf_convert`
-/// with the builtins on, and the notation's own defaults otherwise (the
-/// start `root`, eager classes where they are unambiguous)
-/// ([`compiled_tree`]).
-fn read_gbnf(text: &str) -> Result<Datum, Fail> {
-    let convert = tabnas_gbnf::GbnfConvertOptions::new(tabnas_gbnf::ConvertOptions {
-        builtins: true,
-        ..tabnas_gbnf::ConvertOptions::default()
-    });
-    let spec = tabnas_gbnf::gbnf_convert(text, Some(&convert))
-        .map_err(|error| Fail::input(error.to_string()))?;
-    compiled_tree(&spec)
-}
-
 /// Every grammar package this command carries, with its reader.
 fn packages() -> Vec<(Option<Described>, Reader)> {
     vec![
         (
-            descriptor!("tabnas-abnf", tabnas_abnf, embed),
-            Reader::Tree(read_abnf),
+            descriptor!("tabnas-abnf", tabnas_abnf, embed, transduce),
+            reader!(tabnas_abnf),
         ),
         (
             descriptor!("tabnas-c", tabnas_c, embed),
@@ -657,8 +584,8 @@ fn packages() -> Vec<(Option<Described>, Reader)> {
             reader!(tabnas_csv),
         ),
         (
-            descriptor!("tabnas-ebnf", tabnas_ebnf, embed),
-            Reader::Tree(read_ebnf),
+            descriptor!("tabnas-ebnf", tabnas_ebnf, embed, transduce),
+            reader!(tabnas_ebnf),
         ),
         (
             descriptor!("tabnas-expr", tabnas_expr, embed),
@@ -669,8 +596,8 @@ fn packages() -> Vec<(Option<Described>, Reader)> {
             reader!(tabnas_feed),
         ),
         (
-            descriptor!("tabnas-gbnf", tabnas_gbnf, embed),
-            Reader::Tree(read_gbnf),
+            descriptor!("tabnas-gbnf", tabnas_gbnf, embed, transduce),
+            reader!(tabnas_gbnf),
         ),
         (
             descriptor!("tabnas-ini", tabnas_ini, embed, transduce),
@@ -1580,9 +1507,12 @@ mod tests {
         assert_eq!(
             through,
             [
+                ("abnf", "abnf-transduce"),
                 ("css", "css-transduce"),
                 ("csv", "csv-transduce"),
+                ("ebnf", "ebnf-transduce"),
                 ("feed", "feed-transduce"),
+                ("gbnf", "gbnf-transduce"),
                 ("ini", "ini-transduce"),
                 ("json", "json-transduce"),
                 ("json5", "json5-transduce"),
@@ -2050,24 +1980,22 @@ mod tests {
         assert_eq!(
             parsed,
             [
-                "css", "csv", "feed", "ini", "json", "json5", "jsonc", "jsonic", "jsonl",
-                "markdown", "pgn", "proto", "semver", "toml", "xml", "yaml", "zon"
+                "abnf", "css", "csv", "ebnf", "feed", "gbnf", "ini", "json", "json5", "jsonc",
+                "jsonic", "jsonl", "markdown", "pgn", "proto", "semver", "toml", "xml", "yaml",
+                "zon"
             ]
         );
         assert_eq!(
             parser_names(),
-            "css, csv, feed, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, \
-             toml, xml, yaml or zon"
+            "abnf, css, csv, ebnf, feed, gbnf, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, \
+             proto, semver, toml, xml, yaml or zon"
         );
-        let abnf = format("abnf").expect("abnf is a format");
-        assert!(!abnf.parses());
-        let refused = abnf
-            .passes("x = \"y\"")
-            .err()
-            .expect("a tree has no passes");
+        let c = format("c").expect("c is a format");
+        assert!(!c.parses());
+        let refused = c.passes("int x;").err().expect("a tree has no passes");
         assert_eq!(refused.code, Code::InputInvalid);
         assert!(
-            refused.message.starts_with("abnf is read as a tree"),
+            refused.message.starts_with("c is read as a tree"),
             "{refused}"
         );
         let json5 = format("json5").expect("json5 is a format");

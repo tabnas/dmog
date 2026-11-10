@@ -11,11 +11,12 @@
 //! schema-only target (one that writes a schema's tree with no embedding
 //! into it: C, CSS, PGN, proto and the grammar notations ABNF, EBNF and
 //! GBNF) refuses another format's tree, a grammar notation refuses a
-//! grammar spec it has no form for, naming what it met, and Semantic
-//! Versioning's embedding refuses a tree that is not a version. A refusal
-//! of another kind, or a document written where a refusal is declared, is
-//! a failure. The grammar notations share a schema, the grammar spec their
-//! compilers emit, so each writes the others' documents.
+//! grammar it has no form for, naming the rule and what it met, and
+//! Semantic Versioning's embedding refuses a tree that is not a version. A
+//! refusal of another kind, or a document written where a refusal is
+//! declared, is a failure. The grammar notations share a schema, a
+//! grammar's rules in source order (`grammar-rules`), so each writes the
+//! others' documents.
 //!
 //! The corpora are the sibling checkouts': transduce's fixtures (aless's: a
 //! document of every format but C, CSS, expressions, PGN, proto, Semantic
@@ -150,18 +151,20 @@ fn read_corpora(docs: &mut Vec<(String, &'static str, String)>, dirs: &[Corpus])
 /// The repositories whose fixture corpora the matrix reads, each with the
 /// id its format's manifest gives it (the repository's name, but for
 /// tabnas/chess, whose format is PGN) and the column its rows hold a
-/// document of the format in: the input, but for ABNF, whose rows hold a
-/// grammar and an input to that grammar. EBNF's and GBNF's repositories
-/// keep no fixtures of that kind; their example grammars, and ABNF's, are
-/// files (`NOTATION_EXAMPLES`).
-const SPEC_CORPORA: [(&str, &str, &str); 20] = [
+/// document of the format in: the input, but for the grammar notations,
+/// whose rows hold a grammar (ABNF's and an input to that grammar, and
+/// each notation's `tree.tsv` the tree its reader builds of it). Their
+/// example grammars are files besides (`NOTATION_EXAMPLES`).
+const SPEC_CORPORA: [(&str, &str, &str); 22] = [
     ("abnf", "abnf", "grammar"),
     ("c", "c", "input"),
     ("chess", "pgn", "input"),
     ("css", "css", "input"),
     ("csv", "csv", "input"),
+    ("ebnf", "ebnf", "grammar"),
     ("expr", "expr", "input"),
     ("feed", "feed", "input"),
+    ("gbnf", "gbnf", "grammar"),
     ("ini", "ini", "input"),
     ("json", "json", "input"),
     ("json5", "json5", "input"),
@@ -381,21 +384,22 @@ enum Expect {
     WrittenUnlessRefused(Code, String),
 }
 
-/// Whether a format is a grammar notation: one whose documents read as
-/// the grammar spec the tabnas BNF compiler emits, which each notation's
-/// render writes back.
+/// Whether a format is a grammar notation: one whose documents read as a
+/// grammar's rules in source order (`grammar-rules`, tabnas/bnf's), which
+/// each notation's render writes back.
 fn grammar_notation(format: &Format) -> bool {
-    format.part.schema.as_deref() == Some("grammar-spec")
+    format.part.schema.as_deref() == Some("grammar-rules")
 }
 
 /// What `from`'s document, read as `source`, into `to` is held to. A
 /// schema-only target (one that writes from a tree, with a schema and no
 /// embed: C, CSS, PGN, proto and the grammar notations) refuses a tree of
 /// another schema before any output, as alchemy's composition declares; a
-/// grammar notation's render writes a grammar spec, any notation's, unless
-/// it has no form for something in it, which it refuses naming what it
-/// met, as its loss list declares (an action, a negated class in ABNF, the
-/// engine's own tokens in GBNF, ...); Semantic Versioning's embedding
+/// grammar notation's render writes a grammar's rules, any notation's,
+/// unless it has no form for something in them, which it refuses naming
+/// the rule and what it met, as its loss list declares (prose, a negated
+/// class in ABNF, the engine's own tokens in GBNF, a start the grammar does
+/// not define, ...); Semantic Versioning's embedding
 /// refuses a tree that is not a version, as its part declares; and expr's
 /// render refuses a list led by an object whose `src` its reader would
 /// take for the list's operator, where that is no default operator's
@@ -423,7 +427,7 @@ fn expect(from: &Format, to: &Format, source: &Datum) -> Expect {
         _ if grammar_notation(to) => Expect::WrittenUnlessRefused(
             Code::TargetValueUnrepresentable,
             format!(
-                "the grammar spec cannot be written as {}: ",
+                "the grammar cannot be written as {}: ",
                 to.id().to_uppercase()
             ),
         ),
@@ -1498,58 +1502,94 @@ fn feed_reading(d: &Datum) -> Datum {
     Datum::Object(out.into_iter().collect())
 }
 
-/// Whether a grammar spec written in a grammar notation reads back as the
-/// notations' conventions say. A render writes the spec anew, as far as
-/// its notation can say it, and its contract is the round trip (each
-/// render's header): the text compiles back to the spec it was written
-/// from, but where its loss list says it compiles back to another (a spec
-/// whose alternatives the compiler reordered, or whose left recursion ran
-/// through another rule), and a spec compiled from another notation,
-/// which compiles back under the target's own settings (its group tag, its
-/// lexing, its spelling of the other notation's terminals and core rules)
-/// and recognises what it recognised. So a spec of the target's own
-/// notation reads back as it was, or as one the render writes again as
-/// the same text; and one of another notation reads back as a spec the
-/// render writes again as text that reads back as that spec.
+/// Whether a grammar written in a grammar notation reads back as the
+/// notations' conventions say. A render writes a grammar's rules anew, as
+/// far as its notation can say them, and its contract is the round trip
+/// (each render's header): a tree of the target's own notation reads back
+/// as it was; one of another notation, written as the target spells what
+/// the source spells otherwise (its loss list), reads back as a tree the
+/// render writes again as the same text.
 fn check_grammar(
     from: &Format,
     target: &Format,
     source: &Datum,
     written: &str,
 ) -> Result<(), String> {
-    let limits = Limits::default();
     let back = target
-        .read(written, &limits)
+        .read(written, &Limits::default())
         .map_err(|f| format!("the written grammar does not read back: {f}"))?;
-    if from.id() == target.id() && same(source, &back) {
-        return Ok(());
+    if from.id() == target.id() {
+        return if same(source, &back) {
+            Ok(())
+        } else {
+            Err(format!("read back as {back}, where {source} was written"))
+        };
     }
     let again = translate_text(target, target, written, None).map_err(|f| {
         format!(
-            "the spec it reads back as is not written again: {f}; it was written as {written:?}"
+            "the grammar it reads back as is not written again: {f}; it was written as {written:?}"
         )
     })?;
-    if from.id() == target.id() {
-        return if again == written {
-            Ok(())
-        } else {
-            Err(format!(
-                "reads back as another spec, which is written again as {again:?}, where \
-                 {written:?} was written"
-            ))
-        };
-    }
-    let back_again = target
-        .read(&again, &limits)
-        .map_err(|f| format!("the grammar written again does not read back: {f}"))?;
-    if same(&back, &back_again) {
+    if again == written {
         Ok(())
     } else {
         Err(format!(
-            "reads back as a spec that is written again as {again:?}, which reads back as \
-             another, where {written:?} was written"
+            "reads back as a grammar that is written again as {again:?}, where {written:?} was \
+             written"
         ))
     }
+}
+
+/// The grammar spec a grammar notation's document compiles to, with its
+/// own notation's compiler, as that package writes it for a host that
+/// installs a grammar: the pure-data spec, recognition off, so that the
+/// tree builders stay, as strict JSON, read as JSON (`abnf_compile` for
+/// ABNF, and for EBNF and GBNF the shared compiler's serializers over the
+/// conversion with the builtins on, which tabnas-abnf re-exports). The
+/// compiler's refusal is the `Err`: the reader reads a grammar as its rules
+/// whether or not they compile.
+fn compiled(id: &str, text: &str) -> Result<Datum, String> {
+    let pure = |spec: &tabnas_abnf::GrammarSpec| -> Result<String, String> {
+        let pure = tabnas_abnf::to_pure_spec(spec).map_err(|error| error.to_string())?;
+        Ok(tabnas_abnf::to_jsonic(
+            &pure,
+            tabnas_abnf::JsonicOptions {
+                strict: true,
+                indent: None,
+            },
+        ))
+    };
+    let json = match id {
+        "abnf" => tabnas_abnf::abnf_compile(
+            text,
+            &tabnas_abnf::AbnfCompileOptions {
+                start: None,
+                tag: None,
+                recognition: false,
+                strict: true,
+                indent: None,
+            },
+        )
+        .map_err(|error| error.to_string())?,
+        "ebnf" => {
+            let convert = tabnas_ebnf::EbnfConvertOptions {
+                builtins: true,
+                ..tabnas_ebnf::EbnfConvertOptions::default()
+            };
+            pure(&tabnas_ebnf::ebnf_convert(text, Some(&convert)).map_err(|e| e.to_string())?)?
+        }
+        "gbnf" => {
+            let convert = tabnas_gbnf::GbnfConvertOptions::new(tabnas_gbnf::ConvertOptions {
+                builtins: true,
+                ..tabnas_gbnf::ConvertOptions::default()
+            });
+            pure(&tabnas_gbnf::gbnf_convert(text, Some(&convert)).map_err(|e| e.to_string())?)?
+        }
+        other => panic!("{other} is no grammar notation"),
+    };
+    tabnas_json::parse(&json)
+        .map(|spec| Datum::from_tabnas(&spec))
+        .map_err(|error| error.to_string())
 }
 
 /// Whether a grammar spec sets the lexing GBNF's compiler gives a spec:
@@ -1575,32 +1615,47 @@ fn grammar_engine(spec: &Datum) -> Result<tabnas::Tabnas, String> {
     Ok(engine)
 }
 
-/// What a grammar spec, `source`, written in `target` as `written`
-/// recognises against what the spec that text compiles to recognises, over
-/// the document's samples: each sample is parsed with both, and both accept
-/// it or both refuse it. A render writes a spec as far as its notation can
-/// say it and recognises what it recognised (each loss list's sentence on
-/// the tree builders), but for the lexing: a spec of another notation
-/// compiles back under the target's own settings (its loss list), so across
-/// GBNF's exact lexing and the others' default one, which skips white
-/// space, a sample holding white space may be recognised otherwise, as
-/// declared; the caller holds those to the samples `test/notation-samples.json`
-/// registers for the pair. Ok is the number of samples compared and the
-/// samples recognised otherwise across the lexing.
+/// What a grammar notation's document recognises: compared, the number
+/// of samples compared and the samples recognised otherwise across the
+/// lexing; or not, where its own notation's compiler refuses it, for the
+/// reason given, since the reader reads a grammar as its rules whether or
+/// not they compile.
+enum Recognised {
+    Compared(usize, Vec<String>),
+    Uncompiled(String),
+}
+
+/// What `from`'s document, `text`, written in `target` as `written`,
+/// recognises against what it recognised, over the document's samples:
+/// each grammar is compiled by its own notation's compiler ([`compiled`])
+/// and installed on an engine of its own, each sample is parsed with both,
+/// and both accept it or both refuse it. A render writes a grammar as far
+/// as its notation can say it and recognises what it recognised, but for
+/// the lexing: a grammar of another notation compiles under the target's
+/// own settings (its loss list), so across GBNF's exact lexing and the
+/// others' default one, which skips white space, a sample holding white
+/// space may be recognised otherwise, as declared; the caller holds those
+/// to the samples `test/notation-samples.json` registers for the pair. A
+/// written grammar its own compiler refuses, where the source's compiles,
+/// is a failure.
 fn recognition(
+    from: &Format,
     target: &Format,
-    source: &Datum,
+    text: &str,
     written: &str,
     samples: &[String],
-) -> Result<(usize, Vec<String>), String> {
+) -> Result<Recognised, String> {
     if samples.is_empty() {
-        return Ok((0, Vec::new()));
+        return Ok(Recognised::Compared(0, Vec::new()));
     }
-    let back = target
-        .read(written, &Limits::default())
-        .map_err(|f| format!("the written grammar does not read back: {f}"))?;
-    let across = exact_lexing(source) != exact_lexing(&back);
-    let (read, written_engine) = (grammar_engine(source)?, grammar_engine(&back)?);
+    let source = match compiled(from.id(), text) {
+        Ok(source) => source,
+        Err(why) => return Ok(Recognised::Uncompiled(why)),
+    };
+    let back = compiled(target.id(), written)
+        .map_err(|why| format!("the written grammar does not compile: {why}"))?;
+    let across = exact_lexing(&source) != exact_lexing(&back);
+    let (read, written_engine) = (grammar_engine(&source)?, grammar_engine(&back)?);
     let mut otherwise = Vec::new();
     for sample in samples {
         let (was, is) = (
@@ -1621,7 +1676,7 @@ fn recognition(
             if is { "accepts" } else { "refuses" },
         ));
     }
-    Ok((samples.len(), otherwise))
+    Ok(Recognised::Compared(samples.len(), otherwise))
 }
 
 /// Whether the document read back from `written` in `target` is what the
@@ -1755,18 +1810,19 @@ fn size(d: &Datum) -> usize {
 }
 
 /// The size of a tree every format writes in moments, in the release run.
-/// The grammar spec RFC 3986's URI grammar compiles to holds 513,409 values
-/// (its probe tables), which take seconds into JSON and minutes into an XML
-/// embedding even in release: a workload and not a shape, so the matrix
-/// leaves a document past its bound out, and pins how few such documents
-/// there are. The runs every runtime makes by default hold a tree to a
-/// tenth of this (`DEFAULT_SIZE_BOUND`).
+/// A tree of half a million values (the grammar spec RFC 3986's URI grammar
+/// compiles to holds 513,409) takes seconds into JSON and minutes into an
+/// XML embedding even in release: a workload and not a shape, so the matrix
+/// leaves a document past its bound out, and pins how many there are. None
+/// is, since the grammar notations are read as their rules. The runs every
+/// runtime makes by default hold a tree to a tenth of this
+/// (`DEFAULT_SIZE_BOUND`).
 const SIZE_BOUND: usize = 100_000;
 
 /// The size of a tree every format writes in moments in the TypeScript
-/// command too, whose interpreter takes minutes over the 14,000 values of
-/// the grammar specs the larger GBNF examples compile to (C's, JSON's):
-/// the bound of the runs every runtime makes by default, and so of the
+/// command too, whose interpreter takes minutes over 14,000 values (the
+/// grammar specs the larger GBNF examples compile to, C's and JSON's): the
+/// bound of the runs every runtime makes by default, and so of the
 /// TypeScript and Go matrices, which read the same corpora.
 const DEFAULT_SIZE_BOUND: usize = 10_000;
 
@@ -1778,8 +1834,10 @@ const DEFAULT_SIZE_BOUND: usize = 10_000;
 /// (`samples`, by document) compared between the grammar read and the one
 /// written, each recognised by both alike but those `otherwise` registers
 /// for the pair (every pair it registers one the run compares, when
-/// `every_otherwise_met`), and the pairs of its corpus that fail for a
-/// defect of their target's package (`defective_pairs`, `DEFECTIVE_PAIRS`).
+/// `every_otherwise_met`), exactly `uncompiled` pairs whose document has
+/// samples and is one its own notation's compiler refuses, so that nothing
+/// is compared, and the pairs of its corpus that fail for a defect of
+/// their target's package (`defective_pairs`, `DEFECTIVE_PAIRS`).
 struct Bounds {
     floor: usize,
     too_deep: usize,
@@ -1793,6 +1851,7 @@ struct Bounds {
     defective_pairs: &'static [(&'static str, &'static str)],
     samples: HashMap<String, Vec<String>>,
     samples_compared: usize,
+    uncompiled: usize,
     otherwise: HashMap<String, Vec<String>>,
     every_otherwise_met: bool,
 }
@@ -1803,16 +1862,22 @@ struct Bounds {
 /// `divergent`). The matrix holds each to failing, so an entry cannot
 /// outlive the defect it records: one that passes, or that names no pair
 /// of the corpus, fails the test until it is deleted. Only the release run
-/// reads the documents. None is open. tabnas-yaml 0.5.28 fixed the last
-/// source's defect, with transduce's hold on its pruning: the fourteen
-/// pairs of `yaml/anchors-aliases.tsv:37`, whose alias to an anchored
-/// sequence used as a key read through YAML's part as the text of the
-/// sequence emptied behind the stream (tabnas/yaml#138). tabnas-ebnf 0.1.18
-/// fixed the last target's, `abnf/alignment-abnf-ast.tsv:28 (abnf) ->
-/// ebnf`, whose bounded repetition (`*200"a"`) its render wrote as 200
-/// nested optional groups, past what its own reader reads; the render now
-/// refuses such a repetition, as its loss list declares.
-const DEFECTIVE_PAIRS: [(&str, &str); 0] = [];
+/// reads the documents. One is open: ABNF's `a = b a / "x"`, `b = c`,
+/// `c = "y" /`, which EBNF writes with `c ::= ( "y" )?`, its spelling of
+/// an empty alternative, recognises `y x` and `y y x` with the grammar
+/// ABNF compiles and refuses both with the one EBNF compiles, since the
+/// shared compiler compiles a left recursion behind a rule that matches
+/// nothing only through an option to a grammar that accepts nothing
+/// (tabnas/bnf#123). tabnas-yaml 0.5.28 fixed the last source's defect,
+/// with transduce's hold on its pruning: the fourteen pairs of
+/// `yaml/anchors-aliases.tsv:37`, whose alias to an anchored sequence used
+/// as a key read through YAML's part as the text of the sequence emptied
+/// behind the stream (tabnas/yaml#138).
+const DEFECTIVE_PAIRS: [(&str, &str); 1] = [(
+    "abnf/alignment-abnf-ast.tsv:16 (abnf) -> ebnf",
+    "tabnas/bnf#123: a left recursion behind a rule that matches nothing only through an option \
+     compiles to a grammar that accepts nothing",
+)];
 
 /// The cross product of `docs` and every format: each document read with
 /// its format's grammar, written in every format, and read back under the
@@ -1832,6 +1897,7 @@ fn matrix(docs: Vec<(String, &'static str, String)>, bounds: Bounds) {
     let mut refusals: Vec<String> = Vec::new();
     let mut grammars_written = 0;
     let mut samples_compared = 0;
+    let mut uncompiled = Vec::new();
     let mut declared_otherwise = Vec::new();
     let mut otherwise_met = HashSet::new();
     let mut diverged = Vec::new();
@@ -1904,7 +1970,14 @@ fn matrix(docs: Vec<(String, &'static str, String)>, bounds: Bounds) {
                     grammars_written += 1;
                     let samples = bounds.samples.get(name).map_or(&[][..], Vec::as_slice);
                     check(from, to, source, &written).and_then(|()| {
-                        let (compared, otherwise) = recognition(to, source, &written, samples)?;
+                        let (compared, otherwise) =
+                            match recognition(from, to, text, &written, samples)? {
+                                Recognised::Compared(compared, otherwise) => (compared, otherwise),
+                                Recognised::Uncompiled(why) => {
+                                    uncompiled.push(format!("{pair}: {why}"));
+                                    return Ok(());
+                                }
+                            };
                         samples_compared += compared;
                         let registered = bounds.otherwise.get(&pair).map_or(&[][..], Vec::as_slice);
                         if otherwise != registered {
@@ -1978,6 +2051,9 @@ fn matrix(docs: Vec<(String, &'static str, String)>, bounds: Bounds) {
              test/notation-samples.json registers: {line} holding white space"
         );
     }
+    for line in &uncompiled {
+        eprintln!("no recognition to compare, its own compiler refusing the document: {line}");
+    }
     for (doc, code) in &read_whole {
         eprintln!("read with --whole, which its part cannot stream: {doc}: {code:?}");
     }
@@ -1993,7 +2069,7 @@ fn matrix(docs: Vec<(String, &'static str, String)>, bounds: Bounds) {
         .count();
     let unwritable = refusals
         .iter()
-        .filter(|r| r.contains(": the grammar spec cannot be written as "))
+        .filter(|r| r.contains(": the grammar cannot be written as "))
         .count();
     let expr_refused = refusals
         .iter()
@@ -2007,7 +2083,8 @@ fn matrix(docs: Vec<(String, &'static str, String)>, bounds: Bounds) {
          ({schema_only} by a schema-only target, {unwritable} by a grammar notation's render, \
          {expr_refused} by expr's render, {} by Semantic Versioning's embedding); \
          {grammars_written} grammars written in a grammar notation, {samples_compared} of their \
-         samples compared, {} pairs recognising some otherwise across the lexing, as registered",
+         samples compared, {} pairs recognising some otherwise across the lexing, as registered, \
+         {} pairs with samples whose document its own compiler refuses",
         docs.len(),
         refused_sources.len(),
         too_deep.len(),
@@ -2018,6 +2095,7 @@ fn matrix(docs: Vec<(String, &'static str, String)>, bounds: Bounds) {
         refusals.len(),
         refusals.len() - schema_only - unwritable - expr_refused,
         declared_otherwise.len(),
+        uncompiled.len(),
     );
     let left_out = refused_sources.len() + too_deep.len() + too_large.len() + defective.len();
     assert!(
@@ -2058,6 +2136,12 @@ fn matrix(docs: Vec<(String, &'static str, String)>, bounds: Bounds) {
         repaired.is_empty(),
         "the registered defective pairs {repaired:?} translate as the conventions say: delete their \
          entries"
+    );
+    assert_eq!(
+        uncompiled.len(),
+        bounds.uncompiled,
+        "{} pairs with samples have a document its own compiler refuses (above)",
+        uncompiled.len()
     );
     assert!(
         samples_compared >= bounds.samples_compared,
@@ -2120,6 +2204,7 @@ fn every_document_translates_into_every_format() {
         defective_pairs: &[],
         samples: HashMap::new(),
         samples_compared: 0,
+        uncompiled: 0,
         otherwise: HashMap::new(),
         every_otherwise_met: false,
     };
@@ -2143,13 +2228,14 @@ fn every_fixture_of_every_format_translates_into_every_format() {
         floor: 4000,
         too_deep: 2,
         size: SIZE_BOUND,
-        too_large: 1,
+        too_large: 0,
         whole: 85,
-        refusals: 30697,
-        grammars_written: 132,
+        refusals: 31171,
+        grammars_written: 450,
         defective_pairs: &DEFECTIVE_PAIRS,
         samples,
-        samples_compared: 456,
+        samples_compared: 543,
+        uncompiled: 0,
         otherwise,
         every_otherwise_met: true,
     };

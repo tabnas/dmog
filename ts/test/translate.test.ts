@@ -14,11 +14,11 @@
 // schema-only target (one that writes a schema's tree with no embedding
 // into it: C, CSS, PGN, proto and the grammar notations ABNF, EBNF and
 // GBNF) refuses another format's tree, a grammar notation refuses a
-// grammar spec it has no form for, naming what it met, and Semantic
+// grammar it has no form for, naming the rule and what it met, and Semantic
 // Versioning's embedding refuses a tree that is not a version. A refusal of
 // another kind, or a document written where a refusal is declared, is a
-// failure. The grammar notations share a schema, the grammar spec their
-// compilers emit, so each writes the others' documents.
+// failure. The grammar notations share a schema, a grammar's rules in
+// source order (`grammar-rules`), so each writes the others' documents.
 //
 // The corpus is the sibling checkouts': transduce's fixtures (aless's: a
 // document of every format but C, CSS, expressions, PGN, proto, Semantic
@@ -39,7 +39,10 @@ import assert from 'node:assert'
 import { readFileSync, readdirSync } from 'node:fs'
 import { extname, join } from 'node:path'
 
+import { abnfCompile, toJsonic, toPureSpec } from '@tabnas/abnf'
 import { translate as alchemyTranslate } from '@tabnas/alchemy'
+import { ebnfConvert } from '@tabnas/ebnf'
+import { gbnfConvert } from '@tabnas/gbnf'
 import * as expr from '@tabnas/expr'
 import { jsonic } from '@tabnas/jsonic'
 import { Tabnas } from '@tabnas/parser'
@@ -242,21 +245,22 @@ type Expect =
   | { written: true; unless?: { code: string; reason: string } }
   | { written: false; code: string; reason: string }
 
-// Whether a format is a grammar notation: one whose documents read as the
-// grammar spec the tabnas BNF compiler emits, which each notation's render
-// writes back.
+// Whether a format is a grammar notation: one whose documents read as a
+// grammar's rules in source order (`grammar-rules`, tabnas/bnf's), which
+// each notation's render writes back.
 function grammarNotation(format: Format): boolean {
-  return 'grammar-spec' === format.part.schema
+  return 'grammar-rules' === format.part.schema
 }
 
 // What `from`'s document, read as `source`, into `to` is held to. A
 // schema-only target (one that writes from a tree, with a schema and no
 // embed: C, CSS, PGN, proto and the grammar notations) refuses a tree of
 // another schema before any output, as alchemy's composition declares; a
-// grammar notation's render writes a grammar spec, any notation's, unless
-// it has no form for something in it, which it refuses naming what it met,
-// as its loss list declares (an action, a negated class in ABNF, the
-// engine's own tokens in GBNF, ...); Semantic Versioning's embedding
+// grammar notation's render writes a grammar's rules, any notation's,
+// unless it has no form for something in them, which it refuses naming the
+// rule and what it met, as its loss list declares (prose, a negated class
+// in ABNF, the engine's own tokens in GBNF, a start the grammar does not
+// define, ...); Semantic Versioning's embedding
 // refuses a tree that is not a version, as its part declares; and expr's
 // render refuses a list led by an object whose `src` its reader would take
 // for the list's operator, where that is no default operator's source text
@@ -284,7 +288,7 @@ function expect(from: Format, to: Format, source: Datum): Expect {
       written: true,
       unless: {
         code: 'TARGET_VALUE_UNREPRESENTABLE',
-        reason: `the grammar spec cannot be written as ${to.id.toUpperCase()}: `,
+        reason: `the grammar cannot be written as ${to.id.toUpperCase()}: `,
       },
     }
   }
@@ -1145,51 +1149,60 @@ function feedReading(d: Datum): Datum {
   return obj(out)
 }
 
-// Whether a grammar spec written in a grammar notation reads back as the
+// Whether a grammar written in a grammar notation reads back as the
 // notations' conventions say: undefined when it does, why not when it does
-// not. A render writes the spec anew, as far as its notation can say it,
-// and its contract is the round trip (each render's header): the text
-// compiles back to the spec it was written from, but where its loss list
-// says it compiles back to another (a spec whose alternatives the compiler
-// reordered, or whose left recursion ran through another rule), and a spec
-// compiled from another notation, which compiles back under the target's
-// own settings (its group tag, its lexing, its spelling of the other
-// notation's terminals and core rules) and recognises what it recognised.
-// So a spec of the target's own notation reads back as it was, or as one
-// the render writes again as the same text; and one of another notation
-// reads back as a spec the render writes again as text that reads back as
-// that spec.
+// not. A render writes a grammar's rules anew, as far as its notation can
+// say them, and its contract is the round trip (each render's header): a
+// tree of the target's own notation reads back as it was; one of another
+// notation, written as the target spells what the source spells otherwise
+// (its loss list), reads back as a tree the render writes again as the
+// same text.
 function checkGrammar(from: Format, target: Format, source: Datum, written: string): string | undefined {
-  const limits = Limits.default()
   let back: Datum
   try {
-    back = target.read(written, limits)
+    back = target.read(written, Limits.default())
   } catch (err) {
     return `the written grammar does not read back: ${why(err)}`
   }
-  if (from.id === target.id && same(source, back)) return undefined
+  if (from.id === target.id) {
+    return same(source, back) ? undefined : `read back as ${toText(back)}, where ${toText(source)} was written`
+  }
   let again: string
   try {
     again = translateText(target, target, written)
   } catch (err) {
-    return `the spec it reads back as is not written again: ${why(err)}; it was written as ${JSON.stringify(written)}`
+    return `the grammar it reads back as is not written again: ${why(err)}; it was written as ${JSON.stringify(written)}`
   }
-  if (from.id === target.id) {
-    return again === written
-      ? undefined
-      : `reads back as another spec, which is written again as ${JSON.stringify(again)}, where ` +
-          `${JSON.stringify(written)} was written`
-  }
-  let backAgain: Datum
-  try {
-    backAgain = target.read(again, limits)
-  } catch (err) {
-    return `the grammar written again does not read back: ${why(err)}`
-  }
-  return same(back, backAgain)
+  return again === written
     ? undefined
-    : `reads back as a spec that is written again as ${JSON.stringify(again)}, which reads back as another, ` +
-        `where ${JSON.stringify(written)} was written`
+    : `reads back as a grammar that is written again as ${JSON.stringify(again)}, where ` +
+        `${JSON.stringify(written)} was written`
+}
+
+// The grammar spec a grammar notation's document compiles to, with its own
+// notation's compiler, as that package writes it for a host that installs
+// a grammar: the pure-data spec, recognition off, so that the tree
+// builders stay, as strict JSON, parsed (abnfCompile for ABNF, and for
+// EBNF and GBNF the shared compiler's serializers over the conversion with
+// the builtins on, which @tabnas/abnf exports). The compiler's refusal is
+// thrown: the reader reads a grammar as its rules whether or not they
+// compile.
+function compiled(id: string, text: string): Datum {
+  let json: string
+  switch (id) {
+    case 'abnf':
+      json = abnfCompile(text, { recognition: false, strict: true })
+      break
+    case 'ebnf':
+      json = toJsonic(toPureSpec(ebnfConvert(text, { builtins: true })), { strict: true })
+      break
+    case 'gbnf':
+      json = toJsonic(toPureSpec(gbnfConvert(text, { builtins: true })), { strict: true })
+      break
+    default:
+      throw new Error(`${id} is no grammar notation`)
+  }
+  return format('json').read(json, Limits.default())
 }
 
 // Whether a grammar spec sets the lexing GBNF's compiler gives a spec:
@@ -1220,31 +1233,40 @@ function accepts(engine: Tabnas, sample: string): boolean {
   }
 }
 
-// What a grammar spec, `source`, written in `target` as `written`
-// recognises against what the spec that text compiles to recognises, over
-// the document's samples: each sample is parsed with both, and both accept
-// it or both refuse it. A render writes a spec as far as its notation can
-// say it and recognises what it recognised (each loss list's sentence on
-// the tree builders), but for the lexing: a spec of another notation
-// compiles back under the target's own settings (its loss list), so across
-// GBNF's exact lexing and the others' default one, which skips white
-// space, a sample holding white space may be recognised otherwise, as
-// declared; the caller holds those to the samples
+// What `from`'s document, `text`, written in `target` as `written`,
+// recognises against what it recognised, over the document's samples: each
+// grammar is compiled by its own notation's compiler (`compiled`) and
+// installed on an engine of its own, each sample is parsed with both, and
+// both accept it or both refuse it. A render writes a grammar as far as its
+// notation can say it and recognises what it recognised, but for the
+// lexing: a grammar of another notation compiles under the target's own
+// settings (its loss list), so across GBNF's exact lexing and the others'
+// default one, which skips white space, a sample holding white space may be
+// recognised otherwise, as declared; the caller holds those to the samples
 // `test/notation-samples.json` registers for the pair. The number of
-// samples compared and the samples recognised otherwise across the lexing,
-// or why not.
+// samples compared and the samples recognised otherwise across the lexing;
+// `uncompiled`, where the document's own compiler refuses it, since the
+// reader reads a grammar as its rules whether or not they compile; or why
+// not, a written grammar its own compiler refuses among them.
 function recognition(
+  from: Format,
   target: Format,
-  source: Datum,
+  text: string,
   written: string,
   samples: ReadonlyArray<string>,
-): { compared: number; otherwise: string[] } | string {
+): { compared: number; otherwise: string[] } | { uncompiled: string } | string {
   if (0 === samples.length) return { compared: 0, otherwise: [] }
+  let source: Datum
+  try {
+    source = compiled(from.id, text)
+  } catch (err) {
+    return { uncompiled: why(err) }
+  }
   let back: Datum
   try {
-    back = target.read(written, Limits.default())
+    back = compiled(target.id, written)
   } catch (err) {
-    return `the written grammar does not read back: ${why(err)}`
+    return `the written grammar does not compile: ${why(err)}`
   }
   const across = exactLexing(source) !== exactLexing(back)
   let read: Tabnas
@@ -1405,24 +1427,27 @@ function size(d: Datum): number {
   return 1
 }
 
-// The size of a tree every format writes in moments. The grammar spec RFC
-// 3986's URI grammar compiles to holds 513,409 values (its probe tables),
-// which take seconds into JSON and minutes into an XML embedding, and this
-// command's interpreter takes minutes over the 14,000 values the larger
-// GBNF examples compile to (C's, JSON's): a workload and not a shape, so
-// the matrix leaves a document past this out, and pins how few such
-// documents there are (the Rust crate's release run, faster, reads trees
-// ten times this size).
+// The size of a tree every format writes in moments. A tree of half a
+// million values (the grammar spec RFC 3986's URI grammar compiles to holds
+// 513,409) takes seconds into JSON and minutes into an XML embedding, and
+// this command's interpreter takes minutes over 14,000 (the grammar specs
+// the larger GBNF examples compile to, C's and JSON's): a workload and not
+// a shape, so the matrix leaves a document past this out, and pins how
+// many there are. None is, since the grammar notations are read as their
+// rules (the Rust crate's release run, faster, reads trees ten times this
+// size).
 const SIZE_BOUND = 10_000
 
 // What a run of the matrix is held to: at least `floor` documents, at most
 // `tooDeep` of them deeper than every format reads and `tooLarge` larger
 // than every format writes in moments, at least `refusals` pairs refused as
 // their target declares, at least `grammarsWritten` grammars written in a
-// grammar notation, and at least `samplesCompared` samples of theirs
+// grammar notation, at least `samplesCompared` samples of theirs
 // (NOTATION's `samples`) compared between the grammar read and the one
 // written, each recognised by both alike but those NOTATION's `otherwise`
-// registers for the pair.
+// registers for the pair, and exactly `uncompiled` pairs whose document
+// has samples and is one its own notation's compiler refuses, so that
+// nothing is compared.
 type Bounds = {
   floor: number
   tooDeep: number
@@ -1433,6 +1458,7 @@ type Bounds = {
   refusals: number
   grammarsWritten: number
   samplesCompared: number
+  uncompiled: number
 }
 
 // The cross product of `docs` and every format: each document read with
@@ -1454,6 +1480,7 @@ function matrix(docs: Doc[], bounds: Bounds): void {
   const readWhole = new Map<string, string>()
   let grammarsWritten = 0
   let samplesCompared = 0
+  const uncompiled: string[] = []
   const declaredOtherwise: string[] = []
   let pairs = 0
   const started = Date.now()
@@ -1530,8 +1557,9 @@ function matrix(docs: Doc[], bounds: Bounds): void {
         try {
           failure = check(from, to, source as Datum, written)
           if (undefined === failure && undefined !== held.unless) {
-            const recognised = recognition(to, source as Datum, written, NOTATION.samples[name] ?? [])
+            const recognised = recognition(from, to, text, written, NOTATION.samples[name] ?? [])
             if ('string' === typeof recognised) failure = recognised
+            else if ('uncompiled' in recognised) uncompiled.push(`${pair}: ${recognised.uncompiled}`)
             else {
               samplesCompared += recognised.compared
               const registered = NOTATION.otherwise[pair] ?? []
@@ -1562,6 +1590,9 @@ function matrix(docs: Doc[], bounds: Bounds): void {
   for (const line of tooDeep) process.stderr.write(`deeper than every format reads: ${line}\n`)
   for (const line of tooLarge) process.stderr.write(`larger than ${SIZE_BOUND} values: ${line}\n`)
   for (const [doc, code] of readWhole) process.stderr.write(`read with --whole, which its part cannot stream: ${doc}: ${code}\n`)
+  for (const line of uncompiled) {
+    process.stderr.write(`no recognition to compare, its own compiler refusing the document: ${line}\n`)
+  }
   for (const line of declaredOtherwise) {
     process.stderr.write(
       'recognised otherwise across the lexing, as the loss lists declare and test/notation-samples.json ' +
@@ -1570,7 +1601,7 @@ function matrix(docs: Doc[], bounds: Bounds): void {
   }
   for (const line of failures) process.stderr.write(`FAIL ${line}\n`)
   const schemaOnly = refusals.filter((r) => r.includes('schema_only:')).length
-  const unwritable = refusals.filter((r) => r.includes(': the grammar spec cannot be written as ')).length
+  const unwritable = refusals.filter((r) => r.includes(': the grammar cannot be written as ')).length
   const exprRefused = refusals.filter((r) => r.includes(': the object at ')).length
   process.stderr.write(
     `matrix: ${pairs} pairs of ${docs.length} documents; ${refusedSources.length} refused by their own ` +
@@ -1581,7 +1612,7 @@ function matrix(docs: Doc[], bounds: Bounds): void {
       `${refusals.length - schemaOnly - unwritable - exprRefused} by Semantic ` +
       `Versioning's embedding); ${grammarsWritten} grammars written in a grammar notation, ${samplesCompared} of ` +
       `their samples compared, ${declaredOtherwise.length} pairs recognising some otherwise across the lexing, ` +
-      `as registered\n`,
+      `as registered, ${uncompiled.length} pairs with samples whose document its own compiler refuses\n`,
   )
   const leftOut = refusedSources.length + tooDeep.length + tooLarge.length + defective.length
   assert.ok(
@@ -1600,6 +1631,11 @@ function matrix(docs: Doc[], bounds: Bounds): void {
   assert.ok(
     refusals.length >= bounds.refusals,
     `${refusals.length} pairs are refused as their target declares, fewer than the ${bounds.refusals} the corpus gives`,
+  )
+  assert.equal(
+    uncompiled.length,
+    bounds.uncompiled,
+    `${uncompiled.length} pairs with samples have a document its own compiler refuses (above)`,
   )
   assert.ok(
     samplesCompared >= bounds.samplesCompared,
@@ -1628,7 +1664,16 @@ describe('translate', () => {
   // transduce's fixtures, one document per format at least, and the
   // documents of JSONTestSuite every JSON parser must accept.
   it('every document translates into every format', () => {
-    matrix(corpus(), { floor: 151, tooDeep: 0, tooLarge: 4, whole: 11, refusals: 1084, grammarsWritten: 36, samplesCompared: 236 })
+    matrix(corpus(), {
+      floor: 151,
+      tooDeep: 0,
+      tooLarge: 0,
+      whole: 11,
+      refusals: 1107,
+      grammarsWritten: 45,
+      samplesCompared: 364,
+      uncompiled: 0,
+    })
   })
 
   // Each registered reader defect still stands: a version past 2^53 - 1

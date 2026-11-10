@@ -725,12 +725,12 @@ fn formats_lists_the_formats_translate_reads_and_writes() {
         schema_only,
         ["abnf", "c", "css", "ebnf", "gbnf", "pgn", "proto"]
     );
-    // The grammar notations share a schema, the grammar spec their
-    // compilers emit, so each writes the others' documents.
+    // The grammar notations share a schema, a grammar's rules in source
+    // order, so each writes the others' documents.
     let schema =
         |id: &str| formats.iter().find(|f| f["id"] == id).expect("a format")["schema"].clone();
     for id in ["abnf", "ebnf", "gbnf"] {
-        assert_eq!(schema(id), "grammar-spec", "{id}");
+        assert_eq!(schema(id), "grammar-rules", "{id}");
     }
     assert_eq!(schema("c"), "c");
     // Why a format's documents are read whole, where its manifest says:
@@ -739,15 +739,13 @@ fn formats_lists_the_formats_translate_reads_and_writes() {
     // time, nor CSS's, which streams a statement at a time, nor INI's and
     // TOML's, which stream a member at a time, nor feed's, which streams
     // an entry at a time, nor proto's, which streams a declaration at a
-    // time, nor Markdown's, which streams a block at a time, each through
-    // the part it ships.
+    // time, nor Markdown's, which streams a block at a time, nor the
+    // grammar notations', which stream a rule at a time, each through the
+    // part it ships.
     let by_id = |id: &str| formats.iter().find(|f| f["id"] == id).expect("a format");
     for (id, manifest) in [
-        ("abnf", tabnas_abnf::translate().unwrap().manifest),
         ("c", tabnas_c::translate().unwrap().manifest),
-        ("ebnf", tabnas_ebnf::translate().unwrap().manifest),
         ("expr", tabnas_expr::translate().unwrap().manifest),
-        ("gbnf", tabnas_gbnf::translate().unwrap().manifest),
         ("semver", tabnas_semver::translate().unwrap().manifest),
     ] {
         let manifest: serde_json::Value = serde_json::from_str(manifest).expect("JSON");
@@ -766,6 +764,10 @@ fn formats_lists_the_formats_translate_reads_and_writes() {
     assert_eq!(by_id("proto")["schema"], "proto-ast");
     assert!(by_id("markdown")["whole"].is_null());
     assert_eq!(by_id("markdown")["transduce"], "markdown-transduce");
+    for id in ["abnf", "ebnf", "gbnf"] {
+        assert!(by_id(id)["whole"].is_null(), "{id}");
+        assert_eq!(by_id(id)["transduce"], format!("{id}-transduce"), "{id}");
+    }
     let keys: Vec<&str> = by_id("css")
         .as_object()
         .expect("an object")
@@ -793,11 +795,11 @@ fn formats_lists_the_formats_translate_reads_and_writes() {
 /// What a target declares it cannot carry it refuses before writing
 /// anything, status 1: a schema-only target refuses another format's tree
 /// when the route is composed, before the input is read, a grammar
-/// notation's render refuses a grammar spec it has no form for, naming
-/// what it met, and Semantic Versioning's embedding refuses a tree that is
-/// not a version. Each takes its own format's documents, and a program that
-/// makes its tree; a grammar notation takes the others' too. The TypeScript
-/// and Go commands write the same.
+/// notation's render refuses a grammar it has no form for, naming the
+/// rule and what it met, and Semantic Versioning's embedding refuses a
+/// tree that is not a version. Each takes its own format's documents, and
+/// a program that makes its tree; a grammar notation takes the others'
+/// too. The TypeScript and Go commands write the same.
 #[test]
 fn translate_refuses_what_a_target_cannot_carry() {
     let out = run(
@@ -842,7 +844,7 @@ fn translate_refuses_what_a_target_cannot_carry() {
             "output": "none"
         })
     );
-    for (to, schema) in [("abnf", "grammar-spec"), ("c", "c")] {
+    for (to, schema) in [("abnf", "grammar-rules"), ("c", "c")] {
         let out = run(
             &["translate", "--from", "json", "--to", to, "-"],
             Some("{}"),
@@ -873,10 +875,10 @@ fn translate_refuses_what_a_target_cannot_carry() {
         fail_json(&out),
         serde_json::json!({
             "code": "TARGET_VALUE_UNREPRESENTABLE",
-            "message": "the grammar spec cannot be written as EBNF: the case-insensitive literal \"hi\" \
-                        is no one W3C EBNF terminal: it would be written as [hH] [iI], and this front \
-                        end reads whitespace between terminals",
-            "row": 243,
+            "message": "the grammar cannot be written as EBNF: the rule \"greet\" holds the \
+                        case-insensitive literal \"hi\", which holds a letter beside another \
+                        character, and no one EBNF terminal spells",
+            "row": 83,
             "col": 3,
             "file": "tabnas-ebnf/alchemy/render.alc",
             "output": "none"
@@ -936,7 +938,7 @@ fn translate_refuses_what_a_target_cannot_carry() {
         (
             &["--from", "ebnf", "--to", "gbnf", "-"][..],
             "top ::= \"a\" b\nb ::= \"c\"\n",
-            "root ::= top\ntop ::= \"a\" b\nb ::= \"c\"\n",
+            "top ::= \"a\" b\nb ::= \"c\"\nroot ::= top\n",
         ),
         (
             &["--from", "abnf", "--to", "ebnf", "-"][..],
@@ -958,9 +960,10 @@ fn translate_refuses_what_a_target_cannot_carry() {
 /// which `parse_value` makes), and a JSON5 document holding no value with
 /// json5's own codes (`tabnas_json5::check_reader`, which `parse_reader_with`
 /// makes), not the engine's `unexpected`, from a file and from standard
-/// input; a grammar notation's document its compiler refuses is refused
-/// with the compiler's message. The TypeScript and Go commands write the
-/// same, but that TypeScript's json5 error carries no position.
+/// input. A grammar notation's document is read as its rules, which no
+/// compiler has seen, so one its compiler would refuse is read as it is.
+/// The TypeScript and Go commands write the same, but that TypeScript's
+/// json5 error carries no position.
 #[test]
 fn translate_checks_what_a_packages_parse_checks_first() {
     let deep = format!(
@@ -1012,25 +1015,22 @@ fn translate_checks_what_a_packages_parse_checks_first() {
     );
     assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
     assert_eq!(stdout(&out), "{\"a\":1}\n");
+    // A grammar notation's document is read as its rules in source order:
+    // a rule referencing one the grammar does not define is read as it is,
+    // and so is a left recursion through a cycle of twenty rules, each with
+    // two recursive alternates, which tabnas-bnf's elimination refuses
+    // past 512 alternatives.
     let out = run(
         &["translate", "--from", "abnf", "--to", "json", "-"],
         Some("a = \"b\" c\n"),
     );
-    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
-    assert_eq!(stdout(&out), "");
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
     assert_eq!(
-        fail_json(&out),
-        serde_json::json!({
-            "code": "INPUT_INVALID",
-            "message": "abnf: rule 'a' references unknown rule 'c'",
-            "output": "none"
-        })
+        stdout(&out),
+        "{\"type\":\"grammar\",\"rules\":[{\"type\":\"rule\",\"name\":\"a\",\"alternatives\":\
+         [[{\"type\":\"literal\",\"text\":\"b\",\"caseSensitive\":false},\
+         {\"type\":\"reference\",\"name\":\"c\"}]]}]}\n"
     );
-    // A left recursion through a cycle of twenty rules, each with two
-    // recursive alternates, would make tabnas-bnf's elimination substitute
-    // 2^20 alternates. tabnas-bnf bounds what a rule gains at 512
-    // alternatives, so the grammar is refused in moments rather than
-    // aborting.
     let k = 20;
     let mut cycle = String::from("root ::= r0\n");
     for i in 0..k {
@@ -1043,18 +1043,10 @@ fn translate_checks_what_a_packages_parse_checks_first() {
         &["translate", "--from", "gbnf", "--to", "json", "-"],
         Some(&cycle),
     );
-    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
-    assert_eq!(stdout(&out), "");
-    assert_eq!(
-        fail_json(&out),
-        serde_json::json!({
-            "code": "INPUT_INVALID",
-            "message": "gbnf: rule 'r11' exceeds the left-recursion expansion limit of 512 \
-                        alternatives while inlining 'r12', which begins 2 of its alternatives \
-                        and has 511 of its own. Factor 'r12' out of the alternatives it begins.",
-            "output": "none"
-        })
-    );
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    let tree: serde_json::Value = serde_json::from_str(&stdout(&out)).expect("JSON");
+    assert_eq!(tree["start"], "root");
+    assert_eq!(tree["rules"].as_array().map(Vec::len), Some(k + 1));
 }
 
 /// INPUT that cannot be read exits 2 as `cannot read`, on every route a
@@ -1206,7 +1198,7 @@ fn run_takes_a_grammar_whose_rule_passes_the_program_reads() {
     assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
     assert_eq!(stdout(&out), "");
     assert_eq!(fail_json(&out)["code"], "INPUT_INVALID");
-    for name in ["abnf", "nope"] {
+    for name in ["expr", "nope"] {
         let out = run(&["run", "--grammar", name, program, "-"], Some(doc));
         assert_eq!(out.status.code(), Some(2), "{}", stderr(&out));
         let fail = fail_json(&out);
@@ -1214,9 +1206,9 @@ fn run_takes_a_grammar_whose_rule_passes_the_program_reads() {
         assert_eq!(
             fail["message"],
             format!(
-                "--grammar takes a format whose documents are parsed (css, csv, feed, ini, json, \
-                 json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, toml, xml, yaml or \
-                 zon), not {name:?}"
+                "--grammar takes a format whose documents are parsed (abnf, css, csv, ebnf, feed, \
+                 gbnf, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, toml, \
+                 xml, yaml or zon), not {name:?}"
             )
         );
     }

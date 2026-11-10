@@ -66,10 +66,11 @@ func TestFormatsPrintsTheRegistryAsJSON(t *testing.T) {
 	if o.status != 0 || o.stderr != "" || o.stdout != translate.FormatsJSON()+"\n" || strings.Count(o.stdout, "\n") != 1 {
 		t.Fatalf("%+v", o)
 	}
-	// Each format's fields in their order, abnf's whole up to its loss.
-	// Its whole is its manifest's sentence, null where it gives none.
-	if !strings.HasPrefix(o.stdout, `[{"id":"abnf","reads":["tree"],"writes":"tree","root":"object","schema":"grammar-spec","whole":`+
-		wholeJSON(t, tabnasabnf.Translate().Manifest)+`,"lift":null,"embed":null,"render":"abnf-render","transduce":null,"loss":["`) {
+	// Each format's fields in their order, abnf's up to its loss. Its whole
+	// is its manifest's sentence, null where it gives none, as abnf's does,
+	// which streams a rule at a time through its transducer part.
+	if !strings.HasPrefix(o.stdout, `[{"id":"abnf","reads":["tree"],"writes":"tree","root":"object","schema":"grammar-rules","whole":`+
+		wholeJSON(t, tabnasabnf.Translate().Manifest)+`,"lift":null,"embed":null,"render":"abnf-render","transduce":"abnf-transduce","loss":["`) {
 		t.Errorf("%s", o.stdout)
 	}
 	var formats []map[string]any
@@ -120,10 +121,10 @@ func TestFormatsPrintsTheRegistryAsJSON(t *testing.T) {
 	if strings.Join(schemaOnly, " ") != "abnf c css ebnf gbnf pgn proto" {
 		t.Errorf("%v", schemaOnly)
 	}
-	// The grammar notations share a schema, the grammar spec their
-	// compilers emit, so each writes the others' documents.
+	// The grammar notations share a schema, a grammar's rules in source
+	// order, so each writes the others' documents.
 	for _, id := range []string{"abnf", "ebnf", "gbnf"} {
-		if byID[id]["schema"] != "grammar-spec" {
+		if byID[id]["schema"] != "grammar-rules" {
 			t.Errorf("%s: %v", id, byID[id])
 		}
 	}
@@ -134,14 +135,11 @@ func TestFormatsPrintsTheRegistryAsJSON(t *testing.T) {
 	// every format transduce's Rust and TypeScript lists leave out, each in
 	// the sentence its manifest gives. PGN's says nothing: it streams a
 	// game at a time through its transducer part, here as there, and so
-	// do proto's, a declaration at a time, and Markdown's, a block at a
-	// time.
+	// do proto's, a declaration at a time, Markdown's, a block at a time,
+	// and the grammar notations', a rule at a time.
 	for id, manifest := range map[string]string{
-		"abnf":   tabnasabnf.Translate().Manifest,
 		"c":      tabnasc.Translate().Manifest,
-		"ebnf":   tabnasebnf.Translate().Manifest,
 		"expr":   tabnasexpr.Translate().Manifest,
-		"gbnf":   tabnasgbnf.Translate().Manifest,
 		"semver": tabnassemver.Translate().Manifest,
 	} {
 		var m struct {
@@ -179,9 +177,18 @@ func TestFormatsPrintsTheRegistryAsJSON(t *testing.T) {
 			t.Errorf("%s: whole %v, its manifest's %q", id, byID[id]["whole"], *m.Translate.Whole)
 		}
 	}
-	for _, id := range []string{"json", "markdown", "pgn", "proto"} {
+	for _, id := range []string{"abnf", "ebnf", "gbnf", "json", "markdown", "pgn", "proto"} {
 		if byID[id]["whole"] != nil {
 			t.Errorf("%s: whole %v", id, byID[id]["whole"])
+		}
+	}
+	for id, entry := range map[string]string{
+		"abnf": tabnasabnf.Translate().Transduce.Entry,
+		"ebnf": tabnasebnf.Translate().Transduce.Entry,
+		"gbnf": tabnasgbnf.Translate().Transduce.Entry,
+	} {
+		if byID[id]["transduce"] != entry {
+			t.Errorf("%s: %v", id, byID[id])
 		}
 	}
 	if byID["proto"]["transduce"] != tabnasproto.Translate().Transduce.Entry || byID["proto"]["schema"] != "proto-ast" {
@@ -359,9 +366,9 @@ func TestTranslateRunsAProgramFirst(t *testing.T) {
 // What a target declares it cannot carry it refuses before writing
 // anything, status 1: a schema-only target refuses another format's tree
 // when the route is composed, before the input is read, a grammar
-// notation's render refuses a grammar spec it has no form for, naming what
-// it met, and Semantic Versioning's embedding refuses a tree that is not a
-// version. Each takes its own format's documents, and a program that makes
+// notation's render refuses a grammar it has no form for, naming the rule
+// and what it met, and Semantic Versioning's embedding refuses a tree that
+// is not a version. Each takes its own format's documents, and a program that makes
 // its tree; a grammar notation takes the others' too.
 func TestTranslateRefusesWhatATargetCannotCarry(t *testing.T) {
 	f := wantFailure(t, invoke(t, []string{"translate", "--from", "json", "--to", "css", "/nonexistent/input.json"}, nil),
@@ -377,7 +384,7 @@ func TestTranslateRefusesWhatATargetCannotCarry(t *testing.T) {
 		"or one string of them" || f["row"] != 48.0 || f["col"] != 3.0 || f["file"] != "tabnas-semver/alchemy/embed.alc" {
 		t.Errorf("%v", f)
 	}
-	for _, c := range []struct{ to, schema string }{{"abnf", "grammar-spec"}, {"c", "c"}} {
+	for _, c := range []struct{ to, schema string }{{"abnf", "grammar-rules"}, {"c", "c"}} {
 		f = wantFailure(t, invoke(t, []string{"translate", "--from", "json", "--to", c.to, "-"}, text("{}")),
 			1, "TARGET_VALUE_UNREPRESENTABLE", "")
 		if f["message"] != "schema_only: "+c.to+" writes a "+c.schema+" tree, the tree its own documents read as, and "+
@@ -387,9 +394,9 @@ func TestTranslateRefusesWhatATargetCannotCarry(t *testing.T) {
 	}
 	f = wantFailure(t, invoke(t, []string{"translate", "--from", "abnf", "--to", "ebnf", "-"}, text("greet = \"hi\"\n")),
 		1, "TARGET_VALUE_UNREPRESENTABLE", "")
-	if f["message"] != "the grammar spec cannot be written as EBNF: the case-insensitive literal \"hi\" is no one W3C "+
-		"EBNF terminal: it would be written as [hH] [iI], and this front end reads whitespace between terminals" ||
-		f["row"] != 243.0 || f["col"] != 3.0 || f["file"] != "tabnas-ebnf/alchemy/render.alc" {
+	if f["message"] != "the grammar cannot be written as EBNF: the rule \"greet\" holds the case-insensitive literal "+
+		"\"hi\", which holds a letter beside another character, and no one EBNF terminal spells" ||
+		f["row"] != 83.0 || f["col"] != 3.0 || f["file"] != "tabnas-ebnf/alchemy/render.alc" {
 		t.Errorf("%v", f)
 	}
 	echo := tempFile(t, "echo-css.alc", "def export [input] input\n")
@@ -411,7 +418,7 @@ func TestTranslateRefusesWhatATargetCannotCarry(t *testing.T) {
 		// list), so the final line feed is not written.
 		{[]string{"--from", "c", "--to", "c", "-"}, "int main(void) { return 0; }\n", "int main(void) { return 0; }"},
 		{[]string{"--from", "ebnf", "--to", "abnf", "-"}, "top ::= \"a\" b\nb ::= \"c\"\n", "top = %s\"a\" b\nb = %s\"c\"\n"},
-		{[]string{"--from", "ebnf", "--to", "gbnf", "-"}, "top ::= \"a\" b\nb ::= \"c\"\n", "root ::= top\ntop ::= \"a\" b\nb ::= \"c\"\n"},
+		{[]string{"--from", "ebnf", "--to", "gbnf", "-"}, "top ::= \"a\" b\nb ::= \"c\"\n", "top ::= \"a\" b\nb ::= \"c\"\nroot ::= top\n"},
 		{[]string{"--from", "abnf", "--to", "ebnf", "-"}, "top = \"a\"\n", "top ::= [aA]\n"},
 	} {
 		wantSuccess(t, invoke(t, append([]string{"translate"}, c.args...), text(c.stdin)), c.want)
@@ -424,8 +431,9 @@ func TestTranslateRefusesWhatATargetCannotCarry(t *testing.T) {
 // own codes (its CheckReader, which its ParseReader makes), not the
 // engine's unexpected, from a file and from standard input; a .proto file
 // nesting past proto's cap is refused before the engine runs (the Preflight
-// its ParseValue makes); and a grammar notation's document its compiler
-// refuses is refused with the compiler's message.
+// its ParseValue makes). A grammar notation's document is read as its
+// rules, which no compiler has seen, so one its compiler would refuse is
+// read as it is.
 func TestTranslateChecksWhatAModulesParseChecksFirst(t *testing.T) {
 	for _, c := range []struct{ input, code string }{{"", "json5_empty"}, {"// c\n", "json5_no_value"}} {
 		file := tempFile(t, c.code+".json5", c.input)
@@ -449,16 +457,14 @@ func TestTranslateChecksWhatAModulesParseChecksFirst(t *testing.T) {
 	if f["message"] != "proto: document nests 101 levels deep, past the 100 this parser accepts" || len(f) != 3 {
 		t.Errorf("101 deep: %v", f)
 	}
-	f = wantFailure(t, invoke(t, []string{"translate", "--from", "abnf", "--to", "json", "-"}, text("a = \"b\" c\n")),
-		1, "INPUT_INVALID", "")
-	if f["message"] != "abnf: rule 'a' references unknown rule 'c'" || len(f) != 3 {
-		t.Errorf("%v", f)
-	}
-	// A left recursion through a cycle of twenty rules, each with two
-	// recursive alternates, would make tabnas-bnf's elimination substitute
-	// 2^20 alternates. tabnas-bnf bounds what a rule gains at 512
-	// alternatives, so the grammar is refused in moments rather than
-	// aborting.
+	// A grammar notation's document is read as its rules in source order: a
+	// rule referencing one the grammar does not define is read as it is,
+	// and so is a left recursion through a cycle of twenty rules, each with
+	// two recursive alternates, which tabnas-bnf's elimination refuses past
+	// 512 alternatives.
+	wantSuccess(t, invoke(t, []string{"translate", "--from", "abnf", "--to", "json", "-"}, text("a = \"b\" c\n")),
+		`{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"literal","text":"b",`+
+			`"caseSensitive":false},{"type":"reference","name":"c"}]]}]}`+"\n")
 	const k = 20
 	var cycle strings.Builder
 	cycle.WriteString("root ::= r0\n")
@@ -466,12 +472,13 @@ func TestTranslateChecksWhatAModulesParseChecksFirst(t *testing.T) {
 		next := (i + 1) % k
 		fmt.Fprintf(&cycle, "r%d ::= r%d \"a%d\" | r%d \"b%d\" | \"x%d\"\n", i, next, i, next, i, i)
 	}
-	f = wantFailure(t, invoke(t, []string{"translate", "--from", "gbnf", "--to", "json", "-"}, text(cycle.String())),
-		1, "INPUT_INVALID", "")
-	if f["message"] != "gbnf: rule 'r11' exceeds the left-recursion expansion limit of 512 alternatives while "+
-		"inlining 'r12', which begins 2 of its alternatives and has 511 of its own. Factor 'r12' out of the "+
-		"alternatives it begins." || len(f) != 3 {
-		t.Errorf("the left-recursion cycle: %v", f)
+	o := invoke(t, []string{"translate", "--from", "gbnf", "--to", "json", "-"}, text(cycle.String()))
+	var tree struct {
+		Start string `json:"start"`
+		Rules []any  `json:"rules"`
+	}
+	if err := json.Unmarshal([]byte(o.stdout), &tree); o.status != 0 || err != nil || tree.Start != "root" || len(tree.Rules) != k+1 {
+		t.Errorf("the left-recursion cycle: %+v (%v)", o, err)
 	}
 }
 

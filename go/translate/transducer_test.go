@@ -251,18 +251,18 @@ func TestAFormatWithAParserGivesItsRulePasses(t *testing.T) {
 	// tree; feed, pgn and proto are parsed for their transducer parts, and a
 	// document read whole is read as the typed feed's or database's tree,
 	// or proto's source-ordered tree.
-	want := "c css csv feed ini json json5 jsonc jsonic jsonl markdown pgn proto semver toml xml yaml zon"
+	want := "abnf c css csv ebnf feed gbnf ini json json5 jsonc jsonic jsonl markdown pgn proto semver toml xml yaml zon"
 	if got := strings.Join(parsed, " "); got != want {
 		t.Errorf("the parsed formats are %s", got)
 	}
-	if got := ParserNames(); got != "c, css, csv, feed, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, toml, xml, yaml or zon" {
+	if got := ParserNames(); got != "abnf, c, css, csv, ebnf, feed, gbnf, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, toml, xml, yaml or zon" {
 		t.Errorf("ParserNames is %q", got)
 	}
-	abnf := Named("abnf")
-	if abnf.Parses() {
-		t.Error("abnf is read as a tree")
+	expr := Named("expr")
+	if expr.Parses() {
+		t.Error("expr is read as a tree")
 	}
-	if _, f := abnf.Passes(`x = "y"`); f == nil || f.Code != tt.CodeInputInvalid || !strings.HasPrefix(f.Message, "abnf is read as a tree") {
+	if _, f := expr.Passes("1+2"); f == nil || f.Code != tt.CodeInputInvalid || !strings.HasPrefix(f.Message, "expr is read as a tree") {
 		t.Errorf("a tree has no passes: %v", f)
 	}
 	json5 := Named("json5")

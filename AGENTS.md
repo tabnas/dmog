@@ -161,14 +161,15 @@ cross product of their corpus into every format: transduce's fixtures and
 JSONTestSuite's documents in every runtime, the grammar notations'
 example grammars in TypeScript's and Go's run and in Rust's release run,
 and every format's own `test/spec/*.tsv` in Rust's release run
-(`ci/rust/run.sh`), ABNF's grammars among them. A pair is held to what
-its target declares: written, and read back under the target's
-conventions (its loss list); or refused with the code and the reason its
-parts declare, which the matrix counts: a schema-only target (one that
-writes a schema's tree with no embedding into it: C, CSS, PGN, proto and
-the grammar notations) refuses another format's tree, a grammar
-notation's render refuses a grammar spec it has no form for, naming what
-it met, and Semantic Versioning's embedding refuses a tree that is not a
+(`ci/rust/run.sh`), the grammar notations' among them (ABNF's grammar
+rows, and each notation's `tree.tsv`). A pair is held to what its target
+declares: written, and read back under the target's conventions (its
+loss list); or refused with the code and the reason its parts declare,
+which the matrix counts: a schema-only target (one that writes a
+schema's tree with no embedding into it: C, CSS, PGN, proto and the
+grammar notations) refuses another format's tree, a grammar notation's
+render refuses a grammar it has no form for, naming the rule and what it
+met, and Semantic Versioning's embedding refuses a tree that is not a
 version. A pair refused otherwise, or written where a refusal is
 declared, fails. `translate` streams its output, so a document the
 source's part cannot stream (a repeated key, a stream of several YAML
@@ -178,51 +179,59 @@ the matrix then reads it with `--whole`, holds its pairs to what that
 writes, and counts it, each run with a ceiling on how many it reads so.
 A document is left out as a source where it is past
 what every format takes: nested deeper than 100 levels, or holding more
-values than the run's size bound (10,000 by default, which leaves out the
-larger GBNF examples and RFC 3986's URI grammar, whose spec holds 513,409;
-100,000 in Rust's release run); each run pins how many it leaves out.
+values than the run's size bound (10,000 by default, and 100,000 in
+Rust's release run, past which no document of the corpora is now that
+the grammar notations are read as their rules); each run pins how many
+it leaves out.
 
 The grammar notations, ABNF, EBNF and GBNF, share the schema
-`grammar-spec`, the grammar spec their compilers emit, so each writes the
-others' documents. A grammar spec written in a notation is held to the
-round trip each render declares: from the same notation it reads back as
-it was, or, where the loss list says it compiles back to another (a spec
-whose alternatives the compiler reordered, a left recursion through
-another rule), as one the render writes again as the same text; from
-another notation, which compiles back under the target's own settings
-and recognises what it recognised, as a spec the render writes again as
-text that reads back as that spec. And every grammar written is held to
-what it recognises: the spec read and the spec the written text compiles
-to, each installed on an engine of its own, parse each of the document's
-samples alike. The samples are the inputs the notations' repositories'
-own tests give their example grammars, accepted and refused alike
+`grammar-rules`, a grammar's rules in source order, which tabnas/bnf
+defines and each notation's reader builds without compiling them, so
+each writes the others' documents. A grammar written in a notation is
+held to the round trip each render declares: from the same notation it
+reads back as the tree it was; from another notation, written as the
+target spells what the source spells otherwise (its loss list), it reads
+back as a tree the render writes again as the same text. A render
+refuses what its notation cannot say with TARGET_VALUE_UNREPRESENTABLE,
+naming the rule (`the grammar cannot be written as ABNF: ` and its
+twins), among it a `start` the grammar does not define (a GBNF document
+of rules none of which is `root`, which every render refuses, its own
+included), and, in GBNF, a tree with no start whose rule named `root` is
+not its first, and a reference to the engine's own NR, ST, TX or VL that
+the grammar does not define. And every grammar written is held to what
+it recognises: the document's text and the text written, each compiled
+by its own notation's compiler and installed on an engine of its own,
+parse each of the document's samples alike. A document its own compiler
+refuses, which its reader reads all the same, has nothing to compare,
+and each run pins how many pairs with samples it skips so (`uncompiled`).
+The samples are the inputs the notations' repositories' own tests give
+their example grammars, accepted and refused alike
 (`test/notation-samples.json`, which all three runtimes read), and, in
 Rust's release run, the inputs ABNF's fixture rows give each grammar.
-The one difference the loss lists declare is the lexing: a spec of
-another notation compiles back under the target's settings, so across
-GBNF's exact lexing and the others' default one, which skips white
-space, a sample holding white space may be recognised otherwise. Such a
-pair is registered, never passed: the same file's `otherwise` names
-each pair with exactly the samples it recognises otherwise, every cross
-product holds each pair it compares to that list, and Rust's release
-run, which compares every pair named, holds every entry to a pair it
-compares. A grammar recognising any other sample otherwise fails, unless
-its pair is registered with its package's defect (`DEFECTIVE_PAIRS`).
+The one difference the loss lists declare is the lexing: a grammar of
+another notation compiles under the target's settings, so across GBNF's
+exact lexing and the others' default one, which skips white space, a
+sample holding white space may be recognised otherwise. Such a pair is
+registered, never passed: the same file's `otherwise` names each pair
+with exactly the samples it recognises otherwise, every cross product
+holds each pair it compares to that list, and Rust's release run, which
+compares every pair named, holds every entry to a pair it compares. A
+grammar recognising any other sample otherwise fails, unless its pair is
+registered with its package's defect (`DEFECTIVE_PAIRS`): one is, ABNF's
+`alignment-abnf-ast.tsv:16` into EBNF, whose `c ::= ( "y" )?` tabnas/bnf
+compiles to a grammar that accepts nothing (tabnas/bnf#123).
 
 A format is read with its package's parser, through transduce's parser
-source, unless the parser's own value is not yet the tree its parts
-declare and the package's API reads a document as that tree: then that
-tree is the document, read whole (`Reader::Tree` in Rust, `tree` in Go,
-`{ tree }` in TypeScript), with the checks the package's API makes first:
+source (the grammar notations among them, whose `make()` builds the
+parser whose value is their tree, read through their transducer parts),
+unless the parser's own value is not yet the tree its parts declare and
+the package's API reads a document as that tree: then that tree is the
+document, read whole (`Reader::Tree` in Rust, `tree` in Go, `{ tree }` in
+TypeScript), with the checks the package's API makes first:
 - expressions, as the simplified tree (`parse_simplified`,
   `parseSimplified`, `SimplifyOrdered`);
 - C, as the realized tree in Rust (`tabnas_c::parse`); TypeScript and Go
   walk the parser's value;
-- the grammar notations, as the pure-data grammar spec each package's
-  compiler writes for a host, recognition off, as strict JSON, read as
-  JSON (`abnf_compile` and its twins for ABNF; for EBNF and GBNF the
-  shared compiler's serializers over the conversion with the builtins on,
-  which tabnas-abnf re-exports);
 - Go's feeds and PGN databases, whose modules build typed values, through
   their JSON encoding (`plainTree`). A feed or a PGN database is read so
   only where its transducer part refuses it: otherwise the part reads it

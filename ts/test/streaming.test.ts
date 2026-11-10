@@ -70,8 +70,10 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
   abnf: {
     fails: 'both',
     why:
-      'it has no transducer part: a document is read whole as the grammar spec its compiler writes, ' +
-      "until abnf's part (admin ADR-33, ruling 4; the streaming plan's step 23)",
+      "abnf's tree parser declares no lex.window, so the engine reads a document whole before its parse " +
+      "begins (tabnas/abnf#129); and a grammar's rules are an array no rule's node is, which pruning never " +
+      "empties, and abnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
+      '(tabnas/transduce#81)',
   },
   c: {
     fails: 'both',
@@ -86,14 +88,18 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
   ebnf: {
     fails: 'both',
     why:
-      'it has no transducer part: a document is read whole as the grammar spec its compiler writes, ' +
-      "until ebnf's part (admin ADR-33, ruling 4; the streaming plan's step 23)",
+      "ebnf's tree parser declares no lex.window, so the engine reads a document whole before its parse " +
+      "begins (tabnas/ebnf#75); and a grammar's rules are an array no rule's node is, which pruning never " +
+      "empties, and ebnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
+      '(tabnas/transduce#81)',
   },
   gbnf: {
     fails: 'both',
     why:
-      'it has no transducer part: a document is read whole as the grammar spec its compiler writes, ' +
-      "until gbnf's part (admin ADR-33, ruling 4; the streaming plan's step 23)",
+      "gbnf's tree parser declares no lex.window, so the engine reads a document whole before its parse " +
+      "begins (tabnas/gbnf#75); and a grammar's rules are an array no rule's node is, which pruning never " +
+      "empties, and gbnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
+      '(tabnas/transduce#81)',
   },
   ini: {
     fails: 'flat',

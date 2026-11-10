@@ -30,8 +30,7 @@
 // member, which a part streams twice and tree-contract refuses), fails with its code after what it wrote: --whole reads it whole,
 // its grammar's value the document (admin ADR-33). Where a module's parser
 // builds a value that is not yet the tree its parts declare (an expression's
-// operators, proto's syntax tree, a typed feed or database, a grammar
-// notation's document, which compiles to a grammar spec), the tree the
+// operators, proto's syntax tree, a typed feed or database), the tree the
 // module's API reads a document as is the document, read whole; where the
 // module ships a transducer part too (proto, feed, PGN), the part reads the
 // parser's rule passes, and a document read whole is that tree. Nothing here
@@ -450,7 +449,9 @@ func modules() []module {
 		{descriptor: func() at.Descriptor {
 			p := tabnasabnf.Translate()
 			return descriptor("tabnas-abnf", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
-		}, tree: abnfTree},
+		}, transduce: func() *at.PartText {
+			return partText((*modulePart)(tabnasabnf.Translate().Transduce))
+		}, parser: func() *tabnas.Tabnas { return tabnasabnf.Make() }},
 		{descriptor: func() at.Descriptor {
 			p := tabnasc.Translate()
 			return descriptor("tabnas-c", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
@@ -484,7 +485,9 @@ func modules() []module {
 		{descriptor: func() at.Descriptor {
 			p := tabnasebnf.Translate()
 			return descriptor("tabnas-ebnf", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
-		}, tree: ebnfTree},
+		}, transduce: func() *at.PartText {
+			return partText((*modulePart)(tabnasebnf.Translate().Transduce))
+		}, parser: func() *tabnas.Tabnas { return tabnasebnf.Make() }},
 		{descriptor: func() at.Descriptor {
 			p := tabnasexpr.Translate()
 			return descriptor("tabnas-expr", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
@@ -502,7 +505,9 @@ func modules() []module {
 		{descriptor: func() at.Descriptor {
 			p := tabnasgbnf.Translate()
 			return descriptor("tabnas-gbnf", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
-		}, tree: gbnfTree},
+		}, transduce: func() *at.PartText {
+			return partText((*modulePart)(tabnasgbnf.Translate().Transduce))
+		}, parser: func() *tabnas.Tabnas { return tabnasgbnf.Make() }},
 		{descriptor: func() at.Descriptor {
 			p := tabnasini.Translate()
 			return descriptor("tabnas-ini", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
@@ -703,56 +708,6 @@ func protoCheckReader(r io.Reader) (io.Reader, *tt.Fail) {
 		return nil, fail
 	}
 	return strings.NewReader(text), nil
-}
-
-// abnfTree is an ABNF document as abnf's module reads one for a host, the
-// tree its parts declare: the pure-data grammar spec its compiler writes
-// (AbnfCompile, recognition off, so that the tree builders stay, as strict
-// JSON), read as JSON. The grammar spec is the schema grammar-spec, which
-// the EBNF and GBNF compilers emit too. Go's serializer writes its members
-// in the order the compiler emits them, as TypeScript's and Rust's do, from
-// tabnas-bnf 0.1.30; before, it wrote them in name order, and the match
-// tokens' order in a list of its own (options.match.tokenOrder).
-func abnfTree(text string) (any, *tt.Fail) {
-	recognition := false
-	compiled, err := tabnasabnf.AbnfCompile(text, &tabnasabnf.AbnfCompileOptions{Recognition: &recognition, Strict: true})
-	if err != nil {
-		return nil, tt.InputFail(err.Error())
-	}
-	return jsonTree(compiled)
-}
-
-// compiledTree is a notation's conversion, converted with the builtins on,
-// as the shared compiler writes it for a host: the pure-data grammar spec,
-// with its tree builders (ToJsonic over ToPureSpec, recognition off), as
-// strict JSON, read as JSON. The compiler is tabnas-bnf, whose serializers
-// abnf's module aliases, so reading a notation takes no module beyond the
-// notations'.
-func compiledTree(spec *tabnas.GrammarSpec, err error) (any, *tt.Fail) {
-	if err != nil {
-		return nil, tt.InputFail(err.Error())
-	}
-	pure, err := tabnasabnf.ToPureSpec(spec)
-	if err != nil {
-		return nil, tt.InputFail(err.Error())
-	}
-	return jsonTree(tabnasabnf.ToJsonic(pure, true, 0))
-}
-
-// ebnfTree is an EBNF document as ebnf's module reads one for a host, the
-// tree its parts declare: the grammar spec the shared compiler writes of
-// its conversion with the builtins on (compiledTree).
-func ebnfTree(text string) (any, *tt.Fail) {
-	return compiledTree(tabnasebnf.Ebnf(text, &tabnasebnf.ConvertOptions{Builtins: true}))
-}
-
-// gbnfTree is a GBNF document as gbnf's module reads one for a host, the
-// tree its parts declare: the grammar spec the shared compiler writes of
-// its conversion with the builtins on, and the notation's own defaults
-// otherwise (the start root, eager classes where they are unambiguous)
-// (compiledTree).
-func gbnfTree(text string) (any, *tt.Fail) {
-	return compiledTree(tabnasgbnf.Gbnf(text, &tabnasgbnf.ConvertOptions{Builtins: true}))
 }
 
 // feedTree is a feed as feed's module reads one by default, the Atom-shaped

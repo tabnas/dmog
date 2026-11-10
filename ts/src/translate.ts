@@ -31,9 +31,8 @@
 // left: `--whole` reads it whole, its grammar's value the document (admin
 // ADR-33). Where a package's parser
 // builds a value that is not yet the tree its parts declare, and the
-// package's API reads a document as that tree (expr's simplified form,
-// and the grammar spec a grammar notation's document compiles to), that
-// tree is the document, read whole; where such a package ships a
+// package's API reads a document as that tree (expr's simplified form),
+// that tree is the document, read whole; where such a package ships a
 // transducer part too (proto, whose parser's value is its CST), the part
 // reads the parser's rule passes, and a document read whole is that tree.
 // Nothing here knows a format by its name: a format is what its manifest
@@ -50,17 +49,17 @@
 
 import { closeSync, openSync, readFileSync, readSync } from 'node:fs'
 
-import { abnfCompile, toJsonic, toPureSpec, translate as abnfParts } from '@tabnas/abnf'
+import { make as makeAbnf, translate as abnfParts } from '@tabnas/abnf'
 import { Program, compile as compileProgram, compileSources, isFail, translate } from '@tabnas/alchemy'
 import type { CompileOptions } from '@tabnas/alchemy'
 import { C, translate as cParts } from '@tabnas/c'
 import { make as makeChess, translate as chessParts } from '@tabnas/chess'
 import { make as makeCss, translate as cssParts } from '@tabnas/css'
 import { make as makeCsv, translate as csvParts } from '@tabnas/csv'
-import { ebnfConvert, translate as ebnfParts } from '@tabnas/ebnf'
+import { make as makeEbnf, translate as ebnfParts } from '@tabnas/ebnf'
 import { Expr, parseSimplified, translate as exprParts } from '@tabnas/expr'
 import { make as makeFeed, translate as feedParts } from '@tabnas/feed'
-import { gbnfConvert, translate as gbnfParts } from '@tabnas/gbnf'
+import { make as makeGbnf, translate as gbnfParts } from '@tabnas/gbnf'
 import { make as makeIni, translate as iniParts } from '@tabnas/ini'
 import { make as makeJson, translate as jsonParts } from '@tabnas/json'
 import { make as makeJson5, translate as json5Parts } from '@tabnas/json5'
@@ -474,15 +473,15 @@ function descriptor(pkg: string, parts: Parts | undefined): Described | undefine
 // the nesting check its parse makes first.
 function packages(): Array<[Described | undefined, Reading]> {
   return [
-    [descriptor('tabnas-abnf', abnfParts()), { tree: abnfTree }],
+    [descriptor('tabnas-abnf', abnfParts()), () => makeAbnf()],
     [descriptor('tabnas-c', cParts()), () => new Tabnas().use(jsonic).use(C)],
     [descriptor('tabnas-chess', chessParts()), () => makeChess()],
     [descriptor('tabnas-css', cssParts()), () => makeCss()],
     [descriptor('tabnas-csv', csvParts()), () => makeCsv()],
-    [descriptor('tabnas-ebnf', ebnfParts()), { tree: ebnfTree }],
+    [descriptor('tabnas-ebnf', ebnfParts()), () => makeEbnf()],
     [descriptor('tabnas-expr', exprParts()), { tree: exprTree }],
     [descriptor('tabnas-feed', feedParts()), () => makeFeed()],
-    [descriptor('tabnas-gbnf', gbnfParts()), { tree: gbnfTree }],
+    [descriptor('tabnas-gbnf', gbnfParts()), () => makeGbnf()],
     [descriptor('tabnas-ini', iniParts()), () => makeIni()],
     [descriptor('tabnas-json', jsonParts()), () => makeJson()],
     [descriptor('tabnas-json5', json5Parts()), () => makeJson5()],
@@ -543,41 +542,6 @@ function exprTree(text: string): unknown {
 // is the grammar's syntax tree.
 function protoTree(text: string): unknown {
   return treeOf(() => protoParseTree(text))
-}
-
-// A grammar notation's document as its package's compiler writes it for a
-// host, the tree its parts declare: the pure-data grammar spec, with its
-// tree builders, as strict JSON, parsed as JSON. A document the compiler
-// refuses is the input's failure, with the compiler's message, as the Rust
-// and Go commands report it.
-function specTree(compile: () => string): unknown {
-  let text: string
-  try {
-    text = compile()
-  } catch (err) {
-    throw Fail.input(String((err as { message?: unknown })?.message ?? err))
-  }
-  return JSON.parse(text)
-}
-
-// An ABNF document: abnfCompile, recognition off, so that the tree builders
-// stay. The grammar spec is the schema grammar-spec, which the EBNF and
-// GBNF compilers emit too.
-function abnfTree(text: string): unknown {
-  return specTree(() => abnfCompile(text, { recognition: false, strict: true }))
-}
-
-// An EBNF document: the shared compiler's text of its conversion with the
-// builtins on (compileSpec with recognition off, which is toJsonic over
-// toPureSpec; @tabnas/abnf exports @tabnas/bnf's two).
-function ebnfTree(text: string): unknown {
-  return specTree(() => toJsonic(toPureSpec(ebnfConvert(text, { builtins: true })), { strict: true }))
-}
-
-// A GBNF document, as an EBNF one, with the notation's own defaults
-// otherwise (the start root, eager classes where they are unambiguous).
-function gbnfTree(text: string): unknown {
-  return specTree(() => toJsonic(toPureSpec(gbnfConvert(text, { builtins: true })), { strict: true }))
 }
 
 // ZON's parser as its package's `make()` builds it, with an integer no

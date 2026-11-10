@@ -57,11 +57,14 @@ parts declare it cannot carry, which it refuses with
 CSS, PGN and Protocol Buffers write only their own tree, read from a
 document of the same format or made by a `--with` program, and Semantic
 Versioning writes only a tree that is a version. The grammar notations,
-ABNF, EBNF and GBNF, read a document as the grammar spec it compiles to,
-and each writes the others' too, so a grammar written in one is written
-in another (an ABNF grammar as GBNF), as far as that notation can say
-it: what it has no form for (a negated class in ABNF, the engine's own
-tokens in GBNF) it refuses, naming what it met. `--path` takes a JSON
+ABNF, EBNF and GBNF, read a document as its rules in source order, which
+no compiler has seen, a rule at a time through each notation's transducer
+part, and each writes the others' too, so a grammar written in one is
+written in another (an ABNF grammar as GBNF), as far as that notation can
+say it: what it has no form for (a negated class in ABNF, the engine's own
+tokens in GBNF) it refuses, naming the rule and what it met. A notation
+that starts from its first rule writes the rule another names as its
+start (GBNF's `root`) first. `--path` takes a JSON
 array of keys and indexes (`["people",0]`) and translates that value
 instead of the document, as a plain tree whatever the source's shapes;
 `--key` names the member a root is wrapped under for a format whose

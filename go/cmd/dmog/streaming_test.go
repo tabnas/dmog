@@ -110,18 +110,24 @@ var notStreaming = map[string]struct {
 	fails failing
 	why   string
 }{
-	"abnf": {failsBoth, "it has no transducer part: a document is read whole as the grammar spec its compiler " +
-		"writes, until abnf's part (admin ADR-33, ruling 4; the streaming plan's step 23)"},
+	"abnf": {failsBoth, "abnf's tree parser declares no Lex.Window, so the engine reads a document whole before " +
+		"its parse begins (tabnas/abnf#129); a grammar's rules are an array no rule's node is, which pruning never " +
+		"empties, and abnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
+		"(tabnas/transduce#81); and " + goMemory},
 	"c": {failsBoth, "it has no transducer part: a translation unit is read whole as the parser's value " +
 		"(admin ADR-33, ruling 7; the streaming plan's step 21, whose ruling is pending)"},
 	"css": {failsFlat, "css is not in transduce's prune suite, so the engine's tree keeps every rule " +
 		"(tabnas/transduce#82); and " + goMemory},
 	"csv": {failsFlat, goMemory},
-	"ebnf": {failsBoth, "it has no transducer part: a document is read whole as the grammar spec its compiler " +
-		"writes, until ebnf's part (admin ADR-33, ruling 4; the streaming plan's step 23)"},
+	"ebnf": {failsBoth, "ebnf's tree parser declares no Lex.Window, so the engine reads a document whole before " +
+		"its parse begins (tabnas/ebnf#75); a grammar's rules are an array no rule's node is, which pruning never " +
+		"empties, and ebnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
+		"(tabnas/transduce#81); and " + goMemory},
 	"feed": {failsFlat, goMemory},
-	"gbnf": {failsBoth, "it has no transducer part: a document is read whole as the grammar spec its compiler " +
-		"writes, until gbnf's part (admin ADR-33, ruling 4; the streaming plan's step 23)"},
+	"gbnf": {failsBoth, "gbnf's tree parser declares no Lex.Window, so the engine reads a document whole before " +
+		"its parse begins (tabnas/gbnf#75); a grammar's rules are an array no rule's node is, which pruning never " +
+		"empties, and gbnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
+		"(tabnas/transduce#81); and " + goMemory},
 	"ini": {failsFlat, "every section is a member of the document's root map, and pruning empties no map " +
 		"(tabnas/transduce#81); and " + goMemory},
 	"json":  {failsFlat, goMemory},
