@@ -28,6 +28,12 @@ import (
 var binary string
 
 func TestMain(m *testing.M) {
+	// The streaming gate's measured run is this binary run again as the
+	// command (streaming_memory_test.go): it runs the command, reports, and
+	// exits, building nothing and running no test.
+	if report := os.Getenv(streamingMemoryEnv); report != "" {
+		os.Exit(streamingHelper(report, os.Args[1:]))
+	}
 	dir, err := os.MkdirTemp("", "dmog-")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

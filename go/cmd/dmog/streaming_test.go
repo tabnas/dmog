@@ -23,9 +23,9 @@ package main
 //     after the first part, which holds nine tenths of the items, before
 //     the rest is sent; the run must then end as a run over the whole
 //     document does, with the same output;
-//   - flat memory: the command's peak resident set over the document of
-//     items items and over ten times as many must stay within
-//     streamingBound of each other.
+//   - flat memory: what the command holds over the document of items items
+//     and over ten times as many must stay within streamingBound of each
+//     other.
 //
 // A format that fails either clause is registered in notStreaming with the
 // clauses it fails and why; the gate holds each entry to failing exactly
@@ -33,14 +33,24 @@ package main
 // deleted. The formats the maintainer ruled whole are listed apart
 // (ruledWhole) and are not run.
 //
-// The memory is the child's own peak resident set, getrusage's ru_maxrss
-// for the command once it has exited (ProcessState.SysUsage), which counts
-// what the command held, the Go runtime and the collector's headroom with
-// it, and needs nothing of the test process; on Linux the test also reads
-// the child's VmHWM while it runs, and stops a run once it is past the
-// bound, so a run that holds its document is not run to its end to show
-// it. Unix alone has ru_maxrss, so on Windows the memory clause is not
-// measured, and the gate says so.
+// What the command holds is its live heap, measured in a process of its
+// own: the test binary run again as the command (streaming_memory_test.go),
+// which runs the command's own code over the document and samples the heap
+// after a full collection as the command reads and writes, past what the
+// process held before the command began. A run is stopped once it is past
+// the bound, so a run that holds its document is not run to its end to show
+// it. The peak resident set (ru_maxrss), which the gate measured before,
+// would not do: most of it is the Go runtime and the binary's own pages,
+// some 14 MB to 24 MB before a run holds anything, and the rest the live
+// heap with the collector's headroom over it, which GOGC=100 lets reach
+// twice what is live and a busy machine widens. On four busy cores, six
+// runs of json over 300 items held 16.64 MB to 21.01 MB, and json's two
+// documents measured 1.10 to 1.77 times apart, while jsonic, read whole,
+// measured 1.15 to 1.32 times and markdown, which keeps every block, 1.22 to
+// 1.32: what a run holds of its document was lost in the rest. With GOGC=25
+// the resident set varied less and saw still less, jsonic 1.00 times and
+// markdown 1.01, where the live heap measures them 3.98 and 4.54 times, run
+// after run.
 
 import (
 	"bufio"
@@ -52,9 +62,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -249,37 +257,39 @@ func (d streamingTemplate) file(t *testing.T, dir, id string, n int) string {
 	return path
 }
 
-// memoryRuns lets one measured run go at a time: a command's peak resident
-// set takes in the collector's headroom, which a busy machine widens, and
-// the formats' other runs go on in parallel.
-var memoryRuns sync.Mutex
-
 // written is what a run wrote: its length and a hash of its bytes.
 type written struct {
 	length int64
 	hash   uint64
 }
 
-// streamRun is one run of the binary over a file.
+// streamRun is one measured run of the command over a file.
 type streamRun struct {
-	// peak is the command's peak resident set, in bytes, or with over, what
-	// it had reached when it was stopped past its limit. measured is false
-	// where the platform cannot measure it.
-	peak     int64
-	over     bool
-	measured bool
-	output   written
-	took     time.Duration
+	// peak is the most the command held past what it began with, in bytes,
+	// or with over, what it had reached when it was stopped past its limit.
+	peak   int64
+	over   bool
+	output written
+	took   time.Duration
 }
 
-// runOverFile runs dmog translate --from id --to json over path, stopped
-// past limit bytes of resident set where the platform can watch it (limit
-// 0 for none).
-func runOverFile(t *testing.T, id, path string, limit int64) streamRun {
+// runOverFile runs dmog translate --from id --to json over path, with
+// --whole where whole is true, measured: the test binary runs the command
+// (streamingHelper), and stops it once it holds more than limit bytes past
+// what it began with (limit 0 for none).
+func runOverFile(t *testing.T, id, path string, limit int64, whole bool) streamRun {
 	t.Helper()
-	memoryRuns.Lock()
-	defer memoryRuns.Unlock()
-	cmd := exec.Command(binary, "translate", "--from", id, "--to", "json", path)
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := []string{"translate", "--from", id, "--to", "json"}
+	if whole {
+		args = append(args, "--whole")
+	}
+	report := path + ".memory.json"
+	cmd := exec.Command(self, append(args, path)...)
+	cmd.Env = append(os.Environ(), streamingMemoryEnv+"="+report, fmt.Sprintf("%s=%d", streamingLimitEnv, limit))
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)
@@ -290,17 +300,19 @@ func runOverFile(t *testing.T, id, path string, limit int64) streamRun {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	stopped := make(chan int64, 1)
-	done := make(chan struct{})
-	go func() { stopped <- watchPeak(cmd.Process.Pid, limit, done, cmd.Process.Kill) }()
 	h := fnv.New64a()
 	length, copyErr := io.Copy(h, stdout)
 	waitErr := cmd.Wait()
-	close(done)
-	seen := <-stopped
-	over := seen > 0
 	took := time.Since(started)
-	if !over {
+	data, err := os.ReadFile(report)
+	if err != nil {
+		t.Fatalf("%s %s: no report: %v: %s", id, path, err, stderr.String())
+	}
+	var measured streamingReport
+	if err := json.Unmarshal(data, &measured); err != nil {
+		t.Fatalf("%s %s: %v", id, path, err)
+	}
+	if !measured.Over {
 		if copyErr != nil {
 			t.Fatalf("%s %s: %v", id, path, copyErr)
 		}
@@ -308,8 +320,7 @@ func runOverFile(t *testing.T, id, path string, limit int64) streamRun {
 			t.Fatalf("%s %s: %v: %s", id, path, waitErr, stderr.String())
 		}
 	}
-	peak, measured := peakOf(cmd.ProcessState)
-	return streamRun{peak: max(peak, seen), over: over, measured: measured, output: written{length, h.Sum64()}, took: took}
+	return streamRun{peak: measured.Peak, over: measured.Over, output: written{length, h.Sum64()}, took: took}
 }
 
 // fed is what one run of the binary over a document handed over in two
@@ -457,7 +468,7 @@ func (f streamFound) fails() failing {
 			fails |= failsWritten
 		}
 	}
-	if f.one.measured && (f.ten.over || float64(f.ten.peak) > float64(f.one.peak)*streamingBound) {
+	if f.ten.over || float64(f.ten.peak) > float64(f.one.peak)*streamingBound {
 		fails |= failsFlat
 	}
 	return fails
@@ -474,16 +485,13 @@ func (f streamFound) summary(items int) string {
 			parts = append(parts, fmt.Sprintf("from %s nothing written before the end", route))
 		}
 	}
-	memory := "memory not measured on " + runtime.GOOS
-	if f.one.measured {
-		stopped := ""
-		if f.ten.over {
-			stopped = ", stopped past it"
-		}
-		memory = fmt.Sprintf("peak %s at %d items and %s at %d (bound %s%s), %.1f s and %.1f s",
-			mib(f.one.peak), items, mib(f.ten.peak), items*10,
-			mib(int64(float64(f.one.peak)*streamingBound)), stopped, f.one.took.Seconds(), f.ten.took.Seconds())
+	stopped := ""
+	if f.ten.over {
+		stopped = ", stopped past it"
 	}
+	memory := fmt.Sprintf("peak %s at %d items and %s at %d (bound %s%s), %.1f s and %.1f s",
+		mib(f.one.peak), items, mib(f.ten.peak), items*10,
+		mib(int64(float64(f.one.peak)*streamingBound)), stopped, f.one.took.Seconds(), f.ten.took.Seconds())
 	return strings.Join(parts, ", ") + "; " + memory
 }
 
@@ -493,7 +501,7 @@ func holdStreaming(t *testing.T, docs streamingDocuments, format *translate.Form
 	d := docs.Documents[id]
 	n := docs.Items
 	dir := t.TempDir()
-	one := runOverFile(t, id, d.file(t, dir, id, n), 0)
+	one := runOverFile(t, id, d.file(t, dir, id, n), 0, false)
 	entry, registered := notStreaming[id]
 	// A command expected to write before the end is given a generous time
 	// to; one registered as not writing is given twice the time a whole run
@@ -537,11 +545,8 @@ func holdStreaming(t *testing.T, docs streamingDocuments, format *translate.Form
 			found.when = append(found.when, 0)
 		}
 	}
-	var limit int64
-	if one.measured {
-		limit = int64(float64(one.peak) * streamingBound)
-	}
-	found.ten = runOverFile(t, id, d.file(t, dir, id, n*10), limit)
+	limit := int64(float64(one.peak) * streamingBound)
+	found.ten = runOverFile(t, id, d.file(t, dir, id, n*10), limit, false)
 	return found
 }
 
@@ -570,11 +575,6 @@ func TestEveryFormatStreamsOrIsRegistered(t *testing.T) {
 			}
 			fails := found.fails()
 			entry, registered := notStreaming[id]
-			if !found.one.measured {
-				// The memory clause is not measured here: hold what was.
-				fails &^= failsFlat
-				entry.fails &^= failsFlat
-			}
 			switch {
 			case !registered && fails == 0:
 			case registered && fails == entry.fails:
@@ -595,31 +595,9 @@ func TestEveryFormatStreamsOrIsRegistered(t *testing.T) {
 func TestADocumentHeldWholeFailsTheBound(t *testing.T) {
 	docs := readStreamingDocuments(t)
 	d, n, dir := docs.Documents["json"], docs.Items, t.TempDir()
-	whole := func(path string, limit int64) streamRun {
-		// runOverFile's command, with --whole.
-		cmd := exec.Command(binary, "translate", "--from", "json", "--to", "json", "--whole", path)
-		cmd.Stdout = io.Discard
-		if err := cmd.Start(); err != nil {
-			t.Fatal(err)
-		}
-		stopped := make(chan int64, 1)
-		done := make(chan struct{})
-		go func() { stopped <- watchPeak(cmd.Process.Pid, limit, done, cmd.Process.Kill) }()
-		err := cmd.Wait()
-		close(done)
-		seen := <-stopped
-		if err != nil && seen == 0 {
-			t.Fatalf("json --whole %s: %v", path, err)
-		}
-		peak, measured := peakOf(cmd.ProcessState)
-		return streamRun{peak: max(peak, seen), over: seen > 0, measured: measured}
-	}
-	one := whole(d.file(t, dir, "json", n), 0)
-	if !one.measured {
-		t.Skip("memory is not measured on " + runtime.GOOS)
-	}
+	one := runOverFile(t, "json", d.file(t, dir, "json", n), 0, true)
 	limit := int64(float64(one.peak) * streamingBound)
-	ten := whole(d.file(t, dir, "json", n*10), limit)
+	ten := runOverFile(t, "json", d.file(t, dir, "json", n*10), limit, true)
 	t.Logf("json read whole: peak %s at %d items and %s at %d", mib(one.peak), n, mib(ten.peak), n*10)
 	if !ten.over && ten.peak <= limit {
 		t.Errorf("json read whole held %s at %d items and %s at %d, within the bound %s",
