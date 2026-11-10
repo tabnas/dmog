@@ -817,8 +817,9 @@ describe('cli translate', () => {
   // value is refused with json5's own codes, not the engine's unexpected,
   // from a file and from standard input, as the Rust and Go commands refuse
   // it (json5's TypeScript error carries no position, theirs 1:1); a .proto
-  // file nesting past proto's cap is refused before the engine runs (its
-  // parse's preflight). A grammar notation's document is read as its rules,
+  // file nesting past proto's cap is refused at the brace that opens the
+  // level past it, as proto's parser reads it, with the code proto_too_deep.
+  // A grammar notation's document is read as its rules,
   // which no compiler has seen, so one its compiler would refuse is read as
   // it is.
   it('translate checks what a package checks before its parse', () => {
@@ -855,7 +856,9 @@ describe('cli translate', () => {
     assert.equal(out.stdout, '')
     assert.deepStrictEqual(failJson(out), {
       code: 'INPUT_INVALID',
-      message: 'proto: document nests 101 levels deep, past the 100 this parser accepts',
+      message: 'proto_too_deep: proto: document nests deeper than the 100 levels this parser accepts',
+      row: 2,
+      col: 1111,
       output: 'none',
     })
     // A grammar notation's document is read as its rules in source order: a

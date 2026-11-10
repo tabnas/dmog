@@ -69,12 +69,8 @@ const RULED_WHOLE: Record<string, string> = {
 // clauses: delete an entry, or a clause of it, once its format passes.
 const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
   abnf: {
-    fails: 'both',
-    why:
-      "abnf's tree parser declares no lex.window, so the engine reads a document whole before its parse " +
-      "begins (tabnas/abnf#129); and a grammar's rules are an array no rule's node is, which pruning never " +
-      "empties, and abnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-      '(tabnas/transduce#81)',
+    fails: 'flat',
+    why: "abnf is not in transduce's prune suite, so the engine's tree keeps every rule (tabnas/transduce#88)",
   },
   c: {
     fails: 'both',
@@ -87,26 +83,12 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
     why: "css is not in transduce's prune suite, so the engine's tree keeps every rule (tabnas/transduce#82)",
   },
   ebnf: {
-    fails: 'both',
-    why:
-      "ebnf's tree parser declares no lex.window, so the engine reads a document whole before its parse " +
-      "begins (tabnas/ebnf#75); and a grammar's rules are an array no rule's node is, which pruning never " +
-      "empties, and ebnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-      '(tabnas/transduce#81)',
+    fails: 'flat',
+    why: "ebnf is not in transduce's prune suite, so the engine's tree keeps every rule (tabnas/transduce#88)",
   },
   gbnf: {
-    fails: 'both',
-    why:
-      "gbnf's tree parser declares no lex.window, so the engine reads a document whole before its parse " +
-      "begins (tabnas/gbnf#75); and a grammar's rules are an array no rule's node is, which pruning never " +
-      "empties, and gbnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-      '(tabnas/transduce#81)',
-  },
-  ini: {
     fails: 'flat',
-    why:
-      "every section is a member of the document's root map, and pruning empties no map, so the " +
-      "engine's tree keeps every section (tabnas/transduce#81)",
+    why: "gbnf is not in transduce's prune suite, so the engine's tree keeps every rule (tabnas/transduce#88)",
   },
   jsonic: {
     fails: 'both',
@@ -117,20 +99,14 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
   markdown: {
     fails: 'flat',
     why:
-      "a document's blocks array is no rule's node, so pruning never empties it, and each block's node " +
-      'stays (tabnas/transduce#81)',
+      "markdown's block phase keeps every block it has finished, linked under the document, until the " +
+      'parse ends (tabnas/markdown#100)',
   },
   proto: {
-    fails: 'both',
-    why:
-      "the check of its nesting that proto's parse makes first counts the whole document, and proto's " +
-      'grammar declares no lex.window, so a document is read whole first (tabnas/proto#81)',
-  },
-  toml: {
     fails: 'flat',
     why:
-      "an array of tables is no rule's node, so pruning never empties it, and each table stays whole " +
-      '(tabnas/transduce#81)',
+      "proto's parse builds its whole CST, every definition's node, and its rewind history of 8,192 tokens " +
+      "keeps the window's text back to the oldest of them (tabnas/proto#85)",
   },
 }
 

@@ -239,27 +239,27 @@ TypeScript), with the checks the package's API makes first:
   carry both the parser and the tree;
 - proto's tree, its declarations in source order (`parse_tree`,
   `parseTree`, `ParseTree`), whose parse first refuses a document nesting
-  past proto's cap, before the engine builds a tree whose drop could
-  abort the process. A `.proto` file is read so only where it is read
-  whole: otherwise proto's transducer part reads it over the rule passes
-  of the parser `make()` builds, after the same check, so every runtime
-  carries both the parser and the tree (`Reader::CheckedTree` in Rust,
-  `parser` with `tree` in Go, `{ parser, check, tree }` in TypeScript).
+  past proto's cap, naming its depth. A `.proto` file is read so only
+  where it is read whole: otherwise proto's transducer part reads it over
+  the rule passes of the parser `make()` builds, a window at a time from
+  a reader, and that parser refuses a document nesting past the cap as it
+  reads the brace past it (`proto_too_deep`, from proto 0.7.0), before
+  the engine builds a tree whose drop could abort the process. So every
+  runtime carries both the parser and the tree (`Reader::ParsedTree` in
+  Rust, `parser` with `tree` in Go, `{ parser, tree }` in TypeScript).
 
 Where a package's own parse checks a document before its parser runs, and
 the parser does not check it itself, the reader makes the same check
-first (`Reader::Checked` and `Reader::CheckedTree` in Rust, `check` in
-Go, `{ parser, check, tree }` in TypeScript): json5 refuses a document
-holding no value with its own codes, and proto a document nesting past
-its cap (`preflight`, `Preflight`), in every runtime. Through a reader
-json5's check reads only as far as it needs, a document's leading white
-space and comments, and hands the parser a reader that gives what it read
-and then the rest, so the document is still read a window at a time
-(`check_reader`, `CheckReader`); proto's counts the whole document, which
-is read whole first, as proto's parser, declaring no window, reads it
-anyway. TypeScript's json5 parser makes json5's check itself, in its own
-`parse` and `parseReader` (json5 0.5.18), so TypeScript reads JSON5 with
-its `make()` alone.
+first (`Reader::Checked` in Rust, `check` in Go): json5 refuses a
+document holding no value with its own codes, in Rust and Go. Through a
+reader json5's check reads only as far as it needs, a document's leading
+white space and comments, and hands the parser a reader that gives what
+it read and then the rest, so the document is still read a window at a
+time (`check_reader`, `CheckReader`). TypeScript's json5 parser makes
+json5's check itself, in its own `parse` and `parseReader` (json5
+0.5.18), so TypeScript reads JSON5 with its `make()` alone. proto's
+parser counts its nesting itself as it reads, in every runtime, so proto
+needs no check of the reader's.
 
 A format whose reader, as this command reads a document through
 transduce, does not build the tree its parts declare is registered in
@@ -298,7 +298,15 @@ each format to two clauses:
   `mkfifo` makes; Windows has none and runs standard input alone), and the
   command must write after the first part, nine tenths of the items,
   before the rest is sent. The run then ends as one over the whole
-  document does, with the same output.
+  document does, with the same output. The clause sees output only once
+  it passes the writer's budget, 32 KiB of a record still open, and the
+  engine keeps the window's margin, 64 KiB, unread, so an item's text
+  must reach the output: the first nine tenths of a document, less that
+  margin, must write more than the budget. A text in a comment the render
+  drops sits at that threshold. The grammar notations' items held theirs
+  in a comment, and once abnf, ebnf and gbnf read a window at a time,
+  abnf wrote 110 bytes past the budget at the cut, and ebnf and gbnf fell
+  short of it by under 300; each holds its text in a literal now.
 - **flat memory**: what the run holds over ten times the document stays
   within the runtime's bound of what it holds over the document: 1.25
   times it in Rust, 1.5 times in TypeScript and Go. Each runtime measures
@@ -312,11 +320,14 @@ each format to two clauses:
   off (`--single-threaded`): otherwise what a sample finds alive depends
   on when an optimization compiled on another thread is installed, which
   on a busy machine swelled a sample by as much as 9.5 MB; Go the
-  command's peak resident set (`ru_maxrss`, unix), which on Linux it also
-  reads while the command runs. A run is stopped once it is past the
-  bound, which is all the clause asks of it. Each bound is calibrated from
-  the measurements its comment records, and each runtime holds its bound
-  to fail JSON read whole (`--whole`).
+  command's live heap after a full collection, sampled as it reads and
+  writes, in the test binary run again as the command
+  (`go/cmd/dmog/streaming_memory_test.go`), since its peak resident set is
+  mostly the runtime and the binary's own pages and swings with the
+  collector's headroom. A run is stopped once it is past the bound, which
+  is all the clause asks of it. Each bound is calibrated from the
+  measurements its comment records, and each runtime holds its bound to
+  fail JSON read whole (`--whole`).
 
 A format that fails either clause is registered in that runtime's ledger
 (`NOT_STREAMING`, `notStreaming`) with the clauses it fails and why, an
@@ -332,11 +343,10 @@ run, and the gate holds the table to reading them whole. Never widen a
 bound, or shorten a document, to pass a format: register it.
 
 Three formats are held at once in Rust and TypeScript, and Go's formats
-run in parallel, one measured run at a time. On four busy cores the gate
-took three to five minutes in Rust's debug run and two to three in
-TypeScript, where the parts run slowest and csv's run over ten times its
-document takes longest, and under a minute in Go, whose memory clause
-stops every run past the bound.
+run in parallel. On four busy cores the gate took three to five minutes in
+Rust's debug run and two to three in TypeScript, where the parts run
+slowest and csv's run over ten times its document takes longest, and about
+a minute in Go, whose memory clause stops every run past the bound.
 
 ## Build and test
 

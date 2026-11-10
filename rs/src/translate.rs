@@ -162,10 +162,9 @@ enum Reader {
     Tree(fn(&str) -> Result<Datum, Fail>),
     /// Both, where such a package ships a transducer part (proto, whose
     /// parser's value is its syntax tree): the part reads the rule passes
-    /// of the grammar's parser, after the check, as [`Reader::Checked`]
-    /// reads them, and a document read whole is the tree, as
-    /// [`Reader::Tree`] reads it.
-    CheckedTree(Check, Parsing, fn(&str) -> Result<Datum, Fail>),
+    /// of the grammar's parser, as [`Reader::Parser`] reads them, and a
+    /// document read whole is the tree, as [`Reader::Tree`] reads it.
+    ParsedTree(Parsing, fn(&str) -> Result<Datum, Fail>),
 }
 
 /// A document read through a reader, once.
@@ -225,10 +224,8 @@ impl Format {
     /// parser, and refuses.
     pub fn passes<'s>(&self, text: &'s str) -> Result<ParserEventSource<'s>, Fail> {
         match self.reader {
-            Reader::Parser(parsing) => Ok((parsing.passes)(text)),
-            Reader::Checked(check, parsing) | Reader::CheckedTree(check, parsing, _) => {
-                (check.text)(text).map(|()| (parsing.passes)(text))
-            }
+            Reader::Parser(parsing) | Reader::ParsedTree(parsing, _) => Ok((parsing.passes)(text)),
+            Reader::Checked(check, parsing) => (check.text)(text).map(|()| (parsing.passes)(text)),
             Reader::Tree(_) => Err(self.no_passes()),
         }
     }
@@ -246,10 +243,8 @@ impl Format {
         reader: Box<dyn Read + Send>,
     ) -> Result<ParserEventSource<'static>, Fail> {
         match self.reader {
-            Reader::Parser(parsing) => Ok((parsing.reads)(reader)),
-            Reader::Checked(check, parsing) | Reader::CheckedTree(check, parsing, _) => {
-                Ok((parsing.reads)((check.reader)(reader)?))
-            }
+            Reader::Parser(parsing) | Reader::ParsedTree(parsing, _) => Ok((parsing.reads)(reader)),
+            Reader::Checked(check, parsing) => Ok((parsing.reads)((check.reader)(reader)?)),
             Reader::Tree(_) => Err(self.no_passes()),
         }
     }
@@ -498,10 +493,12 @@ fn read_expr(text: &str) -> Result<Datum, Fail> {
 
 /// A `.proto` document read whole as proto's API reads one, the tree its
 /// parts declare: its declarations in source order (`parse_tree`, which
-/// makes the check the parser does not, [`proto_preflight`], before the
-/// engine runs). The parser's own value is the grammar's syntax tree, so a
-/// whole read reads this; the transducer part reads the parser's rule
-/// passes.
+/// counts the document's nesting first, as `preflight`, so that its
+/// refusal names the depth). The parser's own value is the grammar's
+/// syntax tree, so a whole read reads this; the transducer part reads the
+/// parser's rule passes, and the parser refuses a document nesting past
+/// proto's cap as it reads the brace past it (`proto_too_deep`), before
+/// the engine builds a tree whose drop could abort the process.
 fn read_proto(text: &str) -> Result<Datum, Fail> {
     tabnas_proto::parse_tree(text)
         .map(|tree| Datum::from_tabnas(&tree))
@@ -518,36 +515,10 @@ fn proto_failure(error: tabnas_proto::ProtoError) -> Fail {
     }
 }
 
-/// proto's check before its parser runs, which its parse makes and its
-/// parser does not (`preflight`): a document nesting deeper than its cap
-/// (`tabnas_proto::MAX_NESTING_DEPTH`) is refused before the engine builds
-/// a tree that deep, whose drop could abort the process.
-fn proto_preflight(text: &str) -> Result<(), Fail> {
-    tabnas_proto::preflight(text).map_err(proto_failure)
-}
-
-/// [`proto_preflight`] over a document read through a reader. The cap is
-/// counted over the whole document, so the reader is read to its end
-/// first, as the parser reads it anyway (proto declares no `lex.window`),
-/// and the parser reads the text that passed.
-fn proto_reader_check(mut reader: Bytes) -> Result<Bytes, Fail> {
-    let mut text = String::new();
-    reader.read_to_string(&mut text).map_err(cannot_read)?;
-    proto_preflight(&text)?;
-    Ok(Box::new(std::io::Cursor::new(text.into_bytes())))
-}
-
-/// The reader of proto's grammar, its rule passes after
-/// [`proto_preflight`], and its tree, [`read_proto`], read whole.
+/// The reader of proto's grammar, its rule passes, read a window at a
+/// time from a reader, and its tree, [`read_proto`], read whole.
 fn read_proto_parsed() -> Reader {
-    Reader::CheckedTree(
-        Check {
-            text: proto_preflight,
-            reader: proto_reader_check,
-        },
-        parsing!(tabnas_proto::make()),
-        read_proto,
-    )
+    Reader::ParsedTree(parsing!(tabnas_proto::make()), read_proto)
 }
 
 /// A C translation unit as c's API reads one, the tree its parts declare
@@ -1255,7 +1226,7 @@ fn source<S: Sink + Send + 'static>(
                 .metrics(metrics)
                 .run_owned(sink),
         },
-        Reader::Tree(read) | Reader::CheckedTree(_, _, read) => {
+        Reader::Tree(read) | Reader::ParsedTree(_, read) => {
             let mut guarded = Guarded::new(sink, limits, AbortFlag::new(), metrics);
             let outcome = read(input).and_then(|tree| match walk_datum(&tree, &mut guarded)? {
                 Flow::Continue => guarded.event(JsonEvent::End),

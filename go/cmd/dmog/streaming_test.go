@@ -23,9 +23,9 @@ package main
 //     after the first part, which holds nine tenths of the items, before
 //     the rest is sent; the run must then end as a run over the whole
 //     document does, with the same output;
-//   - flat memory: the command's peak resident set over the document of
-//     items items and over ten times as many must stay within
-//     streamingBound of each other.
+//   - flat memory: what the command holds over the document of items items
+//     and over ten times as many must stay within streamingBound of each
+//     other.
 //
 // A format that fails either clause is registered in notStreaming with the
 // clauses it fails and why; the gate holds each entry to failing exactly
@@ -33,14 +33,24 @@ package main
 // deleted. The formats the maintainer ruled whole are listed apart
 // (ruledWhole) and are not run.
 //
-// The memory is the child's own peak resident set, getrusage's ru_maxrss
-// for the command once it has exited (ProcessState.SysUsage), which counts
-// what the command held, the Go runtime and the collector's headroom with
-// it, and needs nothing of the test process; on Linux the test also reads
-// the child's VmHWM while it runs, and stops a run once it is past the
-// bound, so a run that holds its document is not run to its end to show
-// it. Unix alone has ru_maxrss, so on Windows the memory clause is not
-// measured, and the gate says so.
+// What the command holds is its live heap, measured in a process of its
+// own: the test binary run again as the command (streaming_memory_test.go),
+// which runs the command's own code over the document and samples the heap
+// after a full collection as the command reads and writes, past what the
+// process held before the command began. A run is stopped once it is past
+// the bound, so a run that holds its document is not run to its end to show
+// it. The peak resident set (ru_maxrss), which the gate measured before,
+// would not do: most of it is the Go runtime and the binary's own pages,
+// some 14 MB to 24 MB before a run holds anything, and the rest the live
+// heap with the collector's headroom over it, which GOGC=100 lets reach
+// twice what is live and a busy machine widens. On four busy cores, six
+// runs of json over 300 items held 16.64 MB to 21.01 MB, and json's two
+// documents measured 1.10 to 1.77 times apart, while jsonic, read whole,
+// measured 1.15 to 1.32 times and markdown, which keeps every block, 1.22 to
+// 1.32: what a run holds of its document was lost in the rest. With GOGC=25
+// the resident set varied less and saw still less, jsonic 1.00 times and
+// markdown 1.01, where the live heap measures them 3.98 and 4.54 times, run
+// after run.
 
 import (
 	"bufio"
@@ -52,9 +62,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -95,12 +103,11 @@ var ruledWhole = map[string]string{
 	"semver": "a version is made only once its whole text is accepted; admin ADR-33, ruling 4",
 }
 
-// goMemory is why a format that streams in Rust is not flat in Go: the
-// engine's rule history, which a stream cannot bound in Go, and the lexer's
-// intern pool both keep something of every record.
-const goMemory = "the Go engine keeps every rule of the parse, since a bounded rule history loses a " +
-	"grammar's writes through its links (tabnas/parser#325), and its lexer interns every distinct " +
-	"short string (tabnas/parser#324)"
+// goUnpruned is what a run that does not prune keeps in Go besides the
+// tree: the engine's rule history, which transduce bounds only for a run
+// that prunes a grammar it verified (transduce's BoundsHistory).
+const goUnpruned = "and a run that does not prune keeps the Go engine's whole rule history, which transduce " +
+	"bounds only for a pruning run"
 
 // notStreaming is the formats that do not stream yet in this runtime, each
 // with the clauses it fails and why. The gate holds each entry to failing
@@ -110,59 +117,44 @@ var notStreaming = map[string]struct {
 	fails failing
 	why   string
 }{
-	"abnf": {failsBoth, "abnf's tree parser declares no Lex.Window, so the engine reads a document whole before " +
-		"its parse begins (tabnas/abnf#129); a grammar's rules are an array no rule's node is, which pruning never " +
-		"empties, and abnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#81); and " + goMemory},
+	"abnf": {failsFlat, "abnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
+		"(tabnas/transduce#88); " + goUnpruned},
 	"c": {failsBoth, "it has no transducer part: a translation unit is read whole as the parser's value " +
 		"(admin ADR-33, ruling 7; the streaming plan's step 21, whose ruling is pending)"},
 	"css": {failsFlat, "css is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#82); and " + goMemory},
-	"csv": {failsFlat, goMemory},
-	"ebnf": {failsBoth, "ebnf's tree parser declares no Lex.Window, so the engine reads a document whole before " +
-		"its parse begins (tabnas/ebnf#75); a grammar's rules are an array no rule's node is, which pruning never " +
-		"empties, and ebnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#81); and " + goMemory},
-	"feed": {failsFlat, goMemory},
-	"gbnf": {failsBoth, "gbnf's tree parser declares no Lex.Window, so the engine reads a document whole before " +
-		"its parse begins (tabnas/gbnf#75); a grammar's rules are an array no rule's node is, which pruning never " +
-		"empties, and gbnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#81); and " + goMemory},
-	"ini": {failsFlat, "every section is a member of the document's root map, and pruning empties no map " +
-		"(tabnas/transduce#81); and " + goMemory},
-	"json":  {failsFlat, goMemory},
-	"json5": {failsFlat, goMemory},
-	"jsonc": {failsFlat, goMemory},
+		"(tabnas/transduce#82); " + goUnpruned},
+	"ebnf": {failsFlat, "ebnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
+		"(tabnas/transduce#88); " + goUnpruned},
+	"gbnf": {failsFlat, "gbnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
+		"(tabnas/transduce#88); " + goUnpruned},
 	"jsonic": {failsBoth, "jsonic's constructor declares no Lex.Window, so the engine reads a document whole " +
 		"before its parse begins (tabnas/jsonic#121)"},
-	"jsonl": {failsFlat, goMemory},
-	"markdown": {failsFlat, "a document's blocks array is no rule's node, so pruning never empties it, and " +
-		"each block's node stays (tabnas/transduce#81); and " + goMemory},
-	"pgn": {failsFlat, goMemory},
-	"proto": {failsBoth, "the check of its nesting that proto's parse makes first counts the whole document, " +
-		"and proto's grammar declares no Lex.Window, so a document is read whole first (tabnas/proto#81)"},
-	"toml": {failsFlat, "an array of tables is no rule's node, so pruning never empties it, and each table " +
-		"stays whole (tabnas/transduce#81); and " + goMemory},
-	"xml":  {failsFlat, goMemory},
-	"yaml": {failsFlat, goMemory},
-	"zon":  {failsFlat, goMemory},
+	"markdown": {failsFlat, "markdown's block phase keeps every block it has finished, linked under the " +
+		"document, until the parse ends (tabnas/markdown#100)"},
+	"pgn": {failsFlat, "Go's transduce prunes no PGN database, since its prune suite runs none (transduce's " +
+		"DIVERGENCE.md, entry 4), so the engine's tree keeps every game; " + goUnpruned},
+	"proto": {failsFlat, "proto's parse builds its whole CST, every definition's node, and its rewind history " +
+		"of 8,192 tokens keeps the window's text back to the oldest of them (tabnas/proto#85); " + goUnpruned},
+	"yaml": {failsFlat, "Go's transduce bounds no yaml rule history: yaml's Go childNode walks a child's Next " +
+		"links, which a bounded history cuts, so a bounded parse loses items of a value (transduce's " +
+		"DIVERGENCE.md, entry 5), and the engine keeps every rule of the parse"},
 }
 
-// streamingBound is how far the peak resident set over ten times the
-// document may pass the peak over the document: 1.5 times it. No format's
-// memory is flat in Go yet, so the bound is set from the runtime's own
-// variation and from what a held document costs: the same run's peak varies
-// by under a tenth (json over 300 items, eight runs one after another and
-// nine three at a time: 18.0 MB to 20.6 MB), and a live heap that stays flat
-// keeps the resident set within the collector's headroom of it at both
-// sizes, since GOGC=100 lets the heap reach twice what is live before a
-// collection. A run that holds its document grows with it, measured one run
-// at a time with test/streaming.json's documents (300 items, about 315 KB,
-// and 3,000): json 18.88 MB and 70.62 MB (3.7 times), csv 177.85 MB and
-// 1392.35 MB, xml 27.09 MB and 139.59 MB, and the least, markdown, 17.97 MB
-// and 57.94 MB (3.2 times). JSON read whole (--whole) holds 14.40 MB and
-// 40.40 MB (2.8 times), which TestADocumentHeldWholeFailsTheBound holds to
-// fail the bound.
+// streamingBound is how far what a run holds over ten times the document
+// may pass what it holds over the document: 1.5 times it. Measured with
+// test/streaming.json's documents (300 items, about 315 KB, and 3,000), each
+// run to its end, five runs of each on four cores busy with a Rust build,
+// the formats that stream hold at most 1.38 times as much at ten times, csv
+// 1.02 MB and 1.41 MB, and the rest 0.98 (toml) to 1.29 (xml) times: most of
+// what they add is the Go lexer's intern pool filling to its cap of 4,096
+// strings, which it reaches between the two documents (tabnas/parser#324),
+// and past it they hold what they held, csv 1.42 MB over 30,000 items. A
+// format that holds something of its document grows with it: the least,
+// jsonic, read whole, 0.98 MB and 3.89 MB (3.96 to 4.01 times), then
+// markdown, which keeps every block (4.5 times), the grammar notations (6.4
+// to 6.6), css (7.4), yaml and pgn (7.8 to 8.0), proto (8.7) and c (9.0 to
+// 9.2). JSON read whole (--whole) holds 0.87 MB and 4.90 MB (5.6 to 5.7
+// times), which TestADocumentHeldWholeFailsTheBound holds to fail the bound.
 const streamingBound = 1.5
 
 // streamingTemplate is a format's document in test/streaming.json: head,
@@ -244,37 +236,39 @@ func (d streamingTemplate) file(t *testing.T, dir, id string, n int) string {
 	return path
 }
 
-// memoryRuns lets one measured run go at a time: a command's peak resident
-// set takes in the collector's headroom, which a busy machine widens, and
-// the formats' other runs go on in parallel.
-var memoryRuns sync.Mutex
-
 // written is what a run wrote: its length and a hash of its bytes.
 type written struct {
 	length int64
 	hash   uint64
 }
 
-// streamRun is one run of the binary over a file.
+// streamRun is one measured run of the command over a file.
 type streamRun struct {
-	// peak is the command's peak resident set, in bytes, or with over, what
-	// it had reached when it was stopped past its limit. measured is false
-	// where the platform cannot measure it.
-	peak     int64
-	over     bool
-	measured bool
-	output   written
-	took     time.Duration
+	// peak is the most the command held past what it began with, in bytes,
+	// or with over, what it had reached when it was stopped past its limit.
+	peak   int64
+	over   bool
+	output written
+	took   time.Duration
 }
 
-// runOverFile runs dmog translate --from id --to json over path, stopped
-// past limit bytes of resident set where the platform can watch it (limit
-// 0 for none).
-func runOverFile(t *testing.T, id, path string, limit int64) streamRun {
+// runOverFile runs dmog translate --from id --to json over path, with
+// --whole where whole is true, measured: the test binary runs the command
+// (streamingHelper), and stops it once it holds more than limit bytes past
+// what it began with (limit 0 for none).
+func runOverFile(t *testing.T, id, path string, limit int64, whole bool) streamRun {
 	t.Helper()
-	memoryRuns.Lock()
-	defer memoryRuns.Unlock()
-	cmd := exec.Command(binary, "translate", "--from", id, "--to", "json", path)
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := []string{"translate", "--from", id, "--to", "json"}
+	if whole {
+		args = append(args, "--whole")
+	}
+	report := path + ".memory.json"
+	cmd := exec.Command(self, append(args, path)...)
+	cmd.Env = append(os.Environ(), streamingMemoryEnv+"="+report, fmt.Sprintf("%s=%d", streamingLimitEnv, limit))
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)
@@ -285,17 +279,19 @@ func runOverFile(t *testing.T, id, path string, limit int64) streamRun {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	stopped := make(chan int64, 1)
-	done := make(chan struct{})
-	go func() { stopped <- watchPeak(cmd.Process.Pid, limit, done, cmd.Process.Kill) }()
 	h := fnv.New64a()
 	length, copyErr := io.Copy(h, stdout)
 	waitErr := cmd.Wait()
-	close(done)
-	seen := <-stopped
-	over := seen > 0
 	took := time.Since(started)
-	if !over {
+	data, err := os.ReadFile(report)
+	if err != nil {
+		t.Fatalf("%s %s: no report: %v: %s", id, path, err, stderr.String())
+	}
+	var measured streamingReport
+	if err := json.Unmarshal(data, &measured); err != nil {
+		t.Fatalf("%s %s: %v", id, path, err)
+	}
+	if !measured.Over {
 		if copyErr != nil {
 			t.Fatalf("%s %s: %v", id, path, copyErr)
 		}
@@ -303,8 +299,7 @@ func runOverFile(t *testing.T, id, path string, limit int64) streamRun {
 			t.Fatalf("%s %s: %v: %s", id, path, waitErr, stderr.String())
 		}
 	}
-	peak, measured := peakOf(cmd.ProcessState)
-	return streamRun{peak: max(peak, seen), over: over, measured: measured, output: written{length, h.Sum64()}, took: took}
+	return streamRun{peak: measured.Peak, over: measured.Over, output: written{length, h.Sum64()}, took: took}
 }
 
 // fed is what one run of the binary over a document handed over in two
@@ -452,7 +447,7 @@ func (f streamFound) fails() failing {
 			fails |= failsWritten
 		}
 	}
-	if f.one.measured && (f.ten.over || float64(f.ten.peak) > float64(f.one.peak)*streamingBound) {
+	if f.ten.over || float64(f.ten.peak) > float64(f.one.peak)*streamingBound {
 		fails |= failsFlat
 	}
 	return fails
@@ -469,16 +464,13 @@ func (f streamFound) summary(items int) string {
 			parts = append(parts, fmt.Sprintf("from %s nothing written before the end", route))
 		}
 	}
-	memory := "memory not measured on " + runtime.GOOS
-	if f.one.measured {
-		stopped := ""
-		if f.ten.over {
-			stopped = ", stopped past it"
-		}
-		memory = fmt.Sprintf("peak %s at %d items and %s at %d (bound %s%s), %.1f s and %.1f s",
-			mib(f.one.peak), items, mib(f.ten.peak), items*10,
-			mib(int64(float64(f.one.peak)*streamingBound)), stopped, f.one.took.Seconds(), f.ten.took.Seconds())
+	stopped := ""
+	if f.ten.over {
+		stopped = ", stopped past it"
 	}
+	memory := fmt.Sprintf("peak %s at %d items and %s at %d (bound %s%s), %.1f s and %.1f s",
+		mib(f.one.peak), items, mib(f.ten.peak), items*10,
+		mib(int64(float64(f.one.peak)*streamingBound)), stopped, f.one.took.Seconds(), f.ten.took.Seconds())
 	return strings.Join(parts, ", ") + "; " + memory
 }
 
@@ -488,7 +480,7 @@ func holdStreaming(t *testing.T, docs streamingDocuments, format *translate.Form
 	d := docs.Documents[id]
 	n := docs.Items
 	dir := t.TempDir()
-	one := runOverFile(t, id, d.file(t, dir, id, n), 0)
+	one := runOverFile(t, id, d.file(t, dir, id, n), 0, false)
 	entry, registered := notStreaming[id]
 	// A command expected to write before the end is given a generous time
 	// to; one registered as not writing is given twice the time a whole run
@@ -532,11 +524,8 @@ func holdStreaming(t *testing.T, docs streamingDocuments, format *translate.Form
 			found.when = append(found.when, 0)
 		}
 	}
-	var limit int64
-	if one.measured {
-		limit = int64(float64(one.peak) * streamingBound)
-	}
-	found.ten = runOverFile(t, id, d.file(t, dir, id, n*10), limit)
+	limit := int64(float64(one.peak) * streamingBound)
+	found.ten = runOverFile(t, id, d.file(t, dir, id, n*10), limit, false)
 	return found
 }
 
@@ -565,11 +554,6 @@ func TestEveryFormatStreamsOrIsRegistered(t *testing.T) {
 			}
 			fails := found.fails()
 			entry, registered := notStreaming[id]
-			if !found.one.measured {
-				// The memory clause is not measured here: hold what was.
-				fails &^= failsFlat
-				entry.fails &^= failsFlat
-			}
 			switch {
 			case !registered && fails == 0:
 			case registered && fails == entry.fails:
@@ -590,31 +574,9 @@ func TestEveryFormatStreamsOrIsRegistered(t *testing.T) {
 func TestADocumentHeldWholeFailsTheBound(t *testing.T) {
 	docs := readStreamingDocuments(t)
 	d, n, dir := docs.Documents["json"], docs.Items, t.TempDir()
-	whole := func(path string, limit int64) streamRun {
-		// runOverFile's command, with --whole.
-		cmd := exec.Command(binary, "translate", "--from", "json", "--to", "json", "--whole", path)
-		cmd.Stdout = io.Discard
-		if err := cmd.Start(); err != nil {
-			t.Fatal(err)
-		}
-		stopped := make(chan int64, 1)
-		done := make(chan struct{})
-		go func() { stopped <- watchPeak(cmd.Process.Pid, limit, done, cmd.Process.Kill) }()
-		err := cmd.Wait()
-		close(done)
-		seen := <-stopped
-		if err != nil && seen == 0 {
-			t.Fatalf("json --whole %s: %v", path, err)
-		}
-		peak, measured := peakOf(cmd.ProcessState)
-		return streamRun{peak: max(peak, seen), over: seen > 0, measured: measured}
-	}
-	one := whole(d.file(t, dir, "json", n), 0)
-	if !one.measured {
-		t.Skip("memory is not measured on " + runtime.GOOS)
-	}
+	one := runOverFile(t, "json", d.file(t, dir, "json", n), 0, true)
 	limit := int64(float64(one.peak) * streamingBound)
-	ten := whole(d.file(t, dir, "json", n*10), limit)
+	ten := runOverFile(t, "json", d.file(t, dir, "json", n*10), limit, true)
 	t.Logf("json read whole: peak %s at %d items and %s at %d", mib(one.peak), n, mib(ten.peak), n*10)
 	if !ten.over && ten.peak <= limit {
 		t.Errorf("json read whole held %s at %d items and %s at %d, within the bound %s",

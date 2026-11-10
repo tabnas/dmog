@@ -71,7 +71,6 @@ import { Tabnas } from '@tabnas/parser'
 import {
   make as makeProto,
   parseTree as protoParseTree,
-  preflight as protoPreflight,
   translate as protoParts,
 } from '@tabnas/proto'
 import { DEFAULT_BUDGET, WriteOut, renderers as renderRenderers } from '@tabnas/render'
@@ -148,17 +147,16 @@ type Described = {
 // How a format's documents are read: with its grammar's parser, a fresh
 // one per source (a source owns its parser), which makes any check its
 // package's parse makes first in its own `parse` and `parseReader` (json5's
-// requireValue rule, from json5 0.5.18); or as the tree its package's own
-// API reads a document as, where its parser's value is not yet the tree its
-// parts declare; or both, where such a package ships a transducer part
-// (proto): the part reads the rule passes of its parser, after a check its
-// package's own parse makes first, which the parser does not make itself,
+// requireValue rule, from json5 0.5.18; proto's nesting cap, which its
+// parser counts as it reads, from proto 0.7.0); or as the tree its
+// package's own API reads a document as, where its parser's value is not
+// yet the tree its parts declare; or both, where such a package ships a
+// transducer part (proto): the part reads the rule passes of its parser,
 // and a document read whole is the tree.
 type Reading =
   | (() => Tabnas)
   | {
       readonly parser: () => Tabnas
-      readonly check: (text: string) => void
       readonly tree: (text: string) => unknown
     }
   | { readonly tree: (text: string) => unknown }
@@ -338,15 +336,12 @@ export class Format {
   // `ParserEvents/1` with a fresh parser of the format's grammar, for a
   // program over parser events, a transducer part's or `run --grammar`'s.
   // The check the package's parse makes first runs in the parser's own
-  // parse where the parser makes it (json5's), its refusal the run's, and
-  // first otherwise (proto's), its refusal thrown here, as the package's
-  // API reports it (`refusal`); a format read as a tree has no parser, and
-  // refuses.
+  // parse (json5's, proto's), its refusal the run's; a format read as a
+  // tree has no parser, and refuses.
   passes(text: string): ParserEventSource {
     const reading = this.reading
     if ('function' === typeof reading) return new ParserEventSource(reading(), text)
     if (!('parser' in reading)) throw this.noPasses()
-    checked(reading.check, text)
     return new ParserEventSource(reading.parser(), text)
   }
 
@@ -355,17 +350,13 @@ export class Format {
   // that fails, or bytes that are not UTF-8, fail the run where the parse
   // meets them, with the engine's `unreadable` (`unreadable`). The check
   // the package's parse makes first runs in the parser's own `parseReader`
-  // where the parser makes it (json5's), which reads only as far as the
-  // check needs before the parse reads on; a check made first otherwise
-  // (proto's nesting cap, which counts the whole document) reads the
-  // document whole, and the parser then reads the text it passed.
+  // (json5's, which reads only as far as the check needs before the parse
+  // reads on; proto's, which counts the nesting as the parse reads).
   passesFrom(reader: Reader): ParserEventSource {
     const reading = this.reading
     if ('function' === typeof reading) return ParserEventSource.fromReader(reading(), reader)
     if (!('parser' in reading)) throw this.noPasses()
-    const text = readAll(reader)
-    checked(reading.check, text)
-    return new ParserEventSource(reading.parser(), text)
+    return ParserEventSource.fromReader(reading.parser(), reader)
   }
 
   // The rule passes over a document, from its text, or through a reader
@@ -469,8 +460,7 @@ function descriptor(pkg: string, parts: Parts | undefined): Described | undefine
 // read: each one's default parser, as the Rust crate's `make()` builds it
 // (the relaxed grammars on jsonic's base), or, where its parser's value is
 // not yet the tree its parts declare, the tree its own API reads a
-// document as, and, for proto, which ships a transducer part, both, with
-// the nesting check its parse makes first.
+// document as, and, for proto, which ships a transducer part, both.
 function packages(): Array<[Described | undefined, Reading]> {
   return [
     [descriptor('tabnas-abnf', abnfParts()), () => makeAbnf()],
@@ -489,7 +479,7 @@ function packages(): Array<[Described | undefined, Reading]> {
     [descriptor('tabnas-jsonic', jsonicParts()), () => new Tabnas().use(jsonic)],
     [descriptor('tabnas-jsonl', jsonlParts()), () => makeJsonl()],
     [descriptor('tabnas-markdown', markdownParts()), () => makeMarkdown()],
-    [descriptor('tabnas-proto', protoParts()), { parser: () => makeProto(), check: protoPreflight, tree: protoTree }],
+    [descriptor('tabnas-proto', protoParts()), { parser: () => makeProto(), tree: protoTree }],
     [descriptor('tabnas-semver', semverParts()), () => new Tabnas().use(Semver)],
     [descriptor('tabnas-toml', tomlParts()), () => makeToml()],
     [descriptor('tabnas-xml', xmlParts()), () => makeXml()],
@@ -505,17 +495,6 @@ function packages(): Array<[Described | undefined, Reading]> {
 function refusal(err: unknown): unknown {
   if (isFail(err) || 'string' === typeof (err as { code?: unknown })?.code) return err
   return Fail.input(String((err as { message?: unknown })?.message ?? err))
-}
-
-// A check a package's own parse makes before its parser runs, over `text`:
-// a document it refuses is not parsed, and the refusal is the input's
-// failure, as the package's API reports it (`refusal`).
-function checked(check: (text: string) => void, text: string): void {
-  try {
-    check(text)
-  } catch (err) {
-    throw engineFailure(refusal(err), new AbortFlag())
-  }
 }
 
 // The tree a package's API reads a document as, or the refusal it throws.
@@ -536,10 +515,11 @@ function exprTree(text: string): unknown {
 }
 
 // A .proto file read whole as proto's package reads one, the tree its
-// parts declare: its declarations in source order (parseTree, which makes
-// the check the parser does not, `preflight`: a document nesting deeper
-// than its cap is refused before the engine runs). The parser's own value
-// is the grammar's syntax tree.
+// parts declare: its declarations in source order (parseTree, which counts
+// the document's nesting first, `preflight`, so that its refusal names the
+// depth). The parser's own value is the grammar's syntax tree, and the
+// parser refuses a document nesting past proto's cap as it reads the brace
+// past it (`proto_too_deep`).
 function protoTree(text: string): unknown {
   return treeOf(() => protoParseTree(text))
 }

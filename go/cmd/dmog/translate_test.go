@@ -430,9 +430,10 @@ func TestTranslateRefusesWhatATargetCannotCarry(t *testing.T) {
 // commands do: a JSON5 document holding no value is refused with json5's
 // own codes (its CheckReader, which its ParseReader makes), not the
 // engine's unexpected, from a file and from standard input; a .proto file
-// nesting past proto's cap is refused before the engine runs (the Preflight
-// its ParseValue makes). A grammar notation's document is read as its
-// rules, which no compiler has seen, so one its compiler would refuse is
+// nesting past proto's cap is refused at the brace that opens the level past
+// it, as proto's parser reads it, with the code proto_too_deep, before the
+// engine builds a tree that deep. A grammar notation's document is read as
+// its rules, which no compiler has seen, so one its compiler would refuse is
 // read as it is.
 func TestTranslateChecksWhatAModulesParseChecksFirst(t *testing.T) {
 	for _, c := range []struct{ input, code string }{{"", "json5_empty"}, {"// c\n", "json5_no_value"}} {
@@ -453,8 +454,8 @@ func TestTranslateChecksWhatAModulesParseChecksFirst(t *testing.T) {
 		return text("syntax = \"proto3\";\n" + strings.Repeat("message M {", n) + strings.Repeat("}", n) + "\n")
 	}
 	f := wantFailure(t, invoke(t, []string{"translate", "--from", "proto", "--to", "json", "-"}, deep(101)),
-		1, "INPUT_INVALID", "")
-	if f["message"] != "proto: document nests 101 levels deep, past the 100 this parser accepts" || len(f) != 3 {
+		1, "INPUT_INVALID", "proto_too_deep: proto: document nests deeper than the 100 levels this parser accepts")
+	if f["row"] != 2.0 || f["col"] != 1111.0 || f["output"] != "none" {
 		t.Errorf("101 deep: %v", f)
 	}
 	// A grammar notation's document is read as its rules in source order: a

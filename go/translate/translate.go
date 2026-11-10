@@ -560,7 +560,7 @@ func modules() []module {
 			parser, err := tabnasproto.Make()
 			installed("tabnas-proto", err)
 			return parser
-		}, tree: protoTree, check: &moduleCheck{text: protoCheck, reader: protoCheckReader}},
+		}, tree: protoTree},
 		{descriptor: func() at.Descriptor {
 			p := tabnassemver.Translate()
 			return descriptor("tabnas-semver", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
@@ -674,40 +674,18 @@ func exprTree(text string) (any, *tt.Fail) {
 
 // protoTree is a .proto file read whole as proto's module reads one, the
 // tree its parts declare: its declarations in source order (ParseTree,
-// which makes the check the parser does not, Preflight, before the engine
-// runs). The parser's own value is the grammar's syntax tree, so a whole
-// read reads this; the transducer part reads the parser's rule passes.
+// which counts the document's nesting first, Preflight, so that its refusal
+// names the depth). The parser's own value is the grammar's syntax tree, so
+// a whole read reads this; the transducer part reads the parser's rule
+// passes, and the parser refuses a document nesting past proto's cap as it
+// reads the brace past it (proto_too_deep), before the engine builds a tree
+// that deep.
 func protoTree(text string) (any, *tt.Fail) {
 	tree, err := tabnasproto.ParseTree(text)
 	if err != nil {
 		return nil, engineFailure(err)
 	}
 	return tree, nil
-}
-
-// protoCheck is what proto's parse checks before its parser runs, which
-// the parser does not check itself (Preflight): a document nesting deeper
-// than proto's cap is refused before the engine builds a tree that deep.
-func protoCheck(text string) *tt.Fail {
-	if err := tabnasproto.Preflight(text); err != nil {
-		return tt.InputFail(err.Error())
-	}
-	return nil
-}
-
-// protoCheckReader is protoCheck over a document read through r. The cap
-// is counted over the whole document, so r is read to its end first, as
-// the parser reads it anyway (proto declares no Lex.Window), and the parser
-// reads the text that passed.
-func protoCheckReader(r io.Reader) (io.Reader, *tt.Fail) {
-	text, fail := ReaderDocument(r).text()
-	if fail != nil {
-		return nil, fail
-	}
-	if fail := protoCheck(text); fail != nil {
-		return nil, fail
-	}
-	return strings.NewReader(text), nil
 }
 
 // feedTree is a feed as feed's module reads one by default, the Atom-shaped
