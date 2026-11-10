@@ -1,0 +1,127 @@
+{
+  "note": "The streaming gate's documents (rs/tests/streaming_test.rs, ts/test/streaming.test.ts, go/cmd/dmog/streaming_test.go; AGENTS.md, \"The streaming gate\"). For each format, a document of n items is `head`, then `item` once for each index i from 0, with {i} the index, `separator` between two items, and then `tail`; {text} in any of them is `text`. The gate reads a document of `items` items and one of ten times as many. An item is a short distinct name, which a run that keeps something of every item holds, and a long plain text, so that the document of `items` items is longer than the lexer's window holds (about 192 KiB) at a few events an item. Every format the formats table lists has a document here, but those ruled whole.",
+  "items": 300,
+  "text": "the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog",
+  "documents": {
+    "abnf": {
+      "head": "",
+      "item": "; {text}\r\nr{i} = \"a{i}\" / \"b{i}\"\r\n",
+      "separator": "",
+      "tail": ""
+    },
+    "c": {
+      "head": "",
+      "item": "/* {text} */\nint x{i} = {i};\n",
+      "separator": "",
+      "tail": ""
+    },
+    "css": {
+      "head": "",
+      "item": ".c{i} { margin: {i}px; content: \"{text}\"; }\n",
+      "separator": "",
+      "tail": ""
+    },
+    "csv": {
+      "head": "id,name,text\n",
+      "item": "{i},n{i},{text}\n",
+      "separator": "",
+      "tail": ""
+    },
+    "ebnf": {
+      "head": "",
+      "item": "/* {text} */\nr{i} ::= \"a{i}\" | \"b{i}\"\n",
+      "separator": "",
+      "tail": ""
+    },
+    "feed": {
+      "head": "<feed xmlns=\"http://www.w3.org/2005/Atom\"><title>t</title><id>f</id>\n",
+      "item": "<entry><id>e{i}</id><title>n{i}</title><summary>{text}</summary></entry>\n",
+      "separator": "",
+      "tail": "</feed>\n"
+    },
+    "gbnf": {
+      "head": "root ::= r0\n",
+      "item": "# {text}\nr{i} ::= \"a{i}\" | \"b{i}\"\n",
+      "separator": "",
+      "tail": ""
+    },
+    "ini": {
+      "head": "",
+      "item": "[s{i}]\nid = {i}\nname = n{i}\ntext = {text}\n\n",
+      "separator": "",
+      "tail": ""
+    },
+    "json": {
+      "head": "[\n",
+      "item": "{\"id\": {i}, \"name\": \"n{i}\", \"text\": \"{text}\"}",
+      "separator": ",\n",
+      "tail": "\n]\n"
+    },
+    "json5": {
+      "head": "// records\n[\n",
+      "item": "{id: {i}, name: 'n{i}', text: '{text}'}",
+      "separator": ",\n",
+      "tail": ",\n]\n"
+    },
+    "jsonc": {
+      "head": "// records\n[\n",
+      "item": "{\"id\": {i}, \"name\": \"n{i}\", \"text\": \"{text}\"}",
+      "separator": ",\n",
+      "tail": "\n]\n"
+    },
+    "jsonic": {
+      "head": "[\n",
+      "item": "{id: {i}, name: n{i}, text: \"{text}\"}",
+      "separator": ",\n",
+      "tail": "\n]\n"
+    },
+    "jsonl": {
+      "head": "",
+      "item": "{\"id\": {i}, \"name\": \"n{i}\", \"text\": \"{text}\"}\n",
+      "separator": "",
+      "tail": ""
+    },
+    "markdown": {
+      "head": "",
+      "item": "Paragraph {i}. {text}\n\n",
+      "separator": "",
+      "tail": ""
+    },
+    "pgn": {
+      "head": "",
+      "item": "[Event \"g{i}\"]\n[Result \"*\"]\n\n{ {text} } 1. e4 e5 2. Nf3 Nc6 *\n\n",
+      "separator": "",
+      "tail": ""
+    },
+    "proto": {
+      "head": "syntax = \"proto3\";\n",
+      "item": "// {text}\nmessage M{i} { int32 id = 1; string name = 2; }\n",
+      "separator": "",
+      "tail": ""
+    },
+    "toml": {
+      "head": "",
+      "item": "[[items]]\nid = {i}\nname = \"n{i}\"\ntext = \"{text}\"\n\n",
+      "separator": "",
+      "tail": ""
+    },
+    "xml": {
+      "head": "<items>\n",
+      "item": "<item id=\"{i}\"><name>n{i}</name><text>{text}</text></item>\n",
+      "separator": "",
+      "tail": "</items>\n"
+    },
+    "yaml": {
+      "head": "",
+      "item": "- id: {i}\n  name: n{i}\n  text: {text}\n",
+      "separator": "",
+      "tail": ""
+    },
+    "zon": {
+      "head": ".{\n",
+      "item": ".{ .id = {i}, .name = \"n{i}\", .text = \"{text}\" }",
+      "separator": ",\n",
+      "tail": ",\n}\n"
+    }
+  }
+}

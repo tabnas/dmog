@@ -30,8 +30,7 @@
 // member, which a part streams twice and tree-contract refuses), fails with its code after what it wrote: --whole reads it whole,
 // its grammar's value the document (admin ADR-33). Where a module's parser
 // builds a value that is not yet the tree its parts declare (an expression's
-// operators, proto's syntax tree, a typed feed or database, a grammar
-// notation's document, which compiles to a grammar spec), the tree the
+// operators, proto's syntax tree, a typed feed or database), the tree the
 // module's API reads a document as is the document, read whole; where the
 // module ships a transducer part too (proto, feed, PGN), the part reads the
 // parser's rule passes, and a document read whole is that tree. Nothing here
@@ -67,6 +66,7 @@ import (
 
 	tabnasabnf "github.com/tabnas/abnf/go"
 	alchemy "github.com/tabnas/alchemy/go"
+	"github.com/tabnas/alchemy/go/shared"
 	at "github.com/tabnas/alchemy/go/translate"
 	tabnasc "github.com/tabnas/c/go"
 	tabnaschess "github.com/tabnas/chess/go"
@@ -93,6 +93,33 @@ import (
 	tabnasyaml "github.com/tabnas/yaml/go"
 	tabnaszon "github.com/tabnas/zon/go"
 )
+
+// Renderers is the renderers every program this command compiles is
+// lowered onto: render's own (tr.Renderers), each method render's, but for
+// the writer of the text a command writes (WriteOut), which holds at most
+// render's budget (tr.DefaultBudget, 32 KiB) of a record that is still
+// open, where render's own holds up to its default hold, 16 MiB of it.
+// translate streams its output from its first byte (admin ADR-33, ruling
+// 1), and render's JSON writer makes each member of a root object one
+// record, so with render's hold a tree whose bulk is one member of its root
+// (a stylesheet's rules, an XML element's children, a feed's entries, a
+// Markdown document's blocks, a TOML array of tables) was written only once
+// 16 MiB of it was held, or at the document's end: the streaming gate found
+// it (cmd/dmog/streaming_test.go). A record of up to the budget is still
+// written whole when a run fails part way; a longer one is written as it
+// comes, and the writer retains at most the budget and the hold. render's
+// default suits a library; the policy is the host's.
+func Renderers() shared.Renderers { return commandRenderers{tr.Renderers()} }
+
+// commandRenderers is Renderers: render's renderers, embedded, so that
+// every method is render's, with a writer that holds the budget.
+type commandRenderers struct{ shared.Renderers }
+
+// WriteOut is render's NewWriteOut with WithLimits and WithMetrics, as
+// render's own is, and WithHold the budget.
+func (commandRenderers) WriteOut(w io.Writer, limits shared.Limits, metrics *shared.Metrics) shared.TextOut {
+	return tr.NewWriteOut(w).WithLimits(limits).WithMetrics(metrics).WithHold(tr.DefaultBudget)
+}
 
 // Format is one format this command reads and writes: its parts, as its
 // module's manifest names them, and the grammar its documents are read
@@ -315,7 +342,7 @@ func (f *Format) TransducerProgram() (*alchemy.Program, *tt.Fail) {
 			{File: alc.File, Text: alc.Text},
 			{File: "main", Text: "def export [input] (" + alc.Entry + " input)"},
 		}
-		f.compiled, f.compileFail = alchemy.CompileSourcesWith(sources, alchemy.InputParserEvents, tt.Routers(), tr.Renderers())
+		f.compiled, f.compileFail = alchemy.CompileSourcesWith(sources, alchemy.InputParserEvents, tt.Routers(), Renderers())
 	})
 	return f.compiled, f.compileFail
 }
@@ -422,7 +449,9 @@ func modules() []module {
 		{descriptor: func() at.Descriptor {
 			p := tabnasabnf.Translate()
 			return descriptor("tabnas-abnf", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
-		}, tree: abnfTree},
+		}, transduce: func() *at.PartText {
+			return partText((*modulePart)(tabnasabnf.Translate().Transduce))
+		}, parser: func() *tabnas.Tabnas { return tabnasabnf.Make() }},
 		{descriptor: func() at.Descriptor {
 			p := tabnasc.Translate()
 			return descriptor("tabnas-c", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
@@ -456,7 +485,9 @@ func modules() []module {
 		{descriptor: func() at.Descriptor {
 			p := tabnasebnf.Translate()
 			return descriptor("tabnas-ebnf", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
-		}, tree: ebnfTree},
+		}, transduce: func() *at.PartText {
+			return partText((*modulePart)(tabnasebnf.Translate().Transduce))
+		}, parser: func() *tabnas.Tabnas { return tabnasebnf.Make() }},
 		{descriptor: func() at.Descriptor {
 			p := tabnasexpr.Translate()
 			return descriptor("tabnas-expr", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
@@ -474,7 +505,9 @@ func modules() []module {
 		{descriptor: func() at.Descriptor {
 			p := tabnasgbnf.Translate()
 			return descriptor("tabnas-gbnf", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
-		}, tree: gbnfTree},
+		}, transduce: func() *at.PartText {
+			return partText((*modulePart)(tabnasgbnf.Translate().Transduce))
+		}, parser: func() *tabnas.Tabnas { return tabnasgbnf.Make() }},
 		{descriptor: func() at.Descriptor {
 			p := tabnasini.Translate()
 			return descriptor("tabnas-ini", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
@@ -675,56 +708,6 @@ func protoCheckReader(r io.Reader) (io.Reader, *tt.Fail) {
 		return nil, fail
 	}
 	return strings.NewReader(text), nil
-}
-
-// abnfTree is an ABNF document as abnf's module reads one for a host, the
-// tree its parts declare: the pure-data grammar spec its compiler writes
-// (AbnfCompile, recognition off, so that the tree builders stay, as strict
-// JSON), read as JSON. The grammar spec is the schema grammar-spec, which
-// the EBNF and GBNF compilers emit too. Go's serializer writes its members
-// in the order the compiler emits them, as TypeScript's and Rust's do, from
-// tabnas-bnf 0.1.30; before, it wrote them in name order, and the match
-// tokens' order in a list of its own (options.match.tokenOrder).
-func abnfTree(text string) (any, *tt.Fail) {
-	recognition := false
-	compiled, err := tabnasabnf.AbnfCompile(text, &tabnasabnf.AbnfCompileOptions{Recognition: &recognition, Strict: true})
-	if err != nil {
-		return nil, tt.InputFail(err.Error())
-	}
-	return jsonTree(compiled)
-}
-
-// compiledTree is a notation's conversion, converted with the builtins on,
-// as the shared compiler writes it for a host: the pure-data grammar spec,
-// with its tree builders (ToJsonic over ToPureSpec, recognition off), as
-// strict JSON, read as JSON. The compiler is tabnas-bnf, whose serializers
-// abnf's module aliases, so reading a notation takes no module beyond the
-// notations'.
-func compiledTree(spec *tabnas.GrammarSpec, err error) (any, *tt.Fail) {
-	if err != nil {
-		return nil, tt.InputFail(err.Error())
-	}
-	pure, err := tabnasabnf.ToPureSpec(spec)
-	if err != nil {
-		return nil, tt.InputFail(err.Error())
-	}
-	return jsonTree(tabnasabnf.ToJsonic(pure, true, 0))
-}
-
-// ebnfTree is an EBNF document as ebnf's module reads one for a host, the
-// tree its parts declare: the grammar spec the shared compiler writes of
-// its conversion with the builtins on (compiledTree).
-func ebnfTree(text string) (any, *tt.Fail) {
-	return compiledTree(tabnasebnf.Ebnf(text, &tabnasebnf.ConvertOptions{Builtins: true}))
-}
-
-// gbnfTree is a GBNF document as gbnf's module reads one for a host, the
-// tree its parts declare: the grammar spec the shared compiler writes of
-// its conversion with the builtins on, and the notation's own defaults
-// otherwise (the start root, eager classes where they are unambiguous)
-// (compiledTree).
-func gbnfTree(text string) (any, *tt.Fail) {
-	return compiledTree(tabnasgbnf.Gbnf(text, &tabnasgbnf.ConvertOptions{Builtins: true}))
 }
 
 // feedTree is a feed as feed's module reads one by default, the Atom-shaped
@@ -931,7 +914,7 @@ type parsedRoute struct {
 // Compile is the composition a request makes, and the program it compiles
 // to.
 func Compile(r *Request) (*Compiled, *tt.Fail) {
-	routers, renderers := tt.Routers(), tr.Renderers()
+	routers, renderers := tt.Routers(), Renderers()
 	// The transducer the route reads the document through, where the
 	// source ships one and the whole document is asked, not read whole. A
 	// path's value is a plain tree's events, which the composition over a

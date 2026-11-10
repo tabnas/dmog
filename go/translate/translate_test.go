@@ -16,11 +16,11 @@ package translate_test
 // schema-only target (one that writes a schema's tree with no embedding
 // into it: C, CSS, PGN, proto and the grammar notations ABNF, EBNF and
 // GBNF) refuses another format's tree, a grammar notation refuses a
-// grammar spec it has no form for, naming what it met, and Semantic
+// grammar it has no form for, naming the rule and what it met, and Semantic
 // Versioning's embedding refuses a tree that is not a version. A refusal of
 // another kind, or a document written where a refusal is declared, is a
-// failure. The grammar notations share a schema, the grammar spec their
-// compilers emit, so each writes the others' documents.
+// failure. The grammar notations share a schema, a grammar's rules in
+// source order (grammar-rules), so each writes the others' documents.
 //
 // The corpora are the sibling checkouts': transduce's fixtures (aless's: a
 // document of every format but C, CSS, expressions, PGN, proto, Semantic
@@ -51,9 +51,12 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	tabnasabnf "github.com/tabnas/abnf/go"
 	alchemy "github.com/tabnas/alchemy/go"
 	at "github.com/tabnas/alchemy/go/translate"
 	"github.com/tabnas/dmog/go/translate"
+	tabnasebnf "github.com/tabnas/ebnf/go"
+	tabnasgbnf "github.com/tabnas/gbnf/go"
 	tabnas "github.com/tabnas/parser/go"
 	tt "github.com/tabnas/transduce/go"
 )
@@ -353,20 +356,21 @@ type expectation struct {
 }
 
 // grammarNotation is whether a format is a grammar notation: one whose
-// documents read as the grammar spec the tabnas BNF compiler emits, which
-// each notation's render writes back.
+// documents read as a grammar's rules in source order (grammar-rules,
+// tabnas/bnf's), which each notation's render writes back.
 func grammarNotation(f *translate.Format) bool {
-	return f.Part.Schema == "grammar-spec"
+	return f.Part.Schema == "grammar-rules"
 }
 
 // expect is what from's document, read as source, into to is held to. A
 // schema-only target (one that writes from a tree, with a schema and no
 // embed: C, CSS, PGN, proto and the grammar notations) refuses a tree of
 // another schema before any output, as alchemy's composition declares; a
-// grammar notation's render writes a grammar spec, any notation's, unless
-// it has no form for something in it, which it refuses naming what it met,
-// as its loss list declares (an action, a negated class in ABNF, the
-// engine's own tokens in GBNF, ...); Semantic Versioning's embedding
+// grammar notation's render writes a grammar's rules, any notation's,
+// unless it has no form for something in them, which it refuses naming the
+// rule and what it met, as its loss list declares (prose, a negated class
+// in ABNF, the engine's own tokens in GBNF, a start the grammar does not
+// define, ...); Semantic Versioning's embedding
 // refuses a tree that is not a version, as its part declares; and expr's
 // render refuses a list led by an object whose src its reader would take
 // for the list's operator, where that is no default operator's source text
@@ -386,7 +390,7 @@ func expect(from, to *translate.Format, source *tt.Datum) expectation {
 		return expectation{code: tt.CodeTargetValueUnrepresentable, reason: "the object at "}
 	case grammarNotation(to):
 		return expectation{written: true, unless: true, code: tt.CodeTargetValueUnrepresentable,
-			reason: "the grammar spec cannot be written as " + strings.ToUpper(to.ID()) + ": "}
+			reason: "the grammar cannot be written as " + strings.ToUpper(to.ID()) + ": "}
 	}
 	return expectation{written: true}
 }
@@ -1687,47 +1691,74 @@ func feedReading(d tt.Datum) tt.Datum {
 
 // check is whether the document read back from written in target is what
 // the target's conventions make of source, read as from.
-// checkGrammar is whether a grammar spec written in a grammar notation
-// reads back as the notations' conventions say. A render writes the spec
-// anew, as far as its notation can say it, and its contract is the round
-// trip (each render's header): the text compiles back to the spec it was
-// written from, but where its loss list says it compiles back to another
-// (a spec whose alternatives the compiler reordered, or whose left
-// recursion ran through another rule), and a spec compiled from another
-// notation, which compiles back under the target's own settings (its group
-// tag, its lexing, its spelling of the other notation's terminals and core
-// rules) and recognises what it recognised. So a spec of the target's own
-// notation reads back as it was, or as one the render writes again as the
-// same text; and one of another notation reads back as a spec the render
-// writes again as text that reads back as that spec.
+// checkGrammar is whether a grammar written in a grammar notation reads
+// back as the notations' conventions say. A render writes a grammar's rules
+// anew, as far as its notation can say them, and its contract is the round
+// trip (each render's header): a tree of the target's own notation reads
+// back as it was; one of another notation, written as the target spells
+// what the source spells otherwise (its loss list), reads back as a tree
+// the render writes again as the same text.
 func checkGrammar(from, target *translate.Format, source tt.Datum, written string) error {
-	limits := tt.DefaultLimits()
-	back, f := target.Read(written, limits)
+	back, f := target.Read(written, tt.DefaultLimits())
 	if f != nil {
 		return fmt.Errorf("the written grammar does not read back: %v", f)
 	}
-	if from.ID() == target.ID() && same(&source, &back) {
-		return nil
+	if from.ID() == target.ID() {
+		if same(&source, &back) {
+			return nil
+		}
+		return fmt.Errorf("read back as %s, where %s was written", back.String(), source.String())
 	}
 	again, f := translateText(target, target, written, nil)
 	if f != nil {
-		return fmt.Errorf("the spec it reads back as is not written again: %v; it was written as %q", f, written)
+		return fmt.Errorf("the grammar it reads back as is not written again: %v; it was written as %q", f, written)
 	}
-	if from.ID() == target.ID() {
-		if again == written {
-			return nil
-		}
-		return fmt.Errorf("reads back as another spec, which is written again as %q, where %q was written", again, written)
-	}
-	backAgain, f := target.Read(again, limits)
-	if f != nil {
-		return fmt.Errorf("the grammar written again does not read back: %v", f)
-	}
-	if same(&back, &backAgain) {
+	if again == written {
 		return nil
 	}
-	return fmt.Errorf("reads back as a spec that is written again as %q, which reads back as another, where %q was "+
-		"written", again, written)
+	return fmt.Errorf("reads back as a grammar that is written again as %q, where %q was written", again, written)
+}
+
+// compiledSpec is the grammar spec a grammar notation's document compiles
+// to, with its own notation's compiler, as that module writes it for a
+// host that installs a grammar: the pure-data spec, recognition off, so
+// that the tree builders stay, as strict JSON, read as JSON (AbnfCompile
+// for ABNF, and for EBNF and GBNF the shared compiler's serializers over
+// the conversion with the builtins on, which abnf's module aliases). The
+// compiler's refusal is the error: the reader reads a grammar as its
+// rules whether or not they compile.
+func compiledSpec(t *testing.T, id, text string) (tt.Datum, error) {
+	pure := func(spec *tabnas.GrammarSpec, err error) (string, error) {
+		if err != nil {
+			return "", err
+		}
+		p, err := tabnasabnf.ToPureSpec(spec)
+		if err != nil {
+			return "", err
+		}
+		return tabnasabnf.ToJsonic(p, true, 0), nil
+	}
+	var json string
+	var err error
+	switch id {
+	case "abnf":
+		recognition := false
+		json, err = tabnasabnf.AbnfCompile(text, &tabnasabnf.AbnfCompileOptions{Recognition: &recognition, Strict: true})
+	case "ebnf":
+		json, err = pure(tabnasebnf.Ebnf(text, &tabnasebnf.ConvertOptions{Builtins: true}))
+	case "gbnf":
+		json, err = pure(tabnasgbnf.Gbnf(text, &tabnasgbnf.ConvertOptions{Builtins: true}))
+	default:
+		t.Fatalf("%s is no grammar notation", id)
+	}
+	if err != nil {
+		return tt.Datum{}, err
+	}
+	spec, f := format(t, "json").Read(json, tt.DefaultLimits())
+	if f != nil {
+		return tt.Datum{}, f
+	}
+	return spec, nil
 }
 
 // exactLexing is whether a grammar spec sets the lexing GBNF's compiler
@@ -1761,34 +1792,41 @@ func grammarEngine(spec *tt.Datum) (*tabnas.Tabnas, error) {
 	return engine, nil
 }
 
-// recognition is what a grammar spec, source, written in target as written
-// recognises against what the spec that text compiles to recognises, over
-// the document's samples: each sample is parsed with both, and both accept
-// it or both refuse it. A render writes a spec as far as its notation can
-// say it and recognises what it recognised (each loss list's sentence on
-// the tree builders), but for the lexing: a spec of another notation
-// compiles back under the target's own settings (its loss list), so across
-// GBNF's exact lexing and the others' default one, which skips white
-// space, a sample holding white space may be recognised otherwise, as
-// declared; the caller holds those to the samples
+// recognition is what from's document, text, written in target as written,
+// recognises against what it recognised, over the document's samples: each
+// grammar is compiled by its own notation's compiler (compiledSpec) and
+// installed on an engine of its own, each sample is parsed with both, and
+// both accept it or both refuse it. A render writes a grammar as far as its
+// notation can say it and recognises what it recognised, but for the
+// lexing: a grammar of another notation compiles under the target's own
+// settings (its loss list), so across GBNF's exact lexing and the others'
+// default one, which skips white space, a sample holding white space may be
+// recognised otherwise, as declared; the caller holds those to the samples
 // test/notation-samples.json registers for the pair. It is the number of
-// samples compared and the samples recognised otherwise across the lexing.
-func recognition(target *translate.Format, source tt.Datum, written string, samples []string) (int, []string, error) {
+// samples compared and the samples recognised otherwise across the lexing;
+// uncompiled, where the document's own compiler refuses it, why, since the
+// reader reads a grammar as its rules whether or not they compile; and the
+// error, a written grammar its own compiler refuses among them.
+func recognition(t *testing.T, from, target *translate.Format, text, written string, samples []string) (int, []string, string, error) {
 	if len(samples) == 0 {
-		return 0, nil, nil
+		return 0, nil, "", nil
 	}
-	back, f := target.Read(written, tt.DefaultLimits())
-	if f != nil {
-		return 0, nil, fmt.Errorf("the written grammar does not read back: %v", f)
+	source, err := compiledSpec(t, from.ID(), text)
+	if err != nil {
+		return 0, nil, err.Error(), nil
+	}
+	back, err := compiledSpec(t, target.ID(), written)
+	if err != nil {
+		return 0, nil, "", fmt.Errorf("the written grammar does not compile: %v", err)
 	}
 	across := exactLexing(&source) != exactLexing(&back)
 	read, err := grammarEngine(&source)
 	if err != nil {
-		return 0, nil, fmt.Errorf("the spec read does not install: %v", err)
+		return 0, nil, "", fmt.Errorf("the spec read does not install: %v", err)
 	}
 	writtenEngine, err := grammarEngine(&back)
 	if err != nil {
-		return 0, nil, fmt.Errorf("the spec written does not install: %v", err)
+		return 0, nil, "", fmt.Errorf("the spec written does not install: %v", err)
 	}
 	var otherwise []string
 	verb := map[bool]string{true: "accepts", false: "refuses"}
@@ -1803,10 +1841,10 @@ func recognition(target *translate.Format, source tt.Datum, written string, samp
 			otherwise = append(otherwise, sample)
 			continue
 		}
-		return 0, nil, fmt.Errorf("recognises %q otherwise: the grammar read %s it, the one written %s it, where %q "+
+		return 0, nil, "", fmt.Errorf("recognises %q otherwise: the grammar read %s it, the one written %s it, where %q "+
 			"was written", sample, verb[was], verb[is], written)
 	}
-	return len(samples), otherwise, nil
+	return len(samples), otherwise, "", nil
 }
 
 func check(t testing.TB, from, target *translate.Format, source tt.Datum, written string) error {
@@ -1949,26 +1987,29 @@ func size(d *tt.Datum) int {
 	return n
 }
 
-// sizeBound is the size of a tree every format writes in moments. The
-// grammar spec RFC 3986's URI grammar compiles to holds 513,409 values (its
-// probe tables), which take seconds into JSON and minutes into an XML
-// embedding, and the TypeScript command's interpreter takes minutes over
-// the 14,000 values the larger GBNF examples compile to (C's, JSON's): a
-// workload and not a shape, so the matrix leaves a document past this out,
-// as the TypeScript one does, and pins how few such documents there are
-// (the Rust suite's release run, faster, reads trees ten times this size).
+// sizeBound is the size of a tree every format writes in moments. A tree
+// of half a million values (the grammar spec RFC 3986's URI grammar
+// compiles to holds 513,409) takes seconds into JSON and minutes into an
+// XML embedding, and the TypeScript command's interpreter takes minutes
+// over 14,000 (the grammar specs the larger GBNF examples compile to, C's
+// and JSON's): a workload and not a shape, so the matrix leaves a document
+// past this out, as the TypeScript one does, and pins how many there are.
+// None is, since the grammar notations are read as their rules (the Rust
+// suite's release run, faster, reads trees ten times this size).
 const sizeBound = 10_000
 
 // bounds is what a run of the matrix is held to: at least floor
 // documents, at most tooDeep of them deeper than every format reads and
 // tooLarge larger than every format writes in moments, at least refusals
 // pairs refused as their target declares, at least grammarsWritten
-// grammars written in a grammar notation, and at least samplesCompared
-// samples of theirs (notation's Samples, by document) compared between the
-// grammar read and the one written, each recognised by both alike but
-// those notation's Otherwise registers for the pair.
+// grammars written in a grammar notation, at least samplesCompared samples
+// of theirs (notation's Samples, by document) compared between the grammar
+// read and the one written, each recognised by both alike but those
+// notation's Otherwise registers for the pair, and exactly uncompiled pairs
+// whose document has samples and is one its own notation's compiler
+// refuses, so that nothing is compared.
 type bounds struct {
-	floor, tooDeep, tooLarge, refusals, grammarsWritten, samplesCompared int
+	floor, tooDeep, tooLarge, refusals, grammarsWritten, samplesCompared, uncompiled int
 	// whole is the documents a source's part refuses part way, at most:
 	// each is read with --whole, and its pairs are held to what that
 	// writes.
@@ -2009,7 +2050,7 @@ func matrix(t *testing.T, docs []document, b bounds) {
 	var failures, refusedSources, tooDeep, tooLarge, defective, refusals, diverged, repaired []string
 	met := map[string]bool{}
 	pairs, grammarsWritten, samplesCompared := 0, 0, 0
-	var declaredOtherwise []string
+	var declaredOtherwise, uncompiled []string
 	readWhole := map[string]string{}
 	var readWholeOrder []string
 	started := time.Now()
@@ -2072,12 +2113,14 @@ func matrix(t *testing.T, docs []document, b bounds) {
 				}
 				why = check(t, from, to, source, written)
 				if why == nil && held.unless {
-					compared, otherwise, err := recognition(to, source, written, b.notation.Samples[doc.name])
+					compared, otherwise, refused, err := recognition(t, from, to, doc.text, written, b.notation.Samples[doc.name])
 					why = err
 					samplesCompared += compared
 					registered := b.notation.Otherwise[name]
 					switch {
 					case err != nil:
+					case refused != "":
+						uncompiled = append(uncompiled, name+": "+refused)
 					case !slices.Equal(otherwise, registered):
 						why = fmt.Errorf("recognises %s otherwise across the lexing, where test/notation-samples.json "+
 							"registers %s for the pair", jsonList(otherwise), jsonList(registered))
@@ -2125,6 +2168,9 @@ func matrix(t *testing.T, docs []document, b bounds) {
 	for _, key := range readWholeOrder {
 		t.Logf("read with --whole, which its part cannot stream: %s: %s", key, readWhole[key])
 	}
+	for _, line := range uncompiled {
+		t.Logf("no recognition to compare, its own compiler refusing the document: %s", line)
+	}
 	for _, line := range failures {
 		t.Logf("FAIL %s", line)
 	}
@@ -2133,7 +2179,7 @@ func matrix(t *testing.T, docs []document, b bounds) {
 		switch {
 		case strings.Contains(r, "schema_only:"):
 			schemaOnly++
-		case strings.Contains(r, ": the grammar spec cannot be written as "):
+		case strings.Contains(r, ": the grammar cannot be written as "):
 			unwritable++
 		case strings.Contains(r, ": the object at "):
 			exprRefused++
@@ -2144,11 +2190,12 @@ func matrix(t *testing.T, docs []document, b bounds) {
 		"stream; %d pairs refused as their target declares (%d by a "+
 		"schema-only target, %d by a grammar notation's render, %d by expr's render, %d by Semantic Versioning's "+
 		"embedding); %d grammars written in a grammar notation, %d of their samples compared, %d pairs recognising "+
-		"some otherwise across the lexing, as registered",
+		"some otherwise across the lexing, as registered, %d pairs with samples whose document its own compiler "+
+		"refuses",
 		pairs, len(docs), len(refusedSources), len(tooDeep), len(tooLarge), len(defective), len(diverged), len(readWhole),
 		len(refusals),
 		schemaOnly, unwritable, exprRefused, len(refusals)-schemaOnly-unwritable-exprRefused, grammarsWritten,
-		samplesCompared, len(declaredOtherwise))
+		samplesCompared, len(declaredOtherwise), len(uncompiled))
 	leftOut := len(refusedSources) + len(tooDeep) + len(tooLarge) + len(defective)
 	if pairs+leftOut*len(targets) != total || len(docs) < b.floor {
 		t.Fatalf("the corpora shrank: %d documents", len(docs))
@@ -2164,6 +2211,9 @@ func matrix(t *testing.T, docs []document, b bounds) {
 	}
 	if len(refusals) < b.refusals {
 		t.Fatalf("%d pairs are refused as their target declares, fewer than the %d the corpora give", len(refusals), b.refusals)
+	}
+	if len(uncompiled) != b.uncompiled {
+		t.Fatalf("%d pairs with samples have a document its own compiler refuses (above)", len(uncompiled))
 	}
 	if samplesCompared < b.samplesCompared {
 		t.Fatalf("%d samples are compared, fewer than the %d the corpora give", samplesCompared, b.samplesCompared)
@@ -2218,8 +2268,8 @@ func TestParsePathReadsKeysAndIndexes(t *testing.T) {
 // parser must accept, and the grammar notations' example grammars, into
 // every format.
 func TestEveryDocumentTranslatesIntoEveryFormat(t *testing.T) {
-	matrix(t, corpus(t), bounds{floor: 151, tooDeep: 0, tooLarge: 4, whole: 11, refusals: 1087, grammarsWritten: 33,
-		samplesCompared: 191, notation: notationSamples(t)})
+	matrix(t, corpus(t), bounds{floor: 151, tooDeep: 0, tooLarge: 0, whole: 11, refusals: 1107, grammarsWritten: 45,
+		samplesCompared: 364, uncompiled: 0, notation: notationSamples(t)})
 }
 
 // request is a request from from to to, with no path and no program.

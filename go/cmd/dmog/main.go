@@ -70,7 +70,6 @@ import (
 	alchemy "github.com/tabnas/alchemy/go"
 	at "github.com/tabnas/alchemy/go/translate"
 	"github.com/tabnas/dmog/go/translate"
-	tr "github.com/tabnas/render/go"
 	tt "github.com/tabnas/transduce/go"
 )
 
@@ -264,12 +263,12 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (string, *exit) {
 			}
 			return alchemy.Format(program), nil
 		case "check":
-			if _, f := alchemy.Compile(src, file, tt.Routers(), tr.Renderers()); f != nil {
+			if _, f := alchemy.Compile(src, file, tt.Routers(), translate.Renderers()); f != nil {
 				return "", fromFail(f)
 			}
 			return "", nil
 		}
-		program, f := alchemy.Compile(src, file, tt.Routers(), tr.Renderers())
+		program, f := alchemy.Compile(src, file, tt.Routers(), translate.Renderers())
 		if f != nil {
 			return "", fromFail(f)
 		}
@@ -289,9 +288,9 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (string, *exit) {
 		var program *alchemy.Program
 		var f *alchemy.Fail
 		if options.grammar != nil {
-			program, f = alchemy.CompileWith(src, options.program, alchemy.InputParserEvents, tt.Routers(), tr.Renderers())
+			program, f = alchemy.CompileWith(src, options.program, alchemy.InputParserEvents, tt.Routers(), translate.Renderers())
 		} else {
-			program, f = alchemy.Compile(src, options.program, tt.Routers(), tr.Renderers())
+			program, f = alchemy.Compile(src, options.program, tt.Routers(), translate.Renderers())
 		}
 		if f != nil {
 			return "", fromFail(f)

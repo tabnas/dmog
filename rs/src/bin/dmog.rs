@@ -165,14 +165,14 @@ impl From<Fail> for Exit {
     }
 }
 
-/// Compile `src`, named `file`, with transduce's routers and render's
-/// renderers.
+/// Compile `src`, named `file`, with transduce's routers and the renderers
+/// this command composes of render's ([`translate::renderers`]).
 fn compile(src: &str, file: &str) -> Result<Program, Fail> {
     tabnas_alchemy::compile(
         src,
         file,
         Arc::new(tabnas_transduce::routers()),
-        Arc::new(tabnas_render::renderers()),
+        translate::renderers(),
     )
 }
 
@@ -184,7 +184,7 @@ fn compile_with(src: &str, file: &str, input: Input) -> Result<Program, Fail> {
         file,
         input,
         Arc::new(tabnas_transduce::routers()),
-        Arc::new(tabnas_render::renderers()),
+        translate::renderers(),
     )
 }
 

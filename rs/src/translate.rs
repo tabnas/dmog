@@ -31,10 +31,9 @@
 //! left: `--whole` reads it whole, its grammar's value the document (admin
 //! ADR-33). Where a package's parser builds a value that
 //! is not yet the tree its parts declare, and the package's API reads a
-//! document as that tree (expr's simplified form, C's realized syntax
-//! tree, and the grammar spec a grammar notation's document compiles to),
-//! that tree is the document, read whole; where such a package ships a
-//! transducer part too (proto, whose parser's value is its syntax tree),
+//! document as that tree (expr's simplified form and C's realized syntax
+//! tree), that tree is the document, read whole; where such a package ships
+//! a transducer part too (proto, whose parser's value is its syntax tree),
 //! the part reads the parser's rule passes, and a document read whole is
 //! that tree. Nothing here knows a format by its name: a format is what
 //! its manifest says, and a package whose manifest names no parts this host
@@ -51,6 +50,7 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
 
+use tabnas_alchemy::shared::{CsvOptions, JoinOut, JsonOptions, Renderers, TableSink, TextOut};
 use tabnas_alchemy::translate::{
     compose, compose_parsed, compose_program, compose_program_parsed, Alc, Composition, Descriptor,
     Front, Options, Part, PartText, Render, Root, Shape,
@@ -60,6 +60,79 @@ use tabnas_transduce::{
     capability, walk_datum, AbortFlag, Code, Datum, DatumBuilder, Duplicates, Fail, Flow, Guarded,
     JsonEvent, Limits, Metrics, ParserEventSource, ParserSource, Segment, Sink, TreeContract,
 };
+
+/// The renderers every program this command compiles is lowered onto:
+/// render's own (`tabnas_render::renderers()`), each method delegated to
+/// it, but for the writer of the text a command writes
+/// ([`Renderers::write_out`]), which holds at most render's budget
+/// (`tabnas_render::DEFAULT_BUDGET`, 32 KiB) of a record that is still
+/// open, where render's own holds up to its default hold, 16 MiB of it.
+/// `translate` streams its output from its first byte (admin ADR-33,
+/// ruling 1), and render's JSON writer makes each member of a root object
+/// one record, so with render's hold a tree whose bulk is one member of
+/// its root (a stylesheet's rules, an XML element's children, a feed's
+/// entries, a Markdown document's blocks, a TOML array of tables) was
+/// written only once 16 MiB of it was held, or at the document's end: the
+/// streaming gate found it (`tests/streaming_test.rs`). A record of up to
+/// the budget is still written whole when a run fails part way; a longer
+/// one is written as it comes, and the writer retains at most the budget
+/// and the hold. render's default suits a library; the policy is the
+/// host's.
+pub fn renderers() -> Arc<dyn Renderers> {
+    Arc::new(CommandRenderers(tabnas_render::renderers()))
+}
+
+/// [`renderers`]: render's renderers, with a writer that holds the budget.
+struct CommandRenderers(tabnas_render::RenderRenderers);
+
+impl Renderers for CommandRenderers {
+    fn json(&self, out: Box<dyn TextOut + Send>, options: JsonOptions) -> Box<dyn Sink + Send> {
+        self.0.json(out, options)
+    }
+
+    fn csv(
+        &self,
+        out: Box<dyn TextOut + Send>,
+        options: CsvOptions,
+    ) -> Result<Box<dyn TableSink + Send>, Fail> {
+        self.0.csv(out, options)
+    }
+
+    fn records_to_json(&self, sink: Box<dyn Sink + Send>) -> Box<dyn TableSink + Send> {
+        self.0.records_to_json(sink)
+    }
+
+    fn join<'a>(
+        &self,
+        out: Box<dyn TextOut + Send + 'a>,
+        separator: &str,
+    ) -> Box<dyn JoinOut + Send + 'a> {
+        self.0.join(out, separator)
+    }
+
+    fn replace_text<'a>(
+        &self,
+        out: Box<dyn TextOut + Send + 'a>,
+        from: &str,
+        to: &str,
+    ) -> Box<dyn TextOut + Send + 'a> {
+        self.0.replace_text(out, from, to)
+    }
+
+    fn write_out(
+        &self,
+        writer: Box<dyn Write + Send>,
+        limits: &Limits,
+        metrics: Arc<Metrics>,
+    ) -> Box<dyn TextOut + Send> {
+        Box::new(
+            tabnas_render::WriteOut::new(writer)
+                .with_limits(limits)
+                .with_metrics(metrics)
+                .with_hold(tabnas_render::DEFAULT_BUDGET),
+        )
+    }
+}
 
 /// A format's grammar applied to a document, three ways, each over a
 /// fresh parser of the grammar under the format's own options, since a
@@ -223,7 +296,7 @@ impl Format {
                     &sources,
                     Input::ParserEvents,
                     Arc::new(tabnas_transduce::routers()),
-                    Arc::new(tabnas_render::renderers()),
+                    renderers(),
                 )
                 .map(Some)
             })
@@ -487,84 +560,12 @@ fn read_c(text: &str) -> Result<Datum, Fail> {
         .map_err(|error| engine_failure(&error))
 }
 
-/// A grammar spec's strict JSON text, which a notation's compiler writes, as
-/// the tree it holds, read with the JSON grammar.
-fn spec_tree(json: &str) -> Result<Datum, Fail> {
-    tabnas_json::parse(json)
-        .map(|spec| Datum::from_tabnas(&spec))
-        .map_err(|error| engine_failure(&error))
-}
-
-/// An ABNF document as abnf's API reads one for a host, the tree its parts
-/// declare: the pure-data grammar spec its compiler writes (`abnf_compile`,
-/// recognition off, so that the tree builders stay, as strict JSON), read
-/// as JSON. The grammar spec is the schema grammar-spec, which the EBNF and
-/// GBNF compilers emit too.
-fn read_abnf(text: &str) -> Result<Datum, Fail> {
-    let options = tabnas_abnf::AbnfCompileOptions {
-        start: None,
-        tag: None,
-        recognition: false,
-        strict: true,
-        indent: None,
-    };
-    let compiled = tabnas_abnf::abnf_compile(text, &options)
-        .map_err(|error| Fail::input(error.to_string()))?;
-    spec_tree(&compiled)
-}
-
-/// A notation's conversion, converted with the builtins on, as the
-/// shared compiler writes it for a host: the pure-data grammar spec, with
-/// its tree builders (`compile_spec` with recognition off, which is
-/// `to_jsonic` over `to_pure_spec`), as strict JSON, read as JSON. The
-/// compiler is tabnas-bnf, whose serializers tabnas-abnf re-exports, so
-/// reading a notation takes no package beyond the notations'.
-fn compiled_tree(spec: &tabnas_abnf::GrammarSpec) -> Result<Datum, Fail> {
-    let pure = tabnas_abnf::to_pure_spec(spec).map_err(|error| Fail::input(error.to_string()))?;
-    let json = tabnas_abnf::to_jsonic(
-        &pure,
-        tabnas_abnf::JsonicOptions {
-            strict: true,
-            indent: None,
-        },
-    );
-    spec_tree(&json)
-}
-
-/// An EBNF document as ebnf's API reads one for a host, the tree its parts
-/// declare: the grammar spec the shared compiler writes of `ebnf_convert`
-/// with the builtins on ([`compiled_tree`]).
-fn read_ebnf(text: &str) -> Result<Datum, Fail> {
-    let convert = tabnas_ebnf::EbnfConvertOptions {
-        builtins: true,
-        ..tabnas_ebnf::EbnfConvertOptions::default()
-    };
-    let spec = tabnas_ebnf::ebnf_convert(text, Some(&convert))
-        .map_err(|error| Fail::input(error.to_string()))?;
-    compiled_tree(&spec)
-}
-
-/// A GBNF document as gbnf's API reads one for a host, the tree its parts
-/// declare: the grammar spec the shared compiler writes of `gbnf_convert`
-/// with the builtins on, and the notation's own defaults otherwise (the
-/// start `root`, eager classes where they are unambiguous)
-/// ([`compiled_tree`]).
-fn read_gbnf(text: &str) -> Result<Datum, Fail> {
-    let convert = tabnas_gbnf::GbnfConvertOptions::new(tabnas_gbnf::ConvertOptions {
-        builtins: true,
-        ..tabnas_gbnf::ConvertOptions::default()
-    });
-    let spec = tabnas_gbnf::gbnf_convert(text, Some(&convert))
-        .map_err(|error| Fail::input(error.to_string()))?;
-    compiled_tree(&spec)
-}
-
 /// Every grammar package this command carries, with its reader.
 fn packages() -> Vec<(Option<Described>, Reader)> {
     vec![
         (
-            descriptor!("tabnas-abnf", tabnas_abnf, embed),
-            Reader::Tree(read_abnf),
+            descriptor!("tabnas-abnf", tabnas_abnf, embed, transduce),
+            reader!(tabnas_abnf),
         ),
         (
             descriptor!("tabnas-c", tabnas_c, embed),
@@ -583,8 +584,8 @@ fn packages() -> Vec<(Option<Described>, Reader)> {
             reader!(tabnas_csv),
         ),
         (
-            descriptor!("tabnas-ebnf", tabnas_ebnf, embed),
-            Reader::Tree(read_ebnf),
+            descriptor!("tabnas-ebnf", tabnas_ebnf, embed, transduce),
+            reader!(tabnas_ebnf),
         ),
         (
             descriptor!("tabnas-expr", tabnas_expr, embed),
@@ -595,8 +596,8 @@ fn packages() -> Vec<(Option<Described>, Reader)> {
             reader!(tabnas_feed),
         ),
         (
-            descriptor!("tabnas-gbnf", tabnas_gbnf, embed),
-            Reader::Tree(read_gbnf),
+            descriptor!("tabnas-gbnf", tabnas_gbnf, embed, transduce),
+            reader!(tabnas_gbnf),
         ),
         (
             descriptor!("tabnas-ini", tabnas_ini, embed, transduce),
@@ -742,7 +743,7 @@ pub struct Compiled {
 /// The composition a request makes, and the program it compiles to.
 pub fn compile(request: &Request<'_>) -> Result<Compiled, Fail> {
     let routers = Arc::new(tabnas_transduce::routers());
-    let renderers = Arc::new(tabnas_render::renderers());
+    let renderers = renderers();
     // The transducer the route reads the document through, where the
     // source ships one and the whole document is asked, not read whole. A
     // path's value is a plain tree's events, which the composition over a
@@ -1506,9 +1507,12 @@ mod tests {
         assert_eq!(
             through,
             [
+                ("abnf", "abnf-transduce"),
                 ("css", "css-transduce"),
                 ("csv", "csv-transduce"),
+                ("ebnf", "ebnf-transduce"),
                 ("feed", "feed-transduce"),
+                ("gbnf", "gbnf-transduce"),
                 ("ini", "ini-transduce"),
                 ("json", "json-transduce"),
                 ("json5", "json5-transduce"),
@@ -1976,24 +1980,22 @@ mod tests {
         assert_eq!(
             parsed,
             [
-                "css", "csv", "feed", "ini", "json", "json5", "jsonc", "jsonic", "jsonl",
-                "markdown", "pgn", "proto", "semver", "toml", "xml", "yaml", "zon"
+                "abnf", "css", "csv", "ebnf", "feed", "gbnf", "ini", "json", "json5", "jsonc",
+                "jsonic", "jsonl", "markdown", "pgn", "proto", "semver", "toml", "xml", "yaml",
+                "zon"
             ]
         );
         assert_eq!(
             parser_names(),
-            "css, csv, feed, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, \
-             toml, xml, yaml or zon"
+            "abnf, css, csv, ebnf, feed, gbnf, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, \
+             proto, semver, toml, xml, yaml or zon"
         );
-        let abnf = format("abnf").expect("abnf is a format");
-        assert!(!abnf.parses());
-        let refused = abnf
-            .passes("x = \"y\"")
-            .err()
-            .expect("a tree has no passes");
+        let c = format("c").expect("c is a format");
+        assert!(!c.parses());
+        let refused = c.passes("int x;").err().expect("a tree has no passes");
         assert_eq!(refused.code, Code::InputInvalid);
         assert!(
-            refused.message.starts_with("abnf is read as a tree"),
+            refused.message.starts_with("c is read as a tree"),
             "{refused}"
         );
         let json5 = format("json5").expect("json5 is a format");

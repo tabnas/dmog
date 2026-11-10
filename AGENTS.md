@@ -90,7 +90,16 @@ The command builds a transduce `Routers` and a render `Renderers`,
 passes both to alchemy's `compile`, and runs the result over the input.
 Nothing else in the fleet constructs all three, so behaviour that needs
 all three belongs here, and a library that needs one of them depends on
-that one alone.
+that one alone. The policy of the command's own output is the host's too:
+it wraps render's renderers in one place in each runtime
+(`translate::renderers`, `translate.Renderers`, `renderers` in
+`ts/src/translate.ts`), every method render's but the writer's, which
+holds at most render's budget (32 KiB) of a record still open, where
+render's default holds 16 MiB. `translate` streams from its first byte
+(admin ADR-33, ruling 1), and render's JSON writer makes each member of a
+root object one record, so of a tree whose bulk is one member of its root
+(a stylesheet's rules, an XML element's children) render's default held up
+to 16 MiB before it wrote a byte, which the streaming gate found.
 
 ## Layout
 
@@ -101,6 +110,7 @@ that one alone.
 | `go/e2e/` | the tests of alchemy's programs in Go: test files only, alchemy's exported API composed with transduce and render |
 | `rs/` | `tabnas-dmog`: the `dmog` binary and its tests, and the tests of alchemy's programs (`rs/tests/common/` composes the three) |
 | `examples/` | the worked example of the transducer's design (`export.alc`, `table.alc`, `records.json`), which `rs/tests/cli_test.rs` runs as the README says |
+| `test/` | what the three runtimes' tests share: `notation-samples.json` (the translation matrix) and `streaming.json` (the streaming gate) |
 | `ci/rust/run.sh` | the Rust gate `.github/workflows/rust.yml` runs |
 | `ci/polyglot/run.sh` | the TypeScript and Go gate the same workflow runs |
 | `ci/phase.sh` | `phase`, which both gates run each step through: a line every 25 seconds while it runs |
@@ -151,14 +161,15 @@ cross product of their corpus into every format: transduce's fixtures and
 JSONTestSuite's documents in every runtime, the grammar notations'
 example grammars in TypeScript's and Go's run and in Rust's release run,
 and every format's own `test/spec/*.tsv` in Rust's release run
-(`ci/rust/run.sh`), ABNF's grammars among them. A pair is held to what
-its target declares: written, and read back under the target's
-conventions (its loss list); or refused with the code and the reason its
-parts declare, which the matrix counts: a schema-only target (one that
-writes a schema's tree with no embedding into it: C, CSS, PGN, proto and
-the grammar notations) refuses another format's tree, a grammar
-notation's render refuses a grammar spec it has no form for, naming what
-it met, and Semantic Versioning's embedding refuses a tree that is not a
+(`ci/rust/run.sh`), the grammar notations' among them (ABNF's grammar
+rows, and each notation's `tree.tsv`). A pair is held to what its target
+declares: written, and read back under the target's conventions (its
+loss list); or refused with the code and the reason its parts declare,
+which the matrix counts: a schema-only target (one that writes a
+schema's tree with no embedding into it: C, CSS, PGN, proto and the
+grammar notations) refuses another format's tree, a grammar notation's
+render refuses a grammar it has no form for, naming the rule and what it
+met, and Semantic Versioning's embedding refuses a tree that is not a
 version. A pair refused otherwise, or written where a refusal is
 declared, fails. `translate` streams its output, so a document the
 source's part cannot stream (a repeated key, a stream of several YAML
@@ -168,51 +179,59 @@ the matrix then reads it with `--whole`, holds its pairs to what that
 writes, and counts it, each run with a ceiling on how many it reads so.
 A document is left out as a source where it is past
 what every format takes: nested deeper than 100 levels, or holding more
-values than the run's size bound (10,000 by default, which leaves out the
-larger GBNF examples and RFC 3986's URI grammar, whose spec holds 513,409;
-100,000 in Rust's release run); each run pins how many it leaves out.
+values than the run's size bound (10,000 by default, and 100,000 in
+Rust's release run, past which no document of the corpora is now that
+the grammar notations are read as their rules); each run pins how many
+it leaves out.
 
 The grammar notations, ABNF, EBNF and GBNF, share the schema
-`grammar-spec`, the grammar spec their compilers emit, so each writes the
-others' documents. A grammar spec written in a notation is held to the
-round trip each render declares: from the same notation it reads back as
-it was, or, where the loss list says it compiles back to another (a spec
-whose alternatives the compiler reordered, a left recursion through
-another rule), as one the render writes again as the same text; from
-another notation, which compiles back under the target's own settings
-and recognises what it recognised, as a spec the render writes again as
-text that reads back as that spec. And every grammar written is held to
-what it recognises: the spec read and the spec the written text compiles
-to, each installed on an engine of its own, parse each of the document's
-samples alike. The samples are the inputs the notations' repositories'
-own tests give their example grammars, accepted and refused alike
+`grammar-rules`, a grammar's rules in source order, which tabnas/bnf
+defines and each notation's reader builds without compiling them, so
+each writes the others' documents. A grammar written in a notation is
+held to the round trip each render declares: from the same notation it
+reads back as the tree it was; from another notation, written as the
+target spells what the source spells otherwise (its loss list), it reads
+back as a tree the render writes again as the same text. A render
+refuses what its notation cannot say with TARGET_VALUE_UNREPRESENTABLE,
+naming the rule (`the grammar cannot be written as ABNF: ` and its
+twins), among it a `start` the grammar does not define (a GBNF document
+of rules none of which is `root`, which every render refuses, its own
+included), and, in GBNF, a tree with no start whose rule named `root` is
+not its first, and a reference to the engine's own NR, ST, TX or VL that
+the grammar does not define. And every grammar written is held to what
+it recognises: the document's text and the text written, each compiled
+by its own notation's compiler and installed on an engine of its own,
+parse each of the document's samples alike. A document its own compiler
+refuses, which its reader reads all the same, has nothing to compare,
+and each run pins how many pairs with samples it skips so (`uncompiled`).
+The samples are the inputs the notations' repositories' own tests give
+their example grammars, accepted and refused alike
 (`test/notation-samples.json`, which all three runtimes read), and, in
 Rust's release run, the inputs ABNF's fixture rows give each grammar.
-The one difference the loss lists declare is the lexing: a spec of
-another notation compiles back under the target's settings, so across
-GBNF's exact lexing and the others' default one, which skips white
-space, a sample holding white space may be recognised otherwise. Such a
-pair is registered, never passed: the same file's `otherwise` names
-each pair with exactly the samples it recognises otherwise, every cross
-product holds each pair it compares to that list, and Rust's release
-run, which compares every pair named, holds every entry to a pair it
-compares. A grammar recognising any other sample otherwise fails, unless
-its pair is registered with its package's defect (`DEFECTIVE_PAIRS`).
+The one difference the loss lists declare is the lexing: a grammar of
+another notation compiles under the target's settings, so across GBNF's
+exact lexing and the others' default one, which skips white space, a
+sample holding white space may be recognised otherwise. Such a pair is
+registered, never passed: the same file's `otherwise` names each pair
+with exactly the samples it recognises otherwise, every cross product
+holds each pair it compares to that list, and Rust's release run, which
+compares every pair named, holds every entry to a pair it compares. A
+grammar recognising any other sample otherwise fails, unless its pair is
+registered with its package's defect (`DEFECTIVE_PAIRS`): one is, ABNF's
+`alignment-abnf-ast.tsv:16` into EBNF, whose `c ::= ( "y" )?` tabnas/bnf
+compiles to a grammar that accepts nothing (tabnas/bnf#123).
 
 A format is read with its package's parser, through transduce's parser
-source, unless the parser's own value is not yet the tree its parts
-declare and the package's API reads a document as that tree: then that
-tree is the document, read whole (`Reader::Tree` in Rust, `tree` in Go,
-`{ tree }` in TypeScript), with the checks the package's API makes first:
+source (the grammar notations among them, whose `make()` builds the
+parser whose value is their tree, read through their transducer parts),
+unless the parser's own value is not yet the tree its parts declare and
+the package's API reads a document as that tree: then that tree is the
+document, read whole (`Reader::Tree` in Rust, `tree` in Go, `{ tree }` in
+TypeScript), with the checks the package's API makes first:
 - expressions, as the simplified tree (`parse_simplified`,
   `parseSimplified`, `SimplifyOrdered`);
 - C, as the realized tree in Rust (`tabnas_c::parse`); TypeScript and Go
   walk the parser's value;
-- the grammar notations, as the pure-data grammar spec each package's
-  compiler writes for a host, recognition off, as strict JSON, read as
-  JSON (`abnf_compile` and its twins for ABNF; for EBNF and GBNF the
-  shared compiler's serializers over the conversion with the builtins on,
-  which tabnas-abnf re-exports);
 - Go's feeds and PGN databases, whose modules build typed values, through
   their JSON encoding (`plainTree`). A feed or a PGN database is read so
   only where its transducer part refuses it: otherwise the part reads it
@@ -258,6 +277,66 @@ name order, its match tokens' order in a list of its own; it now writes
 the order the compiler emits, as TypeScript and Rust do.) A defect is the
 package's to repair; never register one to make a pair pass without
 naming it, and never work around one here in silence.
+
+## The streaming gate
+
+`rs/tests/streaming_test.rs`, `ts/test/streaming.test.ts` and
+`go/cmd/dmog/streaming_test.go` hold every format the formats table lists
+to the definition of streaming in alchemy's `docs/streaming-plan.md`,
+section 13 (admin ADR-33): in every runtime, a document of it read from a
+file and from standard input has written its first byte before its input
+ends, and the run's peak memory stays flat over ten times the document.
+The documents are `test/streaming.json`'s, which all three read: for each
+format, a document of `items` items, each a short distinct name and a long
+plain text, so that the document is longer than what the lexer's window
+holds at a few events an item, and one of ten times as many. Each runtime
+translates them to JSON, `dmog translate --from F --to json`, and holds
+each format to two clauses:
+
+- **written before the end**: the document is handed over in two parts,
+  from standard input and from a named pipe given as INPUT (a FIFO, which
+  `mkfifo` makes; Windows has none and runs standard input alone), and the
+  command must write after the first part, nine tenths of the items,
+  before the rest is sent. The run then ends as one over the whole
+  document does, with the same output.
+- **flat memory**: what the run holds over ten times the document stays
+  within the runtime's bound of what it holds over the document: 1.25
+  times it in Rust, 1.5 times in TypeScript and Go. Each runtime measures
+  what it can without a dependency: Rust in process, a counting global
+  allocator over `translate::run_document`, the call the binary makes, per
+  thread, with the document made as it is read; TypeScript the command
+  with a preload (`ts/test/streaming-memory.ts`) that samples the live
+  heap, less the code V8 has compiled, and the buffers outside it as the
+  command reads and writes (V8's peak resident set follows what the parts
+  allocate, not what they hold), and runs it with V8's background threads
+  off (`--single-threaded`): otherwise what a sample finds alive depends
+  on when an optimization compiled on another thread is installed, which
+  on a busy machine swelled a sample by as much as 9.5 MB; Go the
+  command's peak resident set (`ru_maxrss`, unix), which on Linux it also
+  reads while the command runs. A run is stopped once it is past the
+  bound, which is all the clause asks of it. Each bound is calibrated from
+  the measurements its comment records, and each runtime holds its bound
+  to fail JSON read whole (`--whole`).
+
+A format that fails either clause is registered in that runtime's ledger
+(`NOT_STREAMING`, `notStreaming`) with the clauses it fails and why, an
+issue or a ruling, and the gate holds each entry to failing exactly those
+clauses: a format that starts streaming, or passes a clause its entry
+names, fails the gate, which says so, until the entry or the clause is
+deleted; one that stops streaming fails it until it is registered, with
+why. A format the table lists with no document in `test/streaming.json`
+fails it too, and so does an entry or a document that names no format the
+gate runs. expr and semver, which the maintainer ruled whole (ADR-33,
+ruling 4), are listed apart (`RULED_WHOLE`, `ruledWhole`) and are not
+run, and the gate holds the table to reading them whole. Never widen a
+bound, or shorten a document, to pass a format: register it.
+
+Three formats are held at once in Rust and TypeScript, and Go's formats
+run in parallel, one measured run at a time. On four busy cores the gate
+took three to five minutes in Rust's debug run and two to three in
+TypeScript, where the parts run slowest and csv's run over ten times its
+document takes longest, and under a minute in Go, whose memory clause
+stops every run past the bound.
 
 ## Build and test
 

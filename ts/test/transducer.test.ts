@@ -227,19 +227,20 @@ describe('a transducer part', () => {
       .map((f) => f.id)
     // C is parsed here, where the Rust crate reads it as its realized tree.
     assert.deepStrictEqual(parsed, [
-      'c', 'css', 'csv', 'feed', 'ini', 'json', 'json5', 'jsonc', 'jsonic', 'jsonl', 'markdown', 'pgn',
-      'proto', 'semver', 'toml', 'xml', 'yaml', 'zon',
+      'abnf', 'c', 'css', 'csv', 'ebnf', 'feed', 'gbnf', 'ini', 'json', 'json5', 'jsonc', 'jsonic', 'jsonl',
+      'markdown', 'pgn', 'proto', 'semver', 'toml', 'xml', 'yaml', 'zon',
     ])
     assert.equal(
       parserNames(),
-      'c, css, csv, feed, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, toml, xml, yaml or zon',
+      'abnf, c, css, csv, ebnf, feed, gbnf, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, ' +
+        'toml, xml, yaml or zon',
     )
-    const abnf = formatNamed('abnf')
-    assert.ok(abnf)
-    assert.equal(abnf.parses(), false)
+    const expr = formatNamed('expr')
+    assert.ok(expr)
+    assert.equal(expr.parses(), false)
     assert.throws(
-      () => abnf.passes('x = "y"'),
-      (err: unknown) => isFail(err) && 'INPUT_INVALID' === err.code && err.message.startsWith('abnf is read as a tree'),
+      () => expr.passes('1+2'),
+      (err: unknown) => isFail(err) && 'INPUT_INVALID' === err.code && err.message.startsWith('expr is read as a tree'),
     )
     const json5 = formatNamed('json5')
     assert.ok(json5)

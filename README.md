@@ -57,11 +57,14 @@ parts declare it cannot carry, which it refuses with
 CSS, PGN and Protocol Buffers write only their own tree, read from a
 document of the same format or made by a `--with` program, and Semantic
 Versioning writes only a tree that is a version. The grammar notations,
-ABNF, EBNF and GBNF, read a document as the grammar spec it compiles to,
-and each writes the others' too, so a grammar written in one is written
-in another (an ABNF grammar as GBNF), as far as that notation can say
-it: what it has no form for (a negated class in ABNF, the engine's own
-tokens in GBNF) it refuses, naming what it met. `--path` takes a JSON
+ABNF, EBNF and GBNF, read a document as its rules in source order, which
+no compiler has seen, a rule at a time through each notation's transducer
+part, and each writes the others' too, so a grammar written in one is
+written in another (an ABNF grammar as GBNF), as far as that notation can
+say it: what it has no form for (a negated class in ABNF, the engine's own
+tokens in GBNF) it refuses, naming the rule and what it met. A notation
+that starts from its first rule writes the rule another names as its
+start (GBNF's `root`) first. `--path` takes a JSON
 array of keys and indexes (`["people",0]`) and translates that value
 instead of the document, as a plain tree whatever the source's shapes;
 `--key` names the member a root is wrapped under for a format whose
@@ -70,7 +73,14 @@ over the input first and writes its export's events or table.
 
 `translate` writes as it reads: through its format's transducer part a
 document's output streams from the first record, and nothing waits for
-the document's end (admin ADR-33). A `.proto` file streams a declaration
+the document's end (admin ADR-33). The command's writer holds no more
+than 32 KiB of a record still open, so a long one, a stylesheet's
+`rules` written as JSON, say, is written as it comes; a run that fails
+part way leaves its output ending with a whole record where the record
+was shorter than that. Not every format does so yet: the
+streaming gate (`AGENTS.md`) holds each one, in every runtime, to writing
+before its input ends and to flat memory over ten times its document, and
+names each format that does not, and why. A `.proto` file streams a declaration
 at a time, its tree the file's declarations in source order (the schema
 `proto-ast`), after the check of its nesting that proto's own parse makes
 first; read whole, it is the same tree, which proto's package builds,

@@ -464,15 +464,15 @@ describe('cli', () => {
     assert.equal(out.status, 1, out.stderr)
     assert.equal(out.stdout, '')
     assert.equal(failJson(out).code, 'INPUT_INVALID')
-    for (const name of ['abnf', 'nope']) {
+    for (const name of ['expr', 'nope']) {
       out = dmog(['run', '--grammar', name, program, '-'], doc)
       assert.equal(out.status, 2, out.stderr)
       const fail = failJson(out)
       assert.equal(fail.code, 'INPUT_INVALID')
       assert.equal(
         fail.message,
-        '--grammar takes a format whose documents are parsed (c, css, csv, feed, ini, json, json5, jsonc, ' +
-          `jsonic, jsonl, markdown, pgn, proto, semver, toml, xml, yaml or zon), not ${JSON.stringify(name)}`,
+        '--grammar takes a format whose documents are parsed (abnf, c, css, csv, ebnf, feed, gbnf, ini, json, ' +
+          `json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, toml, xml, yaml or zon), not ${JSON.stringify(name)}`,
       )
     }
     const events = tempFile('events.alc', 'def export [input] (json input)\n')
@@ -583,9 +583,12 @@ describe('cli translate', () => {
     assert.deepStrictEqual(
       formats.filter((f: any) => null !== f.transduce).map((f: any) => [f.id, f.transduce]),
       [
+        ['abnf', 'abnf-transduce'],
         ...shipped('css', cssParts()),
         ['csv', 'csv-transduce'],
+        ['ebnf', 'ebnf-transduce'],
         ...shipped('feed', feedParts()),
+        ['gbnf', 'gbnf-transduce'],
         ...shipped('ini', iniParts()),
         ['json', 'json-transduce'],
         ['json5', 'json5-transduce'],
@@ -614,11 +617,11 @@ describe('cli translate', () => {
       formats.filter((f: any) => null !== f.schema && 'tree' === f.writes && null === f.embed).map((f: any) => f.id),
       ['abnf', 'c', 'css', 'ebnf', 'gbnf', 'pgn', 'proto'],
     )
-    // The grammar notations share a schema, the grammar spec their
-    // compilers emit, so each writes the others' documents.
+    // The grammar notations share a schema, a grammar's rules in source
+    // order, so each writes the others' documents.
     assert.deepStrictEqual(
       ['abnf', 'ebnf', 'gbnf', 'c'].map((id) => byId(id).schema),
-      ['grammar-spec', 'grammar-spec', 'grammar-spec', 'c'],
+      ['grammar-rules', 'grammar-rules', 'grammar-rules', 'c'],
     )
     assert.deepStrictEqual(
       [byId('pgn').schema, byId('semver').embed, byId('feed').embed, byId('expr').embed],
@@ -628,13 +631,11 @@ describe('cli translate', () => {
     // every format transduce does not stream, each in the sentence its
     // manifest gives; none for a format read through its transducer part,
     // PGN's among them, which streams a game at a time, proto's, a
-    // declaration at a time, and Markdown's, a block at a time.
+    // declaration at a time, Markdown's, a block at a time, and the grammar
+    // notations', a rule at a time.
     for (const [id, parts] of [
-      ['abnf', abnfParts()],
       ['c', cParts()],
-      ['ebnf', ebnfParts()],
       ['expr', exprParts()],
-      ['gbnf', gbnfParts()],
       ['semver', semverParts()],
     ] as const) {
       const whole = JSON.parse(String(parts?.manifest)).translate.whole
@@ -644,6 +645,14 @@ describe('cli translate', () => {
     assert.strictEqual(byId('markdown').whole, null)
     assert.strictEqual(byId('pgn').whole, null)
     assert.strictEqual(byId('proto').whole, null)
+    for (const [id, parts] of [
+      ['abnf', abnfParts()],
+      ['ebnf', ebnfParts()],
+      ['gbnf', gbnfParts()],
+    ] as const) {
+      assert.strictEqual(byId(id).whole, null, id)
+      assert.strictEqual(byId(id).transduce, parts?.transduce?.entry, id)
+    }
     // CSS, INI, TOML and feed give the sentence up with the part they ship
     // from their next release: each is held to the package this build has,
     // and has one of the two, never both or neither.
@@ -809,8 +818,9 @@ describe('cli translate', () => {
   // from a file and from standard input, as the Rust and Go commands refuse
   // it (json5's TypeScript error carries no position, theirs 1:1); a .proto
   // file nesting past proto's cap is refused before the engine runs (its
-  // parse's preflight); and a grammar notation's document its compiler
-  // refuses is refused with the compiler's message.
+  // parse's preflight). A grammar notation's document is read as its rules,
+  // which no compiler has seen, so one its compiler would refuse is read as
+  // it is.
   it('translate checks what a package checks before its parse', () => {
     for (const [input, code] of [
       ['', 'json5_empty'],
@@ -848,19 +858,18 @@ describe('cli translate', () => {
       message: 'proto: document nests 101 levels deep, past the 100 this parser accepts',
       output: 'none',
     })
+    // A grammar notation's document is read as its rules in source order: a
+    // rule referencing one the grammar does not define is read as it is,
+    // and so is a left recursion through a cycle of twenty rules, each with
+    // two recursive alternates, which tabnas-bnf's elimination refuses past
+    // 512 alternatives.
     out = dmog(['translate', '--from', 'abnf', '--to', 'json', '-'], 'a = "b" c\n')
-    assert.equal(out.status, 1, out.stderr)
-    assert.equal(out.stdout, '')
-    assert.deepStrictEqual(failJson(out), {
-      code: 'INPUT_INVALID',
-      message: "abnf: rule 'a' references unknown rule 'c'",
-      output: 'none',
-    })
-    // A left recursion through a cycle of twenty rules, each with two
-    // recursive alternates, would make tabnas-bnf's elimination substitute
-    // 2^20 alternates. tabnas-bnf bounds what a rule gains at 512
-    // alternatives, so the grammar is refused in moments rather than
-    // aborting.
+    assert.equal(out.status, 0, out.stderr)
+    assert.equal(
+      out.stdout,
+      '{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":' +
+        '[[{"type":"literal","text":"b","caseSensitive":false},{"type":"reference","name":"c"}]]}]}\n',
+    )
     const k = 20
     let cycle = 'root ::= r0\n'
     for (let i = 0; i < k; i++) {
@@ -868,23 +877,18 @@ describe('cli translate', () => {
       cycle += `r${i} ::= r${next} "a${i}" | r${next} "b${i}" | "x${i}"\n`
     }
     out = dmog(['translate', '--from', 'gbnf', '--to', 'json', '-'], cycle)
-    assert.equal(out.status, 1, out.stderr)
-    assert.equal(out.stdout, '')
-    assert.deepStrictEqual(failJson(out), {
-      code: 'INPUT_INVALID',
-      message:
-        "gbnf: rule 'r11' exceeds the left-recursion expansion limit of 512 alternatives while inlining 'r12', " +
-        "which begins 2 of its alternatives and has 511 of its own. Factor 'r12' out of the alternatives it begins.",
-      output: 'none',
-    })
+    assert.equal(out.status, 0, out.stderr)
+    const tree = JSON.parse(out.stdout)
+    assert.equal(tree.start, 'root')
+    assert.equal(tree.rules.length, k + 1)
   })
 
   // What a target declares it cannot carry it refuses before writing
   // anything, status 1: a schema-only target refuses another format's tree
   // when the route is composed, before the input is read, a grammar
-  // notation's render refuses a grammar spec it has no form for, naming
-  // what it met, and Semantic Versioning's embedding refuses a tree that is
-  // not a version. Each takes its own format's documents, and a program
+  // notation's render refuses a grammar it has no form for, naming the rule
+  // and what it met, and Semantic Versioning's embedding refuses a tree that
+  // is not a version. Each takes its own format's documents, and a program
   // that makes its tree; a grammar notation takes the others' too.
 
   it('translate refuses what a target declares it cannot carry', () => {
@@ -913,7 +917,7 @@ describe('cli translate', () => {
       output: 'none',
     })
     for (const [to, schema] of [
-      ['abnf', 'grammar-spec'],
+      ['abnf', 'grammar-rules'],
       ['c', 'c'],
     ]) {
       out = dmog(['translate', '--from', 'json', '--to', to, '-'], '{}')
@@ -933,9 +937,9 @@ describe('cli translate', () => {
     assert.deepStrictEqual(failJson(out), {
       code: 'TARGET_VALUE_UNREPRESENTABLE',
       message:
-        'the grammar spec cannot be written as EBNF: the case-insensitive literal "hi" is no one W3C EBNF ' +
-        'terminal: it would be written as [hH] [iI], and this front end reads whitespace between terminals',
-      row: 243,
+        'the grammar cannot be written as EBNF: the rule "greet" holds the case-insensitive literal "hi", ' +
+        'which holds a letter beside another character, and no one EBNF terminal spells',
+      row: 83,
       col: 3,
       file: 'tabnas-ebnf/alchemy/render.alc',
       output: 'none',
@@ -959,7 +963,7 @@ describe('cli translate', () => {
       // list), so the final line feed is not written.
       [['--from', 'c', '--to', 'c', '-'], 'int main(void) { return 0; }\n', 'int main(void) { return 0; }'],
       [['--from', 'ebnf', '--to', 'abnf', '-'], 'top ::= "a" b\nb ::= "c"\n', 'top = %s"a" b\nb = %s"c"\n'],
-      [['--from', 'ebnf', '--to', 'gbnf', '-'], 'top ::= "a" b\nb ::= "c"\n', 'root ::= top\ntop ::= "a" b\nb ::= "c"\n'],
+      [['--from', 'ebnf', '--to', 'gbnf', '-'], 'top ::= "a" b\nb ::= "c"\n', 'top ::= "a" b\nb ::= "c"\nroot ::= top\n'],
       [['--from', 'abnf', '--to', 'ebnf', '-'], 'top = "a"\n', 'top ::= [aA]\n'],
     ] as Array<[string[], string, string]>) {
       out = dmog(['translate', ...args], stdin)
@@ -1129,6 +1133,26 @@ describe('cli reads INPUT through a reader', () => {
     }
     for (const command of commands) {
       await writtenBeforeTheEnd(command, Buffer.from(`[${records}`), Buffer.from(`,${records}]`))
+    }
+  })
+
+  // So is a document whose root is an object, all of it in one member.
+  // render's JSON writer makes each member of a root object one record, and
+  // the command's writer holds no more than render's budget of a record
+  // still open (src/translate.ts's `renderers`), so the member is written as
+  // it comes, and the run ends as one over the whole document does.
+  it('a document whose root is an object with one long member is written before its input ends', async (t) => {
+    if (!windowed) {
+      t.skip('@tabnas/json declares no lex.window in this build')
+      return
+    }
+    const rows = Array.from({ length: 6000 }, (_, i) => `{"id":${i},"name":"n${i}"}`).join(',')
+    const whole = tempFile('stream-object.json', `{"rows":[${rows},${rows}]}`)
+    for (const command of commands) {
+      const written = await writtenBeforeTheEnd(command, Buffer.from(`{"rows":[${rows}`), Buffer.from(`,${rows}]}`))
+      const once = dmog([...command, whole])
+      assert.equal(once.status, 0, once.stderr)
+      assert.equal(written, once.stdout, command[0])
     }
   })
 
