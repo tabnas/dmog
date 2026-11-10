@@ -75,8 +75,9 @@ import {
   preflight as protoPreflight,
   translate as protoParts,
 } from '@tabnas/proto'
-import { renderers } from '@tabnas/render'
+import { DEFAULT_BUDGET, WriteOut, renderers as renderRenderers } from '@tabnas/render'
 import type { Writer } from '@tabnas/render'
+import type { Renderers } from '@tabnas/alchemy/shared'
 import { Semver, translate as semverParts } from '@tabnas/semver'
 import { make as makeToml, translate as tomlParts } from '@tabnas/toml'
 import {
@@ -102,8 +103,28 @@ import { make as makeXml, translate as xmlParts } from '@tabnas/xml'
 import { make as makeYaml, translate as yamlParts } from '@tabnas/yaml'
 import { make as makeZon, translate as zonParts } from '@tabnas/zon'
 
-// What every composition is compiled with: transduce's routers and
-// render's renderers.
+// The renderers every program this command compiles is lowered onto:
+// render's own, every method render's, but for the writer of the text a
+// command writes (`writeOut`), which holds at most render's budget
+// (`DEFAULT_BUDGET`, 32 KiB) of a record that is still open, where render's
+// own holds up to its default hold, 16 MiB of it. `translate` streams its
+// output from its first byte (admin ADR-33, ruling 1), and render's JSON
+// writer makes each member of a root object one record, so with render's
+// hold a tree whose bulk is one member of its root (a stylesheet's rules,
+// an XML element's children, a feed's entries, a Markdown document's
+// blocks, a TOML array of tables) was written only once 16 MiB of it was
+// held, or at the document's end: the streaming gate found it
+// (test/streaming.test.ts). A record of up to the budget is still written
+// whole when a run fails part way; a longer one is written as it comes, and
+// the writer retains at most the budget and the hold. render's default
+// suits a library; the policy is the host's.
+export const renderers: Renderers = Object.freeze({
+  ...renderRenderers,
+  writeOut: (writer: Writer) => new WriteOut(writer).withHold(DEFAULT_BUDGET),
+})
+
+// What every composition is compiled with: transduce's routers and the
+// renderers above.
 const OPTIONS: CompileOptions = { routers, renderers }
 
 // A grammar package's parts, as each one's `translate()` hands them over.

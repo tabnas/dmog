@@ -1132,6 +1132,26 @@ describe('cli reads INPUT through a reader', () => {
     }
   })
 
+  // So is a document whose root is an object, all of it in one member.
+  // render's JSON writer makes each member of a root object one record, and
+  // the command's writer holds no more than render's budget of a record
+  // still open (src/translate.ts's `renderers`), so the member is written as
+  // it comes, and the run ends as one over the whole document does.
+  it('a document whose root is an object with one long member is written before its input ends', async (t) => {
+    if (!windowed) {
+      t.skip('@tabnas/json declares no lex.window in this build')
+      return
+    }
+    const rows = Array.from({ length: 6000 }, (_, i) => `{"id":${i},"name":"n${i}"}`).join(',')
+    const whole = tempFile('stream-object.json', `{"rows":[${rows},${rows}]}`)
+    for (const command of commands) {
+      const written = await writtenBeforeTheEnd(command, Buffer.from(`{"rows":[${rows}`), Buffer.from(`,${rows}]}`))
+      const once = dmog([...command, whole])
+      assert.equal(once.status, 0, once.stderr)
+      assert.equal(written, once.stdout, command[0])
+    }
+  })
+
   // So is a JSON5 document, whose parser reads only as far as its leading
   // comment to check it holds a value, a ZON document and a YAML document:
   // their packages' `make()` declares `lex.window` too.

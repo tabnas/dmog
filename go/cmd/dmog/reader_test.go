@@ -155,6 +155,31 @@ func TestALongDocumentIsWrittenBeforeItsInputEnds(t *testing.T) {
 	}
 }
 
+// So is a document whose root is an object, all of it in one member.
+// render's JSON writer makes each member of a root object one record, and
+// the command's writer holds no more than render's budget of a record still
+// open (translate.Renderers), so the member is written as it comes, and the
+// run ends as one over the whole document does.
+func TestADocumentWhoseRootIsAnObjectWithOneLongMemberIsWrittenBeforeItsInputEnds(t *testing.T) {
+	if !tabnasjson.Make().Config().Window {
+		t.Skip("github.com/tabnas/json/go declares no Lex.Window in this build")
+	}
+	items := make([]string, 6000)
+	for i := range items {
+		items[i] = fmt.Sprintf(`{"id":%d,"name":"n%d"}`, i, i)
+	}
+	rows := strings.Join(items, ",")
+	whole := tempFile(t, "stream-object.json", `{"rows":[`+rows+","+rows+"]}")
+	for _, command := range streamCommands(t) {
+		got := writtenBeforeTheEnd(t, command, `{"rows":[`+rows, ","+rows+"]}")
+		once := invoke(t, append(append([]string{}, command...), whole), nil)
+		if once.status != 0 || got != once.stdout {
+			t.Errorf("%s: status %d, %d bytes written in two parts and %d at once: %s",
+				command[0], once.status, len(got), len(once.stdout), once.stderr)
+		}
+	}
+}
+
 // So is a JSON5 document, whose check reads only as far as its leading
 // comment (CheckReader), a ZON document and a YAML document: their modules'
 // constructors declare Lex.Window too.

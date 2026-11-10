@@ -92,7 +92,7 @@ const RULED_WHOLE: [(&str, &str); 2] = [
 /// clauses it fails and why. The gate holds each entry to failing exactly
 /// those clauses: delete an entry, or a clause of it, once its format
 /// passes.
-const NOT_STREAMING: [(&str, Fails, &str); 12] = [
+const NOT_STREAMING: [(&str, Fails, &str); 10] = [
     (
         "abnf",
         Fails::Both,
@@ -107,23 +107,15 @@ const NOT_STREAMING: [(&str, Fails, &str); 12] = [
     ),
     (
         "css",
-        Fails::Both,
-        "render's JSON writer holds each member of a root object as one record, up to its \
-         16 MiB hold, and a stylesheet's rules are one member; and css is not in transduce's \
-         prune suite, so the engine's tree keeps every rule (tabnas/transduce#82)",
+        Fails::Flat,
+        "css is not in transduce's prune suite, so the engine's tree keeps every rule \
+         (tabnas/transduce#82)",
     ),
     (
         "ebnf",
         Fails::Both,
         "it has no transducer part: a document is read whole as the grammar spec its compiler \
          writes, until ebnf's part (admin ADR-33, ruling 4; the streaming plan's step 23)",
-    ),
-    (
-        "feed",
-        Fails::Both,
-        "render's JSON writer holds each member of a root object as one record, up to its \
-         16 MiB hold, and a feed's entries are one member; read through that member \
-         (--path [\"entries\"]), a feed streams",
     ),
     (
         "gbnf",
@@ -145,11 +137,9 @@ const NOT_STREAMING: [(&str, Fails, &str); 12] = [
     ),
     (
         "markdown",
-        Fails::Both,
-        "render's JSON writer holds each member of a root object as one record, up to its \
-         16 MiB hold, and a document's blocks are one member; and the blocks array is no \
-         rule's node, so pruning never empties it, and each block's node stays \
-         (tabnas/transduce#81)",
+        Fails::Flat,
+        "a document's blocks array is no rule's node, so pruning never empties it, and each \
+         block's node stays (tabnas/transduce#81)",
     ),
     (
         "proto",
@@ -160,17 +150,9 @@ const NOT_STREAMING: [(&str, Fails, &str); 12] = [
     ),
     (
         "toml",
-        Fails::Both,
-        "render's JSON writer holds each member of a root object as one record, up to its \
-         16 MiB hold, and an array of tables is one member; and that array is no rule's node, \
-         so pruning never empties it, and each table stays whole (tabnas/transduce#81)",
-    ),
-    (
-        "xml",
-        Fails::Both,
-        "render's JSON writer holds each member of a root object as one record, up to its \
-         16 MiB hold, and an element's children are one member; read through that member \
-         (--path [\"children\"]), a document streams",
+        Fails::Flat,
+        "an array of tables is no rule's node, so pruning never empties it, and each table \
+         stays whole (tabnas/transduce#81)",
     ),
 ];
 
@@ -179,13 +161,14 @@ const NOT_STREAMING: [(&str, Fails, &str); 12] = [
 /// (300 items, about 315 KB, and 3,000), the formats that stream hold the
 /// same within a twentieth either way, where in a window's cycle the peak
 /// falls: json 1.67 MB and 1.66 MB, csv 1.74 MB and 1.74 MB, yaml 2.24 MB
-/// and 2.24 MB, json5 1.86 MB and 1.78 MB. A format that holds its document
-/// grows with it, run to its end in a release build: jsonic, read whole,
-/// 2.35 MB and 19.31 MB (8.2 times), toml 3.03 MB and 11.82 MB, ini, whose
-/// sections stay in the engine's tree, 2.37 MB and 6.64 MB (2.8 times), and
-/// the least, feed, whose entries render holds, 2.34 MB and 6.38 MB (2.7
-/// times). JSON read whole (`--whole`) holds 2.60 MB and 23.48 MB (9 times),
-/// which [`a_document_held_whole_fails_the_bound`] holds to fail it.
+/// and 2.24 MB, json5 1.86 MB and 1.78 MB, xml 1.72 MB and 1.72 MB. A format
+/// that holds something of its document grows with it, run to its end:
+/// jsonic, read whole, 2.35 MB and 19.31 MB (8.2 times), css 2.76 MB and
+/// 10.10 MB, ini, whose sections stay in the engine's tree, 2.36 MB and
+/// 6.64 MB (2.8 times), and the least, markdown, which keeps a node of every
+/// block, 2.13 MB and 3.61 MB (1.7 times). JSON read whole (`--whole`) holds
+/// 2.60 MB and 23.48 MB (9 times), which
+/// [`a_document_held_whole_fails_the_bound`] holds to fail it.
 const BOUND: f64 = 1.25;
 
 /// The entry of `id`, if it has one.

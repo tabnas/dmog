@@ -80,23 +80,14 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
       "ADR-33, ruling 7; the streaming plan's step 21, whose ruling is pending)",
   },
   css: {
-    fails: 'both',
-    why:
-      "render's JSON writer holds each member of a root object as one record, up to its 16 MiB hold, " +
-      "and a stylesheet's rules are one member; and css is not in transduce's prune suite, so the " +
-      "engine's tree keeps every rule (tabnas/transduce#82)",
+    fails: 'flat',
+    why: "css is not in transduce's prune suite, so the engine's tree keeps every rule (tabnas/transduce#82)",
   },
   ebnf: {
     fails: 'both',
     why:
       'it has no transducer part: a document is read whole as the grammar spec its compiler writes, ' +
       "until ebnf's part (admin ADR-33, ruling 4; the streaming plan's step 23)",
-  },
-  feed: {
-    fails: 'both',
-    why:
-      "render's JSON writer holds each member of a root object as one record, up to its 16 MiB hold, " +
-      "and a feed's entries are one member",
   },
   gbnf: {
     fails: 'both',
@@ -117,11 +108,10 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
       'parse begins (tabnas/jsonic#121)',
   },
   markdown: {
-    fails: 'both',
+    fails: 'flat',
     why:
-      "render's JSON writer holds each member of a root object as one record, up to its 16 MiB hold, " +
-      "and a document's blocks are one member; and the blocks array is no rule's node, so pruning " +
-      "never empties it, and each block's node stays (tabnas/transduce#81)",
+      "a document's blocks array is no rule's node, so pruning never empties it, and each block's node " +
+      'stays (tabnas/transduce#81)',
   },
   proto: {
     fails: 'both',
@@ -130,17 +120,10 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
       'grammar declares no lex.window, so a document is read whole first (tabnas/proto#81)',
   },
   toml: {
-    fails: 'both',
+    fails: 'flat',
     why:
-      "render's JSON writer holds each member of a root object as one record, up to its 16 MiB hold, " +
-      "and an array of tables is one member; and that array is no rule's node, so pruning never " +
-      'empties it, and each table stays whole (tabnas/transduce#81)',
-  },
-  xml: {
-    fails: 'both',
-    why:
-      "render's JSON writer holds each member of a root object as one record, up to its 16 MiB hold, " +
-      "and an element's children are one member",
+      "an array of tables is no rule's node, so pruning never empties it, and each table stays whole " +
+      '(tabnas/transduce#81)',
   },
 }
 
@@ -149,14 +132,14 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
 // documents (300 items, about 315 KB, and 3,000), the formats that stream
 // hold at most a quarter more at ten times, what more samples catch of the
 // window's swing and of the code V8 optimizes as a run goes on: json 1.26 MB
-// and 1.53 MB, jsonl 1.29 MB and 1.58 MB, csv 1.70 MB and 1.81 MB, yaml
-// 1.94 MB and 1.83 MB. A format that holds its document grows with it, run
-// to its end: jsonic, read whole, 1.58 MB and 6.98 MB, toml 2.75 MB and
-// 10.42 MB, ini, whose sections stay in the engine's tree, 2.16 MB and
-// 6.66 MB, and the least, feed, whose entries render's writer holds, 2.67 MB
-// and 7.85 MB (2.9 times). JSON read whole (`--whole`) holds 0.92 MB and
-// 7.73 MB (8.4 times), which 'a document held whole fails the bound' holds
-// to fail it.
+// and 1.53 MB, jsonl 1.29 MB and 1.58 MB, feed 1.69 MB and 2.06 MB, csv
+// 1.70 MB and 1.81 MB, yaml 1.94 MB and 1.83 MB. A format that holds
+// something of its document grows with it, run to its end: jsonic, read
+// whole, 1.58 MB and 6.98 MB, css 1.87 MB and 6.45 MB, ini, whose sections
+// stay in the engine's tree, 2.14 MB and 6.65 MB, and the least, markdown,
+// which keeps a node of every block, 1.70 MB and 3.23 MB (1.9 times). JSON
+// read whole (`--whole`) holds 0.92 MB and 7.73 MB (8.4 times), which 'a
+// document held whole fails the bound' holds to fail it.
 const BOUND = 1.5
 
 // A format's document in test/streaming.json: `head`, then `item` once for

@@ -70,7 +70,11 @@ over the input first and writes its export's events or table.
 
 `translate` writes as it reads: through its format's transducer part a
 document's output streams from the first record, and nothing waits for
-the document's end (admin ADR-33). Not every format does so yet: the
+the document's end (admin ADR-33). The command's writer holds no more
+than 32 KiB of a record still open, so a long one, a stylesheet's
+`rules` written as JSON, say, is written as it comes; a run that fails
+part way leaves its output ending with a whole record where the record
+was shorter than that. Not every format does so yet: the
 streaming gate (`AGENTS.md`) holds each one, in every runtime, to writing
 before its input ends and to flat memory over ten times its document, and
 names each format that does not, and why. A `.proto` file streams a declaration

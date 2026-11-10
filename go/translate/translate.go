@@ -67,6 +67,7 @@ import (
 
 	tabnasabnf "github.com/tabnas/abnf/go"
 	alchemy "github.com/tabnas/alchemy/go"
+	"github.com/tabnas/alchemy/go/shared"
 	at "github.com/tabnas/alchemy/go/translate"
 	tabnasc "github.com/tabnas/c/go"
 	tabnaschess "github.com/tabnas/chess/go"
@@ -93,6 +94,33 @@ import (
 	tabnasyaml "github.com/tabnas/yaml/go"
 	tabnaszon "github.com/tabnas/zon/go"
 )
+
+// Renderers is the renderers every program this command compiles is
+// lowered onto: render's own (tr.Renderers), each method render's, but for
+// the writer of the text a command writes (WriteOut), which holds at most
+// render's budget (tr.DefaultBudget, 32 KiB) of a record that is still
+// open, where render's own holds up to its default hold, 16 MiB of it.
+// translate streams its output from its first byte (admin ADR-33, ruling
+// 1), and render's JSON writer makes each member of a root object one
+// record, so with render's hold a tree whose bulk is one member of its root
+// (a stylesheet's rules, an XML element's children, a feed's entries, a
+// Markdown document's blocks, a TOML array of tables) was written only once
+// 16 MiB of it was held, or at the document's end: the streaming gate found
+// it (cmd/dmog/streaming_test.go). A record of up to the budget is still
+// written whole when a run fails part way; a longer one is written as it
+// comes, and the writer retains at most the budget and the hold. render's
+// default suits a library; the policy is the host's.
+func Renderers() shared.Renderers { return commandRenderers{tr.Renderers()} }
+
+// commandRenderers is Renderers: render's renderers, embedded, so that
+// every method is render's, with a writer that holds the budget.
+type commandRenderers struct{ shared.Renderers }
+
+// WriteOut is render's NewWriteOut with WithLimits and WithMetrics, as
+// render's own is, and WithHold the budget.
+func (commandRenderers) WriteOut(w io.Writer, limits shared.Limits, metrics *shared.Metrics) shared.TextOut {
+	return tr.NewWriteOut(w).WithLimits(limits).WithMetrics(metrics).WithHold(tr.DefaultBudget)
+}
 
 // Format is one format this command reads and writes: its parts, as its
 // module's manifest names them, and the grammar its documents are read
@@ -315,7 +343,7 @@ func (f *Format) TransducerProgram() (*alchemy.Program, *tt.Fail) {
 			{File: alc.File, Text: alc.Text},
 			{File: "main", Text: "def export [input] (" + alc.Entry + " input)"},
 		}
-		f.compiled, f.compileFail = alchemy.CompileSourcesWith(sources, alchemy.InputParserEvents, tt.Routers(), tr.Renderers())
+		f.compiled, f.compileFail = alchemy.CompileSourcesWith(sources, alchemy.InputParserEvents, tt.Routers(), Renderers())
 	})
 	return f.compiled, f.compileFail
 }
@@ -931,7 +959,7 @@ type parsedRoute struct {
 // Compile is the composition a request makes, and the program it compiles
 // to.
 func Compile(r *Request) (*Compiled, *tt.Fail) {
-	routers, renderers := tt.Routers(), tr.Renderers()
+	routers, renderers := tt.Routers(), Renderers()
 	// The transducer the route reads the document through, where the
 	// source ships one and the whole document is asked, not read whole. A
 	// path's value is a plain tree's events, which the composition over a

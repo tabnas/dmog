@@ -114,14 +114,12 @@ var notStreaming = map[string]struct {
 		"writes, until abnf's part (admin ADR-33, ruling 4; the streaming plan's step 23)"},
 	"c": {failsBoth, "it has no transducer part: a translation unit is read whole as the parser's value " +
 		"(admin ADR-33, ruling 7; the streaming plan's step 21, whose ruling is pending)"},
-	"css": {failsBoth, "render's JSON writer holds each member of a root object as one record, up to its " +
-		"16 MiB hold, and a stylesheet's rules are one member; css is not in transduce's prune suite, so the " +
-		"engine's tree keeps every rule (tabnas/transduce#82); and " + goMemory},
+	"css": {failsFlat, "css is not in transduce's prune suite, so the engine's tree keeps every rule " +
+		"(tabnas/transduce#82); and " + goMemory},
 	"csv": {failsFlat, goMemory},
 	"ebnf": {failsBoth, "it has no transducer part: a document is read whole as the grammar spec its compiler " +
 		"writes, until ebnf's part (admin ADR-33, ruling 4; the streaming plan's step 23)"},
-	"feed": {failsBoth, "render's JSON writer holds each member of a root object as one record, up to its " +
-		"16 MiB hold, and a feed's entries are one member; and " + goMemory},
+	"feed": {failsFlat, goMemory},
 	"gbnf": {failsBoth, "it has no transducer part: a document is read whole as the grammar spec its compiler " +
 		"writes, until gbnf's part (admin ADR-33, ruling 4; the streaming plan's step 23)"},
 	"ini": {failsFlat, "every section is a member of the document's root map, and pruning empties no map " +
@@ -132,17 +130,14 @@ var notStreaming = map[string]struct {
 	"jsonic": {failsBoth, "jsonic's constructor declares no Lex.Window, so the engine reads a document whole " +
 		"before its parse begins (tabnas/jsonic#121)"},
 	"jsonl": {failsFlat, goMemory},
-	"markdown": {failsBoth, "render's JSON writer holds each member of a root object as one record, up to its " +
-		"16 MiB hold, and a document's blocks are one member, an array pruning never empties " +
-		"(tabnas/transduce#81); and " + goMemory},
+	"markdown": {failsFlat, "a document's blocks array is no rule's node, so pruning never empties it, and " +
+		"each block's node stays (tabnas/transduce#81); and " + goMemory},
 	"pgn": {failsFlat, goMemory},
 	"proto": {failsBoth, "the check of its nesting that proto's parse makes first counts the whole document, " +
 		"and proto's grammar declares no Lex.Window, so a document is read whole first (tabnas/proto#81)"},
-	"toml": {failsBoth, "render's JSON writer holds each member of a root object as one record, up to its " +
-		"16 MiB hold, and an array of tables is one member, an array pruning never empties " +
-		"(tabnas/transduce#81); and " + goMemory},
-	"xml": {failsBoth, "render's JSON writer holds each member of a root object as one record, up to its " +
-		"16 MiB hold, and an element's children are one member; and " + goMemory},
+	"toml": {failsFlat, "an array of tables is no rule's node, so pruning never empties it, and each table " +
+		"stays whole (tabnas/transduce#81); and " + goMemory},
+	"xml":  {failsFlat, goMemory},
 	"yaml": {failsFlat, goMemory},
 	"zon":  {failsFlat, goMemory},
 }
@@ -157,10 +152,10 @@ var notStreaming = map[string]struct {
 // sizes, since GOGC=100 lets the heap reach twice what is live before a
 // collection. A run that holds its document grows with it, measured one run
 // at a time with test/streaming.json's documents (300 items, about 315 KB,
-// and 3,000): json 17.39 MB and 63.04 MB (3.6 times), csv 146.16 MB and
-// 1351.29 MB, xml 25.17 MB and 153.51 MB, and the least, markdown, 19.92 MB
-// and 62.58 MB (3.1 times). JSON read whole (--whole) holds 13.92 MB and
-// 40.42 MB (2.9 times), which TestADocumentHeldWholeFailsTheBound holds to
+// and 3,000): json 18.88 MB and 70.62 MB (3.7 times), csv 177.85 MB and
+// 1392.35 MB, xml 27.09 MB and 139.59 MB, and the least, markdown, 17.97 MB
+// and 57.94 MB (3.2 times). JSON read whole (--whole) holds 14.40 MB and
+// 40.40 MB (2.8 times), which TestADocumentHeldWholeFailsTheBound holds to
 // fail the bound.
 const streamingBound = 1.5
 

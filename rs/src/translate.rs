@@ -51,6 +51,7 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
 
+use tabnas_alchemy::shared::{CsvOptions, JoinOut, JsonOptions, Renderers, TableSink, TextOut};
 use tabnas_alchemy::translate::{
     compose, compose_parsed, compose_program, compose_program_parsed, Alc, Composition, Descriptor,
     Front, Options, Part, PartText, Render, Root, Shape,
@@ -60,6 +61,79 @@ use tabnas_transduce::{
     capability, walk_datum, AbortFlag, Code, Datum, DatumBuilder, Duplicates, Fail, Flow, Guarded,
     JsonEvent, Limits, Metrics, ParserEventSource, ParserSource, Segment, Sink, TreeContract,
 };
+
+/// The renderers every program this command compiles is lowered onto:
+/// render's own (`tabnas_render::renderers()`), each method delegated to
+/// it, but for the writer of the text a command writes
+/// ([`Renderers::write_out`]), which holds at most render's budget
+/// (`tabnas_render::DEFAULT_BUDGET`, 32 KiB) of a record that is still
+/// open, where render's own holds up to its default hold, 16 MiB of it.
+/// `translate` streams its output from its first byte (admin ADR-33,
+/// ruling 1), and render's JSON writer makes each member of a root object
+/// one record, so with render's hold a tree whose bulk is one member of
+/// its root (a stylesheet's rules, an XML element's children, a feed's
+/// entries, a Markdown document's blocks, a TOML array of tables) was
+/// written only once 16 MiB of it was held, or at the document's end: the
+/// streaming gate found it (`tests/streaming_test.rs`). A record of up to
+/// the budget is still written whole when a run fails part way; a longer
+/// one is written as it comes, and the writer retains at most the budget
+/// and the hold. render's default suits a library; the policy is the
+/// host's.
+pub fn renderers() -> Arc<dyn Renderers> {
+    Arc::new(CommandRenderers(tabnas_render::renderers()))
+}
+
+/// [`renderers`]: render's renderers, with a writer that holds the budget.
+struct CommandRenderers(tabnas_render::RenderRenderers);
+
+impl Renderers for CommandRenderers {
+    fn json(&self, out: Box<dyn TextOut + Send>, options: JsonOptions) -> Box<dyn Sink + Send> {
+        self.0.json(out, options)
+    }
+
+    fn csv(
+        &self,
+        out: Box<dyn TextOut + Send>,
+        options: CsvOptions,
+    ) -> Result<Box<dyn TableSink + Send>, Fail> {
+        self.0.csv(out, options)
+    }
+
+    fn records_to_json(&self, sink: Box<dyn Sink + Send>) -> Box<dyn TableSink + Send> {
+        self.0.records_to_json(sink)
+    }
+
+    fn join<'a>(
+        &self,
+        out: Box<dyn TextOut + Send + 'a>,
+        separator: &str,
+    ) -> Box<dyn JoinOut + Send + 'a> {
+        self.0.join(out, separator)
+    }
+
+    fn replace_text<'a>(
+        &self,
+        out: Box<dyn TextOut + Send + 'a>,
+        from: &str,
+        to: &str,
+    ) -> Box<dyn TextOut + Send + 'a> {
+        self.0.replace_text(out, from, to)
+    }
+
+    fn write_out(
+        &self,
+        writer: Box<dyn Write + Send>,
+        limits: &Limits,
+        metrics: Arc<Metrics>,
+    ) -> Box<dyn TextOut + Send> {
+        Box::new(
+            tabnas_render::WriteOut::new(writer)
+                .with_limits(limits)
+                .with_metrics(metrics)
+                .with_hold(tabnas_render::DEFAULT_BUDGET),
+        )
+    }
+}
 
 /// A format's grammar applied to a document, three ways, each over a
 /// fresh parser of the grammar under the format's own options, since a
@@ -223,7 +297,7 @@ impl Format {
                     &sources,
                     Input::ParserEvents,
                     Arc::new(tabnas_transduce::routers()),
-                    Arc::new(tabnas_render::renderers()),
+                    renderers(),
                 )
                 .map(Some)
             })
@@ -742,7 +816,7 @@ pub struct Compiled {
 /// The composition a request makes, and the program it compiles to.
 pub fn compile(request: &Request<'_>) -> Result<Compiled, Fail> {
     let routers = Arc::new(tabnas_transduce::routers());
-    let renderers = Arc::new(tabnas_render::renderers());
+    let renderers = renderers();
     // The transducer the route reads the document through, where the
     // source ships one and the whole document is asked, not read whole. A
     // path's value is a plain tree's events, which the composition over a

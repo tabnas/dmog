@@ -90,7 +90,16 @@ The command builds a transduce `Routers` and a render `Renderers`,
 passes both to alchemy's `compile`, and runs the result over the input.
 Nothing else in the fleet constructs all three, so behaviour that needs
 all three belongs here, and a library that needs one of them depends on
-that one alone.
+that one alone. The policy of the command's own output is the host's too:
+it wraps render's renderers in one place in each runtime
+(`translate::renderers`, `translate.Renderers`, `renderers` in
+`ts/src/translate.ts`), every method render's but the writer's, which
+holds at most render's budget (32 KiB) of a record still open, where
+render's default holds 16 MiB. `translate` streams from its first byte
+(admin ADR-33, ruling 1), and render's JSON writer makes each member of a
+root object one record, so of a tree whose bulk is one member of its root
+(a stylesheet's rules, an XML element's children) render's default held up
+to 16 MiB before it wrote a byte, which the streaming gate found.
 
 ## Layout
 
@@ -310,11 +319,11 @@ run, and the gate holds the table to reading them whole. Never widen a
 bound, or shorten a document, to pass a format: register it.
 
 Three formats are held at once in Rust and TypeScript, and Go's formats
-run in parallel, one measured run at a time. Measured on four busy cores,
-the gate takes about three minutes in Rust's debug run and two in
-TypeScript, where the parts run slowest and csv's runs longest of all
-(105 s and 64 s over ten times its document), and under half a minute in
-Go, whose memory clause stops every run past the bound.
+run in parallel, one measured run at a time. On four busy cores the gate
+took three to five minutes in Rust's debug run and two to three in
+TypeScript, where the parts run slowest and csv's run over ten times its
+document takes longest, and under a minute in Go, whose memory clause
+stops every run past the bound.
 
 ## Build and test
 

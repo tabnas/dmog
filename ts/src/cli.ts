@@ -3,7 +3,8 @@
 // The `dmog` command (the Rust binary is rs/src/bin/dmog.rs), run by
 // `bin/dmog`. It composes the language, `@tabnas/alchemy`, with the
 // stages it compiles onto: transduce's `routers` and render's `renderers`,
-// passed to `compile`, the tabnas JSON grammar and its transducer part,
+// with the writer's hold the budget (`./translate`'s `renderers`), passed
+// to `compile`, the tabnas JSON grammar and its transducer part,
 // transduce's `ParserEventSource`, and render's `FdWriter`.
 //
 //   dmog canon FILE       print the program in canonical form
@@ -72,21 +73,22 @@ import {
   rendererNamed,
   translate as alchemyTranslate,
 } from '@tabnas/alchemy'
-import { FdWriter, renderers } from '@tabnas/render'
+import { FdWriter } from '@tabnas/render'
 import { Fail, Limits, Metrics, routers } from '@tabnas/transduce'
 import type { ParserSink, Segment, Sink } from '@tabnas/transduce'
 
 import * as translate from './translate'
 
-// What every program is compiled with: transduce's routers and render's
-// renderers, the stages alchemy builds a run from.
 // VERSION is this package's version. It MUST equal package.json "version":
 // admin/publish.sh rewrites both, and test/version.test.ts fails the build
 // if they drift. Mirrors `const VERSION` in go/cmd/dmog/main.go and
 // `VERSION` in rs/src/bin/dmog.rs.
 export const VERSION = '0.2.0'
 
-const OPTIONS: CompileOptions = { routers, renderers }
+// What every program is compiled with: transduce's routers and the
+// renderers `./translate` composes of render's, the stages alchemy builds a
+// run from.
+const OPTIONS: CompileOptions = { routers, renderers: translate.renderers }
 
 const USAGE =
   'usage: dmog canon|format|check|explain FILE\n' +
