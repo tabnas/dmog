@@ -19,9 +19,9 @@ require (
 	github.com/tabnas/expr/go v0.5.19
 	github.com/tabnas/feed/go v0.6.21
 	github.com/tabnas/gbnf/go v0.2.1
-	github.com/tabnas/ini/go v0.5.22
+	github.com/tabnas/ini/go v0.5.23
 	github.com/tabnas/json/go v0.5.20
-	github.com/tabnas/json5/go v0.5.18
+	github.com/tabnas/json5/go v0.5.19
 	github.com/tabnas/jsonc/go v0.5.17
 	github.com/tabnas/jsonic/go v0.7.11
 	github.com/tabnas/jsonl/go v0.1.20
@@ -30,7 +30,7 @@ require (
 	github.com/tabnas/render/go v0.2.7
 	github.com/tabnas/semver/go v0.0.11
 	github.com/tabnas/toml/go v0.5.21
-	github.com/tabnas/transduce/go v0.6.2
+	github.com/tabnas/transduce/go v0.6.3
 	github.com/tabnas/xml/go v0.7.20
 	github.com/tabnas/yaml/go v0.5.31
 	github.com/tabnas/zon/go v0.5.19

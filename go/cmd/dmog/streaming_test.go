@@ -95,12 +95,22 @@ var ruledWhole = map[string]string{
 	"semver": "a version is made only once its whole text is accepted; admin ADR-33, ruling 4",
 }
 
-// goMemory is why a format that streams in Rust is not flat in Go: the
-// engine's rule history, which a stream cannot bound in Go, and the lexer's
-// intern pool both keep something of every record.
-const goMemory = "the Go engine keeps every rule of the parse, since a bounded rule history loses a " +
-	"grammar's writes through its links (tabnas/parser#325), and its lexer interns every distinct " +
-	"short string (tabnas/parser#324)"
+// goUnpruned is what a run that does not prune keeps in Go besides the
+// tree: the engine's rule history, which transduce bounds only for a run
+// that prunes a grammar it verified (transduce's BoundsHistory).
+const goUnpruned = "and a run that does not prune keeps the Go engine's whole rule history, which transduce " +
+	"bounds only for a pruning run"
+
+// goChurn is why a format whose Go stream holds a flat live heap is still
+// registered: transduce bounds its rule history for a pruning run, which
+// keeps what the parse holds flat (0.8 MB and 0.9 MB of live heap over 2,000
+// and 20,000 JSON records, in transduce's go/history_test.go), but the
+// bound's copies are garbage the collector reaches late, so the peak
+// resident set this gate measures swings by about a third from run to run
+// and passes the bound in some runs.
+const goChurn = "transduce bounds the Go engine's rule history for a pruning run, so the live heap is flat, " +
+	"but the bound's copies make the peak resident set, which this gate measures, swing by about a third " +
+	"from run to run"
 
 // notStreaming is the formats that do not stream yet in this runtime, each
 // with the clauses it fails and why. The gate holds each entry to failing
@@ -111,33 +121,36 @@ var notStreaming = map[string]struct {
 	why   string
 }{
 	"abnf": {failsFlat, "abnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#88); and " + goMemory},
+		"(tabnas/transduce#88); " + goUnpruned},
 	"c": {failsBoth, "it has no transducer part: a translation unit is read whole as the parser's value " +
 		"(admin ADR-33, ruling 7; the streaming plan's step 21, whose ruling is pending)"},
 	"css": {failsFlat, "css is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#82); and " + goMemory},
-	"csv": {failsFlat, goMemory},
+		"(tabnas/transduce#82); " + goUnpruned},
+	"csv": {failsFlat, goChurn},
 	"ebnf": {failsFlat, "ebnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#88); and " + goMemory},
-	"feed": {failsFlat, goMemory},
+		"(tabnas/transduce#88); " + goUnpruned},
+	"feed": {failsFlat, goChurn},
 	"gbnf": {failsFlat, "gbnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#88); and " + goMemory},
-	"ini":   {failsFlat, goMemory},
-	"json":  {failsFlat, goMemory},
-	"json5": {failsFlat, goMemory},
-	"jsonc": {failsFlat, goMemory},
+		"(tabnas/transduce#88); " + goUnpruned},
+	"ini":   {failsFlat, goChurn},
+	"json":  {failsFlat, goChurn},
+	"json5": {failsFlat, goChurn},
+	"jsonc": {failsFlat, goChurn},
 	"jsonic": {failsBoth, "jsonic's constructor declares no Lex.Window, so the engine reads a document whole " +
 		"before its parse begins (tabnas/jsonic#121)"},
-	"jsonl": {failsFlat, goMemory},
+	"jsonl": {failsFlat, goChurn},
 	"markdown": {failsFlat, "markdown's block phase keeps every block it has finished, linked under the " +
-		"document, until the parse ends (tabnas/markdown#100); and " + goMemory},
-	"pgn": {failsFlat, goMemory},
+		"document, until the parse ends (tabnas/markdown#100)"},
+	"pgn": {failsFlat, "Go's transduce prunes no PGN database, since its prune suite runs none (transduce's " +
+		"DIVERGENCE.md, entry 4), so the engine's tree keeps every game; " + goUnpruned},
 	"proto": {failsFlat, "proto's parse builds its whole CST, every definition's node, and its rewind history " +
-		"of 8,192 tokens keeps the window's text back to the oldest of them (tabnas/proto#85); and " + goMemory},
-	"toml": {failsFlat, goMemory},
-	"xml":  {failsFlat, goMemory},
-	"yaml": {failsFlat, goMemory},
-	"zon":  {failsFlat, goMemory},
+		"of 8,192 tokens keeps the window's text back to the oldest of them (tabnas/proto#85); " + goUnpruned},
+	"toml": {failsFlat, goChurn},
+	"xml":  {failsFlat, goChurn},
+	"yaml": {failsFlat, "Go's transduce bounds no yaml rule history: yaml's Go childNode walks a child's Next " +
+		"links, which a bounded history cuts, so a bounded parse loses items of a value (transduce's " +
+		"DIVERGENCE.md, entry 5), and the engine keeps every rule of the parse"},
+	"zon": {failsFlat, goChurn},
 }
 
 // streamingBound is how far the peak resident set over ten times the
