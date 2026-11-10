@@ -131,19 +131,18 @@ func TestFormatsPrintsTheRegistryAsJSON(t *testing.T) {
 		t.Errorf("%v", byID["c"])
 	}
 	// Why a format's documents are read whole, where its manifest says:
-	// every format transduce's Rust and TypeScript lists leave out, and
-	// Markdown, which they stream only once its last line is in, each in
+	// every format transduce's Rust and TypeScript lists leave out, each in
 	// the sentence its manifest gives. PGN's says nothing: it streams a
-	// game at a time through its transducer part, here as there.
+	// game at a time through its transducer part, here as there, and so
+	// do proto's, a declaration at a time, and Markdown's, a block at a
+	// time.
 	for id, manifest := range map[string]string{
-		"abnf":     tabnasabnf.Translate().Manifest,
-		"c":        tabnasc.Translate().Manifest,
-		"ebnf":     tabnasebnf.Translate().Manifest,
-		"expr":     tabnasexpr.Translate().Manifest,
-		"gbnf":     tabnasgbnf.Translate().Manifest,
-		"markdown": tabnasmarkdown.Translate().Manifest,
-		"proto":    tabnasproto.Translate().Manifest,
-		"semver":   tabnassemver.Translate().Manifest,
+		"abnf":   tabnasabnf.Translate().Manifest,
+		"c":      tabnasc.Translate().Manifest,
+		"ebnf":   tabnasebnf.Translate().Manifest,
+		"expr":   tabnasexpr.Translate().Manifest,
+		"gbnf":   tabnasgbnf.Translate().Manifest,
+		"semver": tabnassemver.Translate().Manifest,
 	} {
 		var m struct {
 			Translate struct {
@@ -180,10 +179,16 @@ func TestFormatsPrintsTheRegistryAsJSON(t *testing.T) {
 			t.Errorf("%s: whole %v, its manifest's %q", id, byID[id]["whole"], *m.Translate.Whole)
 		}
 	}
-	for _, id := range []string{"json", "pgn"} {
+	for _, id := range []string{"json", "markdown", "pgn", "proto"} {
 		if byID[id]["whole"] != nil {
 			t.Errorf("%s: whole %v", id, byID[id]["whole"])
 		}
+	}
+	if byID["proto"]["transduce"] != tabnasproto.Translate().Transduce.Entry || byID["proto"]["schema"] != "proto-ast" {
+		t.Errorf("%v", byID["proto"])
+	}
+	if byID["markdown"]["transduce"] != tabnasmarkdown.Translate().Transduce.Entry {
+		t.Errorf("%v", byID["markdown"])
 	}
 	if byID["pgn"]["schema"] != "pgn-database" || byID["semver"]["embed"] != "semver-embed" ||
 		byID["feed"]["embed"] != "feed-embed" || byID["expr"]["embed"] != "expr-embed" {
@@ -416,16 +421,23 @@ func TestTranslateRefusesWhatATargetCannotCarry(t *testing.T) {
 // What a module's own parse checks before its parser runs, the command
 // checks too, status 1, writing nothing, as the Rust and TypeScript
 // commands do: a JSON5 document holding no value is refused with json5's
-// own codes (its Parse), not the engine's unexpected; a .proto file nesting
-// past proto's cap is refused before the engine runs (the Preflight its
-// ParseValue makes); and a grammar notation's document its compiler
+// own codes (its CheckReader, which its ParseReader makes), not the
+// engine's unexpected, from a file and from standard input; a .proto file
+// nesting past proto's cap is refused before the engine runs (the Preflight
+// its ParseValue makes); and a grammar notation's document its compiler
 // refuses is refused with the compiler's message.
 func TestTranslateChecksWhatAModulesParseChecksFirst(t *testing.T) {
 	for _, c := range []struct{ input, code string }{{"", "json5_empty"}, {"// c\n", "json5_no_value"}} {
-		f := wantFailure(t, invoke(t, []string{"translate", "--from", "json5", "--to", "json", "-"}, text(c.input)),
-			1, "INPUT_INVALID", c.code+": JSON5 input must contain a value")
-		if f["row"] != 1.0 || f["col"] != 1.0 || f["output"] != "none" {
-			t.Errorf("%q: %v", c.input, f)
+		file := tempFile(t, c.code+".json5", c.input)
+		for _, in := range []struct {
+			path  string
+			stdin *string
+		}{{file, nil}, {"-", text(c.input)}} {
+			f := wantFailure(t, invoke(t, []string{"translate", "--from", "json5", "--to", "json", in.path}, in.stdin),
+				1, "INPUT_INVALID", c.code+": JSON5 input must contain a value")
+			if f["row"] != 1.0 || f["col"] != 1.0 || f["output"] != "none" {
+				t.Errorf("%q from %s: %v", c.input, in.path, f)
+			}
 		}
 	}
 	wantSuccess(t, invoke(t, []string{"translate", "--from", "json5", "--to", "json", "-"}, text("// c\n{a:1}\n")), `{"a":1}`+"\n")

@@ -238,7 +238,8 @@ func TestYAMLReadsASequenceEntryAsItsGrammarDoes(t *testing.T) {
 }
 
 // Every format with a parser answers its rule passes; one read as a tree
-// has none and refuses; json5's check runs first.
+// has none and refuses; json5's check runs first, over a text and through
+// a reader.
 func TestAFormatWithAParserGivesItsRulePasses(t *testing.T) {
 	var parsed []string
 	for _, f := range Formats() {
@@ -247,14 +248,14 @@ func TestAFormatWithAParserGivesItsRulePasses(t *testing.T) {
 		}
 	}
 	// C is parsed here, where the Rust crate reads it as its realized
-	// tree; feed and pgn are parsed for their transducer parts, and a
-	// document a part does not stream is read whole as the typed feed's or
-	// database's tree.
-	want := "c css csv feed ini json json5 jsonc jsonic jsonl markdown pgn semver toml xml yaml zon"
+	// tree; feed, pgn and proto are parsed for their transducer parts, and a
+	// document read whole is read as the typed feed's or database's tree,
+	// or proto's source-ordered tree.
+	want := "c css csv feed ini json json5 jsonc jsonic jsonl markdown pgn proto semver toml xml yaml zon"
 	if got := strings.Join(parsed, " "); got != want {
 		t.Errorf("the parsed formats are %s", got)
 	}
-	if got := ParserNames(); got != "c, css, csv, feed, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, semver, toml, xml, yaml or zon" {
+	if got := ParserNames(); got != "c, css, csv, feed, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, toml, xml, yaml or zon" {
 		t.Errorf("ParserNames is %q", got)
 	}
 	abnf := Named("abnf")
@@ -267,6 +268,9 @@ func TestAFormatWithAParserGivesItsRulePasses(t *testing.T) {
 	json5 := Named("json5")
 	if _, f := json5.Passes("// only a comment"); f == nil || f.Code != tt.CodeInputInvalid {
 		t.Errorf("the check refuses: %v", f)
+	}
+	if _, f := json5.PassesFrom(strings.NewReader("// only a comment")); f == nil || f.Code != tt.CodeInputInvalid {
+		t.Errorf("the check refuses through a reader: %v", f)
 	}
 	if source, f := json5.Passes("{a: 1}"); f != nil || source == nil {
 		t.Errorf("the check passes: %v", f)

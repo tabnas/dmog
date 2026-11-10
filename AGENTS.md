@@ -206,9 +206,6 @@ tree is the document, read whole (`Reader::Tree` in Rust, `tree` in Go,
 `{ tree }` in TypeScript), with the checks the package's API makes first:
 - expressions, as the simplified tree (`parse_simplified`,
   `parseSimplified`, `SimplifyOrdered`);
-- proto's descriptor, as its parse builds it, which first refuses a
-  document nesting past proto's cap, before the engine builds a tree whose
-  drop could abort the process (`parse_value`, `parse`, `ParseValue`);
 - C, as the realized tree in Rust (`tabnas_c::parse`); TypeScript and Go
   walk the parser's value;
 - the grammar notations, as the pure-data grammar spec each package's
@@ -220,13 +217,30 @@ tree is the document, read whole (`Reader::Tree` in Rust, `tree` in Go,
   their JSON encoding (`plainTree`). A feed or a PGN database is read so
   only where its transducer part refuses it: otherwise the part reads it
   over the parser's rule passes, as in every runtime, so Go's modules
-  carry both the parser and the tree.
+  carry both the parser and the tree;
+- proto's tree, its declarations in source order (`parse_tree`,
+  `parseTree`, `ParseTree`), whose parse first refuses a document nesting
+  past proto's cap, before the engine builds a tree whose drop could
+  abort the process. A `.proto` file is read so only where it is read
+  whole: otherwise proto's transducer part reads it over the rule passes
+  of the parser `make()` builds, after the same check, so every runtime
+  carries both the parser and the tree (`Reader::CheckedTree` in Rust,
+  `parser` with `tree` in Go, `{ parser, check, tree }` in TypeScript).
 
 Where a package's own parse checks a document before its parser runs, and
 the parser does not check it itself, the reader makes the same check
-first (`Reader::Checked` in Rust, `check` in Go, `{ parser, check }` in
-TypeScript): json5 refuses a document holding no value with its own codes
-in every runtime.
+first (`Reader::Checked` and `Reader::CheckedTree` in Rust, `check` in
+Go, `{ parser, check, tree }` in TypeScript): json5 refuses a document
+holding no value with its own codes, and proto a document nesting past
+its cap (`preflight`, `Preflight`), in every runtime. Through a reader
+json5's check reads only as far as it needs, a document's leading white
+space and comments, and hands the parser a reader that gives what it read
+and then the rest, so the document is still read a window at a time
+(`check_reader`, `CheckReader`); proto's counts the whole document, which
+is read whole first, as proto's parser, declaring no window, reads it
+anyway. TypeScript's json5 parser makes json5's check itself, in its own
+`parse` and `parseReader` (json5 0.5.18), so TypeScript reads JSON5 with
+its `make()` alone.
 
 A format whose reader, as this command reads a document through
 transduce, does not build the tree its parts declare is registered in

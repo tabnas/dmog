@@ -734,12 +734,13 @@ fn formats_lists_the_formats_translate_reads_and_writes() {
     }
     assert_eq!(schema("c"), "c");
     // Why a format's documents are read whole, where its manifest says:
-    // every format transduce does not stream, and Markdown, which it
-    // streams only once the last line is in, each in the sentence its
+    // every format transduce does not stream, each in the sentence its
     // manifest gives; JSON's none, nor PGN's, which streams a game at a
     // time, nor CSS's, which streams a statement at a time, nor INI's and
     // TOML's, which stream a member at a time, nor feed's, which streams
-    // an entry at a time.
+    // an entry at a time, nor proto's, which streams a declaration at a
+    // time, nor Markdown's, which streams a block at a time, each through
+    // the part it ships.
     let by_id = |id: &str| formats.iter().find(|f| f["id"] == id).expect("a format");
     for (id, manifest) in [
         ("abnf", tabnas_abnf::translate().unwrap().manifest),
@@ -747,8 +748,6 @@ fn formats_lists_the_formats_translate_reads_and_writes() {
         ("ebnf", tabnas_ebnf::translate().unwrap().manifest),
         ("expr", tabnas_expr::translate().unwrap().manifest),
         ("gbnf", tabnas_gbnf::translate().unwrap().manifest),
-        ("markdown", tabnas_markdown::translate().unwrap().manifest),
-        ("proto", tabnas_proto::translate().unwrap().manifest),
         ("semver", tabnas_semver::translate().unwrap().manifest),
     ] {
         let manifest: serde_json::Value = serde_json::from_str(manifest).expect("JSON");
@@ -762,6 +761,11 @@ fn formats_lists_the_formats_translate_reads_and_writes() {
     assert!(by_id("ini")["whole"].is_null());
     assert!(by_id("toml")["whole"].is_null());
     assert!(by_id("feed")["whole"].is_null());
+    assert!(by_id("proto")["whole"].is_null());
+    assert_eq!(by_id("proto")["transduce"], "proto-transduce");
+    assert_eq!(by_id("proto")["schema"], "proto-ast");
+    assert!(by_id("markdown")["whole"].is_null());
+    assert_eq!(by_id("markdown")["transduce"], "markdown-transduce");
     let keys: Vec<&str> = by_id("css")
         .as_object()
         .expect("an object")
@@ -952,10 +956,11 @@ fn translate_refuses_what_a_target_cannot_carry() {
 /// nesting past proto's cap is refused before the engine builds a tree that
 /// deep, whose drop could abort the process (`tabnas_proto::preflight`,
 /// which `parse_value` makes), and a JSON5 document holding no value with
-/// json5's own codes (`tabnas_json5::parse_with`), not the engine's
-/// `unexpected`; a grammar notation's document its compiler refuses is
-/// refused with the compiler's message. The TypeScript and Go commands
-/// write the same, but that TypeScript's json5 error carries no position.
+/// json5's own codes (`tabnas_json5::check_reader`, which `parse_reader_with`
+/// makes), not the engine's `unexpected`, from a file and from standard
+/// input; a grammar notation's document its compiler refuses is refused
+/// with the compiler's message. The TypeScript and Go commands write the
+/// same, but that TypeScript's json5 error carries no position.
 #[test]
 fn translate_checks_what_a_packages_parse_checks_first() {
     let deep = format!(
@@ -978,23 +983,27 @@ fn translate_checks_what_a_packages_parse_checks_first() {
         })
     );
     for (input, code) in [("", "json5_empty"), ("// c\n", "json5_no_value")] {
-        let out = run(
-            &["translate", "--from", "json5", "--to", "json", "-"],
-            Some(input),
-        );
-        assert_eq!(out.status.code(), Some(1), "{input:?}: {}", stderr(&out));
-        assert_eq!(stdout(&out), "", "{input:?}");
-        assert_eq!(
-            fail_json(&out),
-            serde_json::json!({
-                "code": "INPUT_INVALID",
-                "message": format!("{code}: JSON5 input must contain a value"),
-                "row": 1,
-                "col": 1,
-                "output": "none"
-            }),
-            "{input:?}"
-        );
+        let file = temp_file(&format!("{code}.json5"), input);
+        let file = file.to_str().expect("a utf-8 path");
+        for (path, stdin) in [(file, None), ("-", Some(input))] {
+            let out = run(
+                &["translate", "--from", "json5", "--to", "json", path],
+                stdin,
+            );
+            assert_eq!(out.status.code(), Some(1), "{path}: {}", stderr(&out));
+            assert_eq!(stdout(&out), "", "{path}");
+            assert_eq!(
+                fail_json(&out),
+                serde_json::json!({
+                    "code": "INPUT_INVALID",
+                    "message": format!("{code}: JSON5 input must contain a value"),
+                    "row": 1,
+                    "col": 1,
+                    "output": "none"
+                }),
+                "{path}"
+            );
+        }
     }
     // A document that opens with a comment and holds a value is read.
     let out = run(
@@ -1052,8 +1061,9 @@ fn translate_checks_what_a_packages_parse_checks_first() {
 /// command reads it by:
 /// - `run`, through a reader, a window at a time for JSON;
 /// - `run --grammar`, through a reader for a grammar that declares the
-///   window (json), whole first for one that does not (yaml), and whole
-///   for json5, whose check reads the document first;
+///   window (json, and json5, whose check reads only as far as the
+///   document's leading whitespace and comments), and whole first for one
+///   that does not (yaml);
 /// - `translate`, through a reader on the transducer part's route, and
 ///   whole on the others (a path, a format whose package ships no part,
 ///   standard input).
@@ -1205,8 +1215,8 @@ fn run_takes_a_grammar_whose_rule_passes_the_program_reads() {
             fail["message"],
             format!(
                 "--grammar takes a format whose documents are parsed (css, csv, feed, ini, json, \
-                 json5, jsonc, jsonic, jsonl, markdown, pgn, semver, toml, xml, yaml or zon), \
-                 not {name:?}"
+                 json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, toml, xml, yaml or \
+                 zon), not {name:?}"
             )
         );
     }

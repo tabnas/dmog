@@ -243,7 +243,10 @@ fn structural_translation_parts_agree_with_their_descriptors_and_compile() {
             "jsonl",
             structural_parts!(tabnas_jsonl::translate(), transduce),
         ),
-        ("markdown", structural_parts!(tabnas_markdown::translate())),
+        (
+            "markdown",
+            structural_parts!(tabnas_markdown::translate(), transduce),
+        ),
         (
             "toml",
             structural_parts!(tabnas_toml::translate(), transduce),

@@ -73,6 +73,7 @@ func grammarTransducers() map[string]*structuralPart {
 	jsonc := tabnasjsonc.Translate()
 	jsonic := tabnasjsonic.Translate()
 	jsonl := tabnasjsonl.Translate()
+	markdown := tabnasmarkdown.Translate()
 	toml := tabnastoml.Translate()
 	xml := tabnasxml.Translate()
 	yaml := tabnasyaml.Translate()
@@ -85,11 +86,14 @@ func grammarTransducers() map[string]*structuralPart {
 		"jsonc":  packagePart(jsonc.Transduce != nil, func() (string, string) { return jsonc.Transduce.Entry, jsonc.Transduce.Source }),
 		"jsonic": packagePart(jsonic.Transduce != nil, func() (string, string) { return jsonic.Transduce.Entry, jsonic.Transduce.Source }),
 		"jsonl":  packagePart(jsonl.Transduce != nil, func() (string, string) { return jsonl.Transduce.Entry, jsonl.Transduce.Source }),
-		"pgn":    packagePart(chess.Transduce != nil, func() (string, string) { return chess.Transduce.Entry, chess.Transduce.Source }),
-		"toml":   packagePart(toml.Transduce != nil, func() (string, string) { return toml.Transduce.Entry, toml.Transduce.Source }),
-		"xml":    packagePart(xml.Transduce != nil, func() (string, string) { return xml.Transduce.Entry, xml.Transduce.Source }),
-		"yaml":   packagePart(yaml.Transduce != nil, func() (string, string) { return yaml.Transduce.Entry, yaml.Transduce.Source }),
-		"zon":    packagePart(zon.Transduce != nil, func() (string, string) { return zon.Transduce.Entry, zon.Transduce.Source }),
+		"markdown": packagePart(markdown.Transduce != nil, func() (string, string) {
+			return markdown.Transduce.Entry, markdown.Transduce.Source
+		}),
+		"pgn":  packagePart(chess.Transduce != nil, func() (string, string) { return chess.Transduce.Entry, chess.Transduce.Source }),
+		"toml": packagePart(toml.Transduce != nil, func() (string, string) { return toml.Transduce.Entry, toml.Transduce.Source }),
+		"xml":  packagePart(xml.Transduce != nil, func() (string, string) { return xml.Transduce.Entry, xml.Transduce.Source }),
+		"yaml": packagePart(yaml.Transduce != nil, func() (string, string) { return yaml.Transduce.Entry, yaml.Transduce.Source }),
+		"zon":  packagePart(zon.Transduce != nil, func() (string, string) { return zon.Transduce.Entry, zon.Transduce.Source }),
 	}
 }
 

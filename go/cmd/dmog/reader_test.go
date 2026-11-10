@@ -155,6 +155,27 @@ func TestALongDocumentIsWrittenBeforeItsInputEnds(t *testing.T) {
 	}
 }
 
+// So is a JSON5 document, whose check reads only as far as its leading
+// comment (CheckReader), and a ZON document: their modules' constructors
+// declare Lex.Window too.
+func TestAJSON5OrZONDocumentIsWrittenBeforeItsInputEnds(t *testing.T) {
+	each := func(item func(i int) string, separator string) string {
+		items := make([]string, 20000)
+		for i := range items {
+			items[i] = item(i)
+		}
+		return strings.Join(items, separator)
+	}
+	json5 := each(func(i int) string { return fmt.Sprintf("{id:%d,name:'n%d'}", i, i) }, ",")
+	zon := each(func(i int) string { return fmt.Sprintf(`.{ .id = %d, .name = "n%d" }`, i, i) }, ", ")
+	for _, c := range []struct{ from, first, rest string }{
+		{"json5", "// records\n[" + json5, "," + json5 + ",]"},
+		{"zon", ".{ " + zon, ", " + zon + " }"},
+	} {
+		writtenBeforeTheEnd(t, []string{"translate", "--from", c.from, "--to", "json"}, c.first, c.rest)
+	}
+}
+
 // So does the value a path names below the root: a sub-stream of the
 // document's events, written as they come, and all of the value.
 func TestAPathsValueIsWrittenBeforeItsInputEnds(t *testing.T) {

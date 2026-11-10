@@ -32,7 +32,9 @@
 // builds a value that is not yet the tree its parts declare (an expression's
 // operators, proto's syntax tree, a typed feed or database, a grammar
 // notation's document, which compiles to a grammar spec), the tree the
-// module's API reads a document as is the document, read whole. Nothing here
+// module's API reads a document as is the document, read whole; where the
+// module ships a transducer part too (proto, feed, PGN), the part reads the
+// parser's rule passes, and a document read whole is that tree. Nothing here
 // knows a format by its name: a format is what its manifest says, and a
 // module whose manifest names no parts this host can take is not a format
 // here.
@@ -112,16 +114,16 @@ type Format struct {
 	passesFrom func(r io.Reader) *tt.ParserEventSource
 	// tree is a document as the tree the format's module reads it as with
 	// its own API, where its parser's value is not yet the tree its parts
-	// declare (an expression's operators, or a typed value): a whole read
-	// reads it. It is nil where reader is not, but for a module that ships
-	// a transducer part (PGN): its parser's rule passes stream through the
-	// part, and a document the part does not stream is read whole as this
-	// tree.
+	// declare (an expression's operators, proto's syntax tree, or a typed
+	// value): a whole read reads it. It is nil where reader is not, but for
+	// a module that ships a transducer part (proto, feed, PGN): its parser's
+	// rule passes stream through the part, and a document read whole is
+	// this tree.
 	tree func(text string) (any, *tt.Fail)
 	// check is what the module's own parse checks before its parser runs,
 	// which the parser does not check itself: a document it refuses is not
 	// parsed. Nil where the module checks nothing first.
-	check func(text string) *tt.Fail
+	check *moduleCheck
 	// Transducer is the transducer part the format's module ships, its
 	// manifest's translate.transduce: the alchemy file whose entry makes
 	// the format's JSON events of its parser's rule passes, through which
@@ -154,7 +156,7 @@ func (f *Format) Passes(text string) (*tt.ParserEventSource, *tt.Fail) {
 		return nil, f.noPasses()
 	}
 	if f.check != nil {
-		if fail := f.check(text); fail != nil {
+		if fail := f.check.text(text); fail != nil {
 			return nil, fail
 		}
 	}
@@ -165,20 +167,20 @@ func (f *Format) Passes(text string) (*tt.ParserEventSource, *tt.Fail) {
 // window of it at a time where the grammar declares Lex.Window; a read that
 // fails, or bytes that are not UTF-8, fail the run where the parse meets
 // them, with the engine's unreadable (Unreadable). The check the module's
-// parse makes first, where it makes one, reads the document whole, and the
-// parser then reads the text it passed.
+// parse makes first, where it makes one, reads only as far as it needs, and
+// the parser then reads what it read and the rest.
 func (f *Format) PassesFrom(r io.Reader) (*tt.ParserEventSource, *tt.Fail) {
 	if f.passes == nil {
 		return nil, f.noPasses()
 	}
-	if f.check == nil {
-		return f.passesFrom(r), nil
+	if f.check != nil {
+		rest, fail := f.check.reader(r)
+		if fail != nil {
+			return nil, fail
+		}
+		r = rest
 	}
-	text, fail := ReaderDocument(r).text()
-	if fail != nil {
-		return nil, fail
-	}
-	return f.Passes(text)
+	return f.passesFrom(r), nil
 }
 
 // passesOf is the rule passes over a document, from its text or through
@@ -278,7 +280,7 @@ func Unreadable(f *tt.Fail) (string, bool) {
 // under the same limits and counts.
 func (f *Format) run(input string, limits tt.Limits, metrics *tt.Metrics, sink tt.Sink) (tt.Flow, *tt.Fail) {
 	if f.check != nil {
-		if fail := f.check(input); fail != nil {
+		if fail := f.check.text(input); fail != nil {
 			return tt.Continue, fail
 		}
 	}
@@ -393,16 +395,28 @@ type module struct {
 	transduce  func() *at.PartText
 	parser     func() *tabnas.Tabnas
 	tree       func(text string) (any, *tt.Fail)
-	check      func(text string) *tt.Fail
+	check      *moduleCheck
+}
+
+// moduleCheck is what a module's own parse checks before its parser runs,
+// which the parser does not check itself, over a document given as its
+// text and over one read through a reader.
+type moduleCheck struct {
+	// text checks a document's text.
+	text func(text string) *tt.Fail
+	// reader checks a document read through r, reading only as far as the
+	// check needs, and hands back a reader that gives every byte r gives,
+	// the ones it read first, for the parser to read.
+	reader func(r io.Reader) (io.Reader, *tt.Fail)
 }
 
 // modules is every grammar module this command carries, each with how its
 // documents are read: the module's own parser, under its own options, or,
 // where its parser's value is not yet the tree its parts declare, the tree
-// its own API reads a document as. chess's and feed's are both: a database
-// or a feed streams through its transducer part over the parser's rule
-// passes, and one the part does not stream is read whole as the typed
-// database's or feed's tree.
+// its own API reads a document as. chess's, feed's and proto's are both: a
+// database, a feed or a .proto file streams through its transducer part
+// over the parser's rule passes, and one read whole is read as the typed
+// database's or feed's tree, or proto's source-ordered tree.
 func modules() []module {
 	return []module{
 		{descriptor: func() at.Descriptor {
@@ -478,9 +492,8 @@ func modules() []module {
 			return descriptor("tabnas-json5", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
 		}, transduce: func() *at.PartText {
 			return partText((*modulePart)(tabnasjson5.Translate().Transduce))
-		}, parser: func() *tabnas.Tabnas {
-			return json5Parser()
-		}, check: json5Check},
+		}, parser: func() *tabnas.Tabnas { return tabnasjson5.Make() },
+			check: &moduleCheck{text: json5Check, reader: json5CheckReader}},
 		{descriptor: func() at.Descriptor {
 			p := tabnasjsonc.Translate()
 			return descriptor("tabnas-jsonc", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
@@ -502,11 +515,19 @@ func modules() []module {
 		{descriptor: func() at.Descriptor {
 			p := tabnasmarkdown.Translate()
 			return descriptor("tabnas-markdown", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
+		}, transduce: func() *at.PartText {
+			return partText((*modulePart)(tabnasmarkdown.Translate().Transduce))
 		}, parser: func() *tabnas.Tabnas { return tabnasmarkdown.Make() }},
 		{descriptor: func() at.Descriptor {
 			p := tabnasproto.Translate()
 			return descriptor("tabnas-proto", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
-		}, tree: protoTree},
+		}, transduce: func() *at.PartText {
+			return partText((*modulePart)(tabnasproto.Translate().Transduce))
+		}, parser: func() *tabnas.Tabnas {
+			parser, err := tabnasproto.Make()
+			installed("tabnas-proto", err)
+			return parser
+		}, tree: protoTree, check: &moduleCheck{text: protoCheck, reader: protoCheckReader}},
 		{descriptor: func() at.Descriptor {
 			p := tabnassemver.Translate()
 			return descriptor("tabnas-semver", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
@@ -574,13 +595,6 @@ var feedParser = sync.OnceValue(func() *tabnas.Tabnas {
 	return parser
 })
 
-// json5Parser is json5's parser with its default options, on jsonic's.
-func json5Parser() *tabnas.Tabnas {
-	parser := tabnasjsonic.Make()
-	installed("tabnas-json5", parser.UseDefaults(tabnasjson5.Json5, tabnasjson5.Defaults()))
-	return parser
-}
-
 // json5Check is what json5's Parse checks before its parser runs, which
 // the parser does not check itself: a document holding no value is refused
 // as json5_empty or json5_no_value, rather than as the engine's unexpected.
@@ -591,11 +605,24 @@ func json5Check(text string) *tt.Fail {
 	if rest != "" && !strings.HasPrefix(rest, "/") {
 		return nil
 	}
-	_, err := tabnasjson5.Parse(json5Parser(), text)
+	_, err := tabnasjson5.Parse(tabnasjson5.Make(), text)
 	if te, ok := err.(*tabnas.TabnasError); ok && (te.Code == "json5_empty" || te.Code == "json5_no_value") {
 		return engineFailure(te)
 	}
 	return nil
+}
+
+// json5CheckReader is json5Check over a document read through r, as the
+// module's ParseReader makes it (CheckReader): r is read only as far as the
+// document's leading white space and comments and the character after
+// them, and what comes back gives what was read and then the rest of r, so
+// that the parser reads the document a window at a time after the check.
+func json5CheckReader(r io.Reader) (io.Reader, *tt.Fail) {
+	rest, err := tabnasjson5.CheckReader(tabnasjson5.Make(), r)
+	if err != nil {
+		return nil, engineFailure(err)
+	}
+	return rest, nil
 }
 
 // exprTree is an expression as expr's module reads one for its shared
@@ -612,18 +639,42 @@ func exprTree(text string) (any, *tt.Fail) {
 	return tabnasexpr.SimplifyOrdered(value), nil
 }
 
-// protoTree is a .proto file as proto's module reads one, the descriptor
-// its parts declare as a tree, every member named and ordered as the
-// canonical parse gives it (ParseValue). Its parse makes the check the
-// parser does not, before the engine runs: a document nesting deeper than
-// its cap is refused before the engine builds a tree that deep. The
-// parser's own value is the grammar's syntax tree.
+// protoTree is a .proto file read whole as proto's module reads one, the
+// tree its parts declare: its declarations in source order (ParseTree,
+// which makes the check the parser does not, Preflight, before the engine
+// runs). The parser's own value is the grammar's syntax tree, so a whole
+// read reads this; the transducer part reads the parser's rule passes.
 func protoTree(text string) (any, *tt.Fail) {
-	tree, err := tabnasproto.ParseValue(text, nil)
+	tree, err := tabnasproto.ParseTree(text)
 	if err != nil {
 		return nil, engineFailure(err)
 	}
 	return tree, nil
+}
+
+// protoCheck is what proto's parse checks before its parser runs, which
+// the parser does not check itself (Preflight): a document nesting deeper
+// than proto's cap is refused before the engine builds a tree that deep.
+func protoCheck(text string) *tt.Fail {
+	if err := tabnasproto.Preflight(text); err != nil {
+		return tt.InputFail(err.Error())
+	}
+	return nil
+}
+
+// protoCheckReader is protoCheck over a document read through r. The cap
+// is counted over the whole document, so r is read to its end first, as
+// the parser reads it anyway (proto declares no Lex.Window), and the parser
+// reads the text that passed.
+func protoCheckReader(r io.Reader) (io.Reader, *tt.Fail) {
+	text, fail := ReaderDocument(r).text()
+	if fail != nil {
+		return nil, fail
+	}
+	if fail := protoCheck(text); fail != nil {
+		return nil, fail
+	}
+	return strings.NewReader(text), nil
 }
 
 // abnfTree is an ABNF document as abnf's module reads one for a host, the
