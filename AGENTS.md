@@ -101,6 +101,7 @@ that one alone.
 | `go/e2e/` | the tests of alchemy's programs in Go: test files only, alchemy's exported API composed with transduce and render |
 | `rs/` | `tabnas-dmog`: the `dmog` binary and its tests, and the tests of alchemy's programs (`rs/tests/common/` composes the three) |
 | `examples/` | the worked example of the transducer's design (`export.alc`, `table.alc`, `records.json`), which `rs/tests/cli_test.rs` runs as the README says |
+| `test/` | what the three runtimes' tests share: `notation-samples.json` (the translation matrix) and `streaming.json` (the streaming gate) |
 | `ci/rust/run.sh` | the Rust gate `.github/workflows/rust.yml` runs |
 | `ci/polyglot/run.sh` | the TypeScript and Go gate the same workflow runs |
 | `ci/phase.sh` | `phase`, which both gates run each step through: a line every 25 seconds while it runs |
@@ -258,6 +259,62 @@ name order, its match tokens' order in a list of its own; it now writes
 the order the compiler emits, as TypeScript and Rust do.) A defect is the
 package's to repair; never register one to make a pair pass without
 naming it, and never work around one here in silence.
+
+## The streaming gate
+
+`rs/tests/streaming_test.rs`, `ts/test/streaming.test.ts` and
+`go/cmd/dmog/streaming_test.go` hold every format the formats table lists
+to the definition of streaming in alchemy's `docs/streaming-plan.md`,
+section 13 (admin ADR-33): in every runtime, a document of it read from a
+file and from standard input has written its first byte before its input
+ends, and the run's peak memory stays flat over ten times the document.
+The documents are `test/streaming.json`'s, which all three read: for each
+format, a document of `items` items, each a short distinct name and a long
+plain text, so that the document is longer than what the lexer's window
+holds at a few events an item, and one of ten times as many. Each runtime
+translates them to JSON, `dmog translate --from F --to json`, and holds
+each format to two clauses:
+
+- **written before the end**: the document is handed over in two parts,
+  from standard input and from a named pipe given as INPUT (a FIFO, which
+  `mkfifo` makes; Windows has none and runs standard input alone), and the
+  command must write after the first part, nine tenths of the items,
+  before the rest is sent. The run then ends as one over the whole
+  document does, with the same output.
+- **flat memory**: what the run holds over ten times the document stays
+  within the runtime's bound of what it holds over the document: 1.25
+  times it in Rust, 1.5 times in TypeScript and Go. Each runtime measures
+  what it can without a dependency: Rust in process, a counting global
+  allocator over `translate::run_document`, the call the binary makes, per
+  thread, with the document made as it is read; TypeScript the command
+  with a preload (`ts/test/streaming-memory.ts`) that samples the live
+  heap and the buffers outside it as the command reads and writes, since
+  V8's peak resident set follows what the parts allocate, not what they
+  hold; Go the command's peak resident set (`ru_maxrss`, unix), which on
+  Linux it also reads while the command runs. A run is stopped once it is
+  past the bound, which is all the clause asks of it. Each bound is
+  calibrated from the measurements its comment records, and each runtime
+  holds its bound to fail JSON read whole (`--whole`).
+
+A format that fails either clause is registered in that runtime's ledger
+(`NOT_STREAMING`, `notStreaming`) with the clauses it fails and why, an
+issue or a ruling, and the gate holds each entry to failing exactly those
+clauses: a format that starts streaming, or passes a clause its entry
+names, fails the gate, which says so, until the entry or the clause is
+deleted; one that stops streaming fails it until it is registered, with
+why. A format the table lists with no document in `test/streaming.json`
+fails it too, and so does an entry or a document that names no format the
+gate runs. expr and semver, which the maintainer ruled whole (ADR-33,
+ruling 4), are listed apart (`RULED_WHOLE`, `ruledWhole`) and are not
+run, and the gate holds the table to reading them whole. Never widen a
+bound, or shorten a document, to pass a format: register it.
+
+Three formats are held at once in Rust and TypeScript, and Go's formats
+run in parallel, one measured run at a time. Measured on four busy cores,
+the gate takes about three minutes in Rust's debug run and two in
+TypeScript, where the parts run slowest and csv's runs longest of all
+(105 s and 64 s over ten times its document), and under half a minute in
+Go, whose memory clause stops every run past the bound.
 
 ## Build and test
 

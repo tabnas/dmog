@@ -70,7 +70,10 @@ over the input first and writes its export's events or table.
 
 `translate` writes as it reads: through its format's transducer part a
 document's output streams from the first record, and nothing waits for
-the document's end (admin ADR-33). A `.proto` file streams a declaration
+the document's end (admin ADR-33). Not every format does so yet: the
+streaming gate (`AGENTS.md`) holds each one, in every runtime, to writing
+before its input ends and to flat memory over ten times its document, and
+names each format that does not, and why. A `.proto` file streams a declaration
 at a time, its tree the file's declarations in source order (the schema
 `proto-ast`), after the check of its nesting that proto's own parse makes
 first; read whole, it is the same tree, which proto's package builds,
