@@ -96,10 +96,9 @@ const RULED_WHOLE: [(&str, &str); 2] = [
 const NOT_STREAMING: [(&str, Fails, &str); 9] = [
     (
         "abnf",
-        Fails::Both,
-        "abnf's tree parser declares no lex.window, so the engine reads a document whole before \
-         its parse begins (tabnas/abnf#129); and abnf is not in transduce's prune suite, so the engine's \
-         tree keeps every rule (tabnas/transduce#88)",
+        Fails::Flat,
+        "abnf is not in transduce's prune suite, so the engine's tree keeps every rule \
+         (tabnas/transduce#88)",
     ),
     (
         "c",
@@ -115,17 +114,15 @@ const NOT_STREAMING: [(&str, Fails, &str); 9] = [
     ),
     (
         "ebnf",
-        Fails::Both,
-        "ebnf's tree parser declares no lex.window, so the engine reads a document whole before \
-         its parse begins (tabnas/ebnf#75); and ebnf is not in transduce's prune suite, so the engine's \
-         tree keeps every rule (tabnas/transduce#88)",
+        Fails::Flat,
+        "ebnf is not in transduce's prune suite, so the engine's tree keeps every rule \
+         (tabnas/transduce#88)",
     ),
     (
         "gbnf",
-        Fails::Both,
-        "gbnf's tree parser declares no lex.window, so the engine reads a document whole before \
-         its parse begins (tabnas/gbnf#75); and gbnf is not in transduce's prune suite, so the engine's \
-         tree keeps every rule (tabnas/transduce#88)",
+        Fails::Flat,
+        "gbnf is not in transduce's prune suite, so the engine's tree keeps every rule \
+         (tabnas/transduce#88)",
     ),
     (
         "jsonic",
@@ -141,10 +138,9 @@ const NOT_STREAMING: [(&str, Fails, &str); 9] = [
     ),
     (
         "proto",
-        Fails::Both,
-        "the check of its nesting that proto's parse makes first counts the whole document, \
-         and proto's grammar declares no lex.window, so a document is read whole first \
-         (tabnas/proto#81)",
+        Fails::Flat,
+        "proto's parse builds its whole CST, every definition's node, and its rewind history \
+         of 8,192 tokens keeps the window's text back to the oldest of them (tabnas/proto#85)",
     ),
     (
         "toml",

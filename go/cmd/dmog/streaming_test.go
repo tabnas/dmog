@@ -110,21 +110,18 @@ var notStreaming = map[string]struct {
 	fails failing
 	why   string
 }{
-	"abnf": {failsBoth, "abnf's tree parser declares no Lex.Window, so the engine reads a document whole before " +
-		"its parse begins (tabnas/abnf#129); abnf is not in transduce's prune suite, so the engine's tree keeps " +
-		"every rule (tabnas/transduce#88); and " + goMemory},
+	"abnf": {failsFlat, "abnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
+		"(tabnas/transduce#88); and " + goMemory},
 	"c": {failsBoth, "it has no transducer part: a translation unit is read whole as the parser's value " +
 		"(admin ADR-33, ruling 7; the streaming plan's step 21, whose ruling is pending)"},
 	"css": {failsFlat, "css is not in transduce's prune suite, so the engine's tree keeps every rule " +
 		"(tabnas/transduce#82); and " + goMemory},
 	"csv": {failsFlat, goMemory},
-	"ebnf": {failsBoth, "ebnf's tree parser declares no Lex.Window, so the engine reads a document whole before " +
-		"its parse begins (tabnas/ebnf#75); ebnf is not in transduce's prune suite, so the engine's tree keeps " +
-		"every rule (tabnas/transduce#88); and " + goMemory},
+	"ebnf": {failsFlat, "ebnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
+		"(tabnas/transduce#88); and " + goMemory},
 	"feed": {failsFlat, goMemory},
-	"gbnf": {failsBoth, "gbnf's tree parser declares no Lex.Window, so the engine reads a document whole before " +
-		"its parse begins (tabnas/gbnf#75); gbnf is not in transduce's prune suite, so the engine's tree keeps " +
-		"every rule (tabnas/transduce#88); and " + goMemory},
+	"gbnf": {failsFlat, "gbnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
+		"(tabnas/transduce#88); and " + goMemory},
 	"ini":   {failsFlat, goMemory},
 	"json":  {failsFlat, goMemory},
 	"json5": {failsFlat, goMemory},
@@ -135,8 +132,8 @@ var notStreaming = map[string]struct {
 	"markdown": {failsFlat, "markdown's block phase keeps every block it has finished, linked under the " +
 		"document, until the parse ends (tabnas/markdown#100); and " + goMemory},
 	"pgn": {failsFlat, goMemory},
-	"proto": {failsBoth, "the check of its nesting that proto's parse makes first counts the whole document, " +
-		"and proto's grammar declares no Lex.Window, so a document is read whole first (tabnas/proto#81)"},
+	"proto": {failsFlat, "proto's parse builds its whole CST, every definition's node, and its rewind history " +
+		"of 8,192 tokens keeps the window's text back to the oldest of them (tabnas/proto#85); and " + goMemory},
 	"toml": {failsFlat, goMemory},
 	"xml":  {failsFlat, goMemory},
 	"yaml": {failsFlat, goMemory},

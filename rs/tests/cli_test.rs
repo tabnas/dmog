@@ -955,9 +955,10 @@ fn translate_refuses_what_a_target_cannot_carry() {
 
 /// What a package's own parse checks before its parser runs, the command
 /// checks too, and refuses with status 1, writing nothing: a .proto file
-/// nesting past proto's cap is refused before the engine builds a tree that
-/// deep, whose drop could abort the process (`tabnas_proto::preflight`,
-/// which `parse_value` makes), and a JSON5 document holding no value with
+/// nesting past proto's cap is refused at the brace that opens the level
+/// past it, as proto's parser reads it, with the code `proto_too_deep`,
+/// before the engine builds a tree that deep, whose drop could abort the
+/// process, and a JSON5 document holding no value with
 /// json5's own codes (`tabnas_json5::check_reader`, which `parse_reader_with`
 /// makes), not the engine's `unexpected`, from a file and from standard
 /// input. A grammar notation's document is read as its rules, which no
@@ -981,7 +982,9 @@ fn translate_checks_what_a_packages_parse_checks_first() {
         fail_json(&out),
         serde_json::json!({
             "code": "INPUT_INVALID",
-            "message": "proto: document nests 101 levels deep, past the 100 this parser accepts",
+            "message": "proto_too_deep: proto: document nests deeper than the 100 levels this parser accepts",
+            "row": 2,
+            "col": 1111,
             "output": "none"
         })
     );

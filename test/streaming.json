@@ -1,11 +1,11 @@
 {
-  "note": "The streaming gate's documents (rs/tests/streaming_test.rs, ts/test/streaming.test.ts, go/cmd/dmog/streaming_test.go; AGENTS.md, \"The streaming gate\"). For each format, a document of n items is `head`, then `item` once for each index i from 0, with {i} the index, `separator` between two items, and then `tail`; {text} in any of them is `text`. The gate reads a document of `items` items and one of ten times as many. An item is a short distinct name, which a run that keeps something of every item holds, and a long plain text, so that the document of `items` items is longer than the lexer's window holds (about 192 KiB) at a few events an item. Every format the formats table lists has a document here, but those ruled whole.",
+  "note": "The streaming gate's documents (rs/tests/streaming_test.rs, ts/test/streaming.test.ts, go/cmd/dmog/streaming_test.go; AGENTS.md, \"The streaming gate\"). For each format, a document of n items is `head`, then `item` once for each index i from 0, with {i} the index, `separator` between two items, and then `tail`; {text} in any of them is `text`. The gate reads a document of `items` items and one of ten times as many. An item is a short distinct name, which a run that keeps something of every item holds, and a long plain text, so that the document of `items` items is longer than the lexer's window holds (about 192 KiB) at a few events an item. An item's text must reach the output: the gate sees output only once it passes the writer's budget of 32 KiB, and the engine keeps the window's margin of 64 KiB unread, so the first nine tenths of a document, less that margin, must write more than the budget. A text in a comment the render drops sits at that threshold: the grammar notations' items once held theirs in a comment, and at the cut abnf wrote 110 bytes past the budget and ebnf and gbnf fell under 300 bytes short of it, so each now holds its text in a literal. Every format the formats table lists has a document here, but those ruled whole.",
   "items": 300,
   "text": "the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog",
   "documents": {
     "abnf": {
       "head": "",
-      "item": "; {text}\r\nr{i} = \"a{i}\" / \"b{i}\"\r\n",
+      "item": "r{i} = \"a{i} {text}\" / \"b{i}\"\r\n",
       "separator": "",
       "tail": ""
     },
@@ -29,7 +29,7 @@
     },
     "ebnf": {
       "head": "",
-      "item": "/* {text} */\nr{i} ::= \"a{i}\" | \"b{i}\"\n",
+      "item": "r{i} ::= \"a{i} {text}\" | \"b{i}\"\n",
       "separator": "",
       "tail": ""
     },
@@ -41,7 +41,7 @@
     },
     "gbnf": {
       "head": "root ::= r0\n",
-      "item": "# {text}\nr{i} ::= \"a{i}\" | \"b{i}\"\n",
+      "item": "r{i} ::= \"a{i} {text}\" | \"b{i}\"\n",
       "separator": "",
       "tail": ""
     },
