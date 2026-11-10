@@ -156,9 +156,9 @@ func TestALongDocumentIsWrittenBeforeItsInputEnds(t *testing.T) {
 }
 
 // So is a JSON5 document, whose check reads only as far as its leading
-// comment (CheckReader), and a ZON document: their modules' constructors
-// declare Lex.Window too.
-func TestAJSON5OrZONDocumentIsWrittenBeforeItsInputEnds(t *testing.T) {
+// comment (CheckReader), a ZON document and a YAML document: their modules'
+// constructors declare Lex.Window too.
+func TestAJSON5ZONOrYAMLDocumentIsWrittenBeforeItsInputEnds(t *testing.T) {
 	each := func(item func(i int) string, separator string) string {
 		items := make([]string, 20000)
 		for i := range items {
@@ -168,9 +168,11 @@ func TestAJSON5OrZONDocumentIsWrittenBeforeItsInputEnds(t *testing.T) {
 	}
 	json5 := each(func(i int) string { return fmt.Sprintf("{id:%d,name:'n%d'}", i, i) }, ",")
 	zon := each(func(i int) string { return fmt.Sprintf(`.{ .id = %d, .name = "n%d" }`, i, i) }, ", ")
+	yaml := each(func(i int) string { return fmt.Sprintf("- id: %d\n  name: n%d\n", i, i) }, "")
 	for _, c := range []struct{ from, first, rest string }{
 		{"json5", "// records\n[" + json5, "," + json5 + ",]"},
 		{"zon", ".{ " + zon, ", " + zon + " }"},
+		{"yaml", "# records\n" + yaml, yaml},
 	} {
 		writtenBeforeTheEnd(t, []string{"translate", "--from", c.from, "--to", "json"}, c.first, c.rest)
 	}

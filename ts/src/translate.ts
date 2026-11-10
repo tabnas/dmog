@@ -99,7 +99,7 @@ import {
 } from '@tabnas/transduce'
 import type { Flow, JsonEvent, Segment, Sink } from '@tabnas/transduce'
 import { make as makeXml, translate as xmlParts } from '@tabnas/xml'
-import { Yaml, translate as yamlParts } from '@tabnas/yaml'
+import { make as makeYaml, translate as yamlParts } from '@tabnas/yaml'
 import { make as makeZon, translate as zonParts } from '@tabnas/zon'
 
 // What every composition is compiled with: transduce's routers and
@@ -473,7 +473,7 @@ function packages(): Array<[Described | undefined, Reading]> {
     [descriptor('tabnas-semver', semverParts()), () => new Tabnas().use(Semver)],
     [descriptor('tabnas-toml', tomlParts()), () => makeToml()],
     [descriptor('tabnas-xml', xmlParts()), () => makeXml()],
-    [descriptor('tabnas-yaml', yamlParts()), () => new Tabnas().use(jsonic).use(Yaml)],
+    [descriptor('tabnas-yaml', yamlParts()), () => makeYaml()],
     [descriptor('tabnas-zon', zonParts()), () => zonParser()],
   ]
 }
