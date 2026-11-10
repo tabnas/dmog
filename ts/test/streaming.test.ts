@@ -96,12 +96,6 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
       "jsonic's constructor declares no lex.window, so the engine reads a document whole before its " +
       'parse begins (tabnas/jsonic#121)',
   },
-  proto: {
-    fails: 'flat',
-    why:
-      "proto's parse builds its whole CST, every definition's node, and its rewind history of 8,192 tokens " +
-      "keeps the window's text back to the oldest of them (tabnas/proto#85)",
-  },
 }
 
 // How far what a run holds over ten times the document may pass what it

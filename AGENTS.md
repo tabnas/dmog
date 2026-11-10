@@ -241,10 +241,13 @@ TypeScript), with the checks the package's API makes first:
   `parseTree`, `ParseTree`), whose parse first refuses a document nesting
   past proto's cap, naming its depth. A `.proto` file is read so only
   where it is read whole: otherwise proto's transducer part reads it over
-  the rule passes of the parser `make()` builds, a window at a time from
-  a reader, and that parser refuses a document nesting past the cap as it
-  reads the brace past it (`proto_too_deep`, from proto 0.7.0), before
-  the engine builds a tree whose drop could abort the process. So every
+  the rule passes of its streaming parser (`makeStreaming()`,
+  `MakeStreaming()`, `make_streaming()`, from proto 0.7.1), whose passes
+  are those of the parser `make()` builds and which builds no tree, so a
+  stream holds no declaration it has closed. It reads a window at a time
+  from a reader, and refuses a document nesting past the cap as it reads
+  the brace past it (`proto_too_deep`, from proto 0.7.0), before the
+  engine builds a tree whose drop could abort the process. So every
   runtime carries both the parser and the tree (`Reader::ParsedTree` in
   Rust, `parser` with `tree` in Go, `{ parser, tree }` in TypeScript).
 

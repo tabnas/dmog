@@ -442,8 +442,9 @@ type moduleCheck struct {
 // where its parser's value is not yet the tree its parts declare, the tree
 // its own API reads a document as. chess's, feed's and proto's are both: a
 // database, a feed or a .proto file streams through its transducer part
-// over the parser's rule passes, and one read whole is read as the typed
-// database's or feed's tree, or proto's source-ordered tree.
+// over the parser's rule passes (proto's from MakeStreaming, which builds
+// no tree), and one read whole is read as the typed database's or feed's
+// tree, or proto's source-ordered tree.
 func modules() []module {
 	return []module{
 		{descriptor: func() at.Descriptor {
@@ -557,7 +558,7 @@ func modules() []module {
 		}, transduce: func() *at.PartText {
 			return partText((*modulePart)(tabnasproto.Translate().Transduce))
 		}, parser: func() *tabnas.Tabnas {
-			parser, err := tabnasproto.Make()
+			parser, err := tabnasproto.MakeStreaming()
 			installed("tabnas-proto", err)
 			return parser
 		}, tree: protoTree},

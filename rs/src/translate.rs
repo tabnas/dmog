@@ -515,10 +515,12 @@ fn proto_failure(error: tabnas_proto::ProtoError) -> Fail {
     }
 }
 
-/// The reader of proto's grammar, its rule passes, read a window at a
-/// time from a reader, and its tree, [`read_proto`], read whole.
+/// The reader of proto's grammar: the rule passes of its streaming parser
+/// (`make_streaming`, from proto 0.7.1), whose passes are `make()`'s and
+/// which builds no tree, read a window at a time from a reader; and its
+/// tree, [`read_proto`], read whole.
 fn read_proto_parsed() -> Reader {
-    Reader::ParsedTree(parsing!(tabnas_proto::make()), read_proto)
+    Reader::ParsedTree(parsing!(tabnas_proto::make_streaming()), read_proto)
 }
 
 /// A C translation unit as c's API reads one, the tree its parts declare

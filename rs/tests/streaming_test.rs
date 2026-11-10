@@ -93,7 +93,7 @@ const RULED_WHOLE: [(&str, &str); 2] = [
 /// clauses it fails and why. The gate holds each entry to failing exactly
 /// those clauses: delete an entry, or a clause of it, once its format
 /// passes.
-const NOT_STREAMING: [(&str, Fails, &str); 7] = [
+const NOT_STREAMING: [(&str, Fails, &str); 6] = [
     (
         "abnf",
         Fails::Flat,
@@ -129,12 +129,6 @@ const NOT_STREAMING: [(&str, Fails, &str); 7] = [
         Fails::Both,
         "jsonic's constructor declares no lex.window, so the engine reads a document whole \
          before its parse begins (tabnas/jsonic#121)",
-    ),
-    (
-        "proto",
-        Fails::Flat,
-        "proto's parse builds its whole CST, every definition's node, and its rewind history \
-         of 8,192 tokens keeps the window's text back to the oldest of them (tabnas/proto#85)",
     ),
 ];
 

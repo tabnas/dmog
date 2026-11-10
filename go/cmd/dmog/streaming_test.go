@@ -131,8 +131,6 @@ var notStreaming = map[string]struct {
 		"before its parse begins (tabnas/jsonic#121)"},
 	"pgn": {failsFlat, "Go's transduce prunes no PGN database, since its prune suite runs none (transduce's " +
 		"DIVERGENCE.md, entry 4), so the engine's tree keeps every game; " + goUnpruned},
-	"proto": {failsFlat, "proto's parse builds its whole CST, every definition's node, and its rewind history " +
-		"of 8,192 tokens keeps the window's text back to the oldest of them (tabnas/proto#85); " + goUnpruned},
 	"yaml": {failsFlat, "Go's transduce bounds no yaml rule history: yaml's Go childNode walks a child's Next " +
 		"links, which a bounded history cuts, so a bounded parse loses items of a value (transduce's " +
 		"DIVERGENCE.md, entry 5), and the engine keeps every rule of the parse"},

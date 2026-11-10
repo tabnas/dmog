@@ -34,7 +34,8 @@
 // package's API reads a document as that tree (expr's simplified form),
 // that tree is the document, read whole; where such a package ships a
 // transducer part too (proto, whose parser's value is its CST), the part
-// reads the parser's rule passes, and a document read whole is that tree.
+// reads the rule passes of the package's streaming parser, which builds no
+// tree, and a document read whole is that tree.
 // Nothing here knows a format by its name: a format is what its manifest
 // says, and a package whose manifest names no parts this host can take is
 // not a format here.
@@ -69,7 +70,7 @@ import { make as makeJsonl, translate as jsonlParts } from '@tabnas/jsonl'
 import { make as makeMarkdown, translate as markdownParts } from '@tabnas/markdown'
 import { Tabnas } from '@tabnas/parser'
 import {
-  make as makeProto,
+  makeStreaming as makeProtoStreaming,
   parseTree as protoParseTree,
   translate as protoParts,
 } from '@tabnas/proto'
@@ -152,7 +153,9 @@ type Described = {
 // package's own API reads a document as, where its parser's value is not
 // yet the tree its parts declare; or both, where such a package ships a
 // transducer part (proto): the part reads the rule passes of its parser,
-// and a document read whole is the tree.
+// the package's streaming one, whose passes are its tree parser's and which
+// builds no tree (proto's `makeStreaming()`, from proto 0.7.1), and a
+// document read whole is the tree.
 type Reading =
   | (() => Tabnas)
   | {
@@ -479,7 +482,7 @@ function packages(): Array<[Described | undefined, Reading]> {
     [descriptor('tabnas-jsonic', jsonicParts()), () => new Tabnas().use(jsonic)],
     [descriptor('tabnas-jsonl', jsonlParts()), () => makeJsonl()],
     [descriptor('tabnas-markdown', markdownParts()), () => makeMarkdown()],
-    [descriptor('tabnas-proto', protoParts()), { parser: () => makeProto(), tree: protoTree }],
+    [descriptor('tabnas-proto', protoParts()), { parser: () => makeProtoStreaming(), tree: protoTree }],
     [descriptor('tabnas-semver', semverParts()), () => new Tabnas().use(Semver)],
     [descriptor('tabnas-toml', tomlParts()), () => makeToml()],
     [descriptor('tabnas-xml', xmlParts()), () => makeXml()],
