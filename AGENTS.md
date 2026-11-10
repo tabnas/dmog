@@ -306,13 +306,17 @@ each format to two clauses:
   allocator over `translate::run_document`, the call the binary makes, per
   thread, with the document made as it is read; TypeScript the command
   with a preload (`ts/test/streaming-memory.ts`) that samples the live
-  heap and the buffers outside it as the command reads and writes, since
-  V8's peak resident set follows what the parts allocate, not what they
-  hold; Go the command's peak resident set (`ru_maxrss`, unix), which on
-  Linux it also reads while the command runs. A run is stopped once it is
-  past the bound, which is all the clause asks of it. Each bound is
-  calibrated from the measurements its comment records, and each runtime
-  holds its bound to fail JSON read whole (`--whole`).
+  heap, less the code V8 has compiled, and the buffers outside it as the
+  command reads and writes (V8's peak resident set follows what the parts
+  allocate, not what they hold), and runs it with V8's background threads
+  off (`--single-threaded`): otherwise what a sample finds alive depends
+  on when an optimization compiled on another thread is installed, which
+  on a busy machine swelled a sample by as much as 9.5 MB; Go the
+  command's peak resident set (`ru_maxrss`, unix), which on Linux it also
+  reads while the command runs. A run is stopped once it is past the
+  bound, which is all the clause asks of it. Each bound is calibrated from
+  the measurements its comment records, and each runtime holds its bound
+  to fail JSON read whole (`--whole`).
 
 A format that fails either clause is registered in that runtime's ledger
 (`NOT_STREAMING`, `notStreaming`) with the clauses it fails and why, an

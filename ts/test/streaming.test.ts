@@ -24,8 +24,9 @@
 // - flat memory: what the command holds, over the document of `items`
 //   items and over ten times as many, must stay within BOUND of each other.
 //   test/streaming-memory.ts, preloaded into the command, measures it: the
-//   live heap and the buffers outside it, sampled as the command reads and
-//   writes, past what it held when it opened INPUT.
+//   live heap less the code V8 compiled, and the buffers outside it,
+//   sampled as the command reads and writes, past what it held when it
+//   opened INPUT, with V8's background threads off.
 //
 // A format that fails either clause is registered in NOT_STREAMING with the
 // clauses it fails and why; the gate holds each entry to failing exactly
@@ -135,17 +136,18 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
 
 // How far what a run holds over ten times the document may pass what it
 // holds over the document: 1.5 times it. Measured with test/streaming.json's
-// documents (300 items, about 315 KB, and 3,000), the formats that stream
-// hold at most a quarter more at ten times, what more samples catch of the
-// window's swing and of the code V8 optimizes as a run goes on: json 1.26 MB
-// and 1.53 MB, jsonl 1.29 MB and 1.58 MB, feed 1.69 MB and 2.06 MB, csv
-// 1.70 MB and 1.81 MB, yaml 1.94 MB and 1.83 MB. A format that holds
-// something of its document grows with it, run to its end: jsonic, read
-// whole, 1.58 MB and 6.98 MB, css 1.87 MB and 6.45 MB, ini, whose sections
-// stay in the engine's tree, 2.14 MB and 6.65 MB, and the least, markdown,
-// which keeps a node of every block, 1.70 MB and 3.23 MB (1.9 times). JSON
-// read whole (`--whole`) holds 0.92 MB and 7.73 MB (8.4 times), which 'a
-// document held whole fails the bound' holds to fail it.
+// documents (300 items, about 315 KB, and 3,000), each run to its end on
+// Node 24, the formats that stream hold at most a twentieth more at ten
+// times: json5 0.96 MB and 1.00 MB, yaml 1.19 MB and 1.24 MB (1.04 times
+// each), and the rest 1.02 to 1.04 times (on Node 22, 1.05 to 1.11 times).
+// A format that holds something of its document grows with it: the least,
+// markdown, which keeps a node of every block, 1.23 MB and 2.43 MB (1.98
+// times; 1.95 on Node 22), then toml (3.4 times), ini and css (3.8 and 3.9),
+// whose sections and rules stay in the engine's tree, and the formats read
+// whole, 3.6 times (proto) to 7.2 times (gbnf). JSON read whole (`--whole`)
+// holds 0.67 MB and 4.76 MB (7.1 times), which 'a document held whole fails
+// the bound' holds to fail it. Two runs of every document, on four cores
+// busy with a Rust build, measured each within 3 KB of the other.
 const BOUND = 1.5
 
 // A format's document in test/streaming.json: `head`, then `item` once for
@@ -190,10 +192,13 @@ type Measured = { peak: number; over: boolean; took: number; output: Output }
 const mb = (bytes: number): string => `${(bytes / 1048576).toFixed(2)} MB`
 
 // `dmog translate --from id --to json [--whole] path`, measured, and ended
-// once it holds more than `limit` bytes where one is given.
+// once it holds more than `limit` bytes where one is given. V8 runs it
+// without its background threads (`--single-threaded`), so that what it
+// holds at each point of the stream is the same in every run, to a few
+// kilobytes, however busy the machine (test/streaming-memory.ts has why).
 async function measure(id: string, path: string, limit = 0, whole = false): Promise<Measured> {
   const report = `${path}.memory.json`
-  const args = ['--require', MEMORY, BIN, 'translate', '--from', id, '--to', 'json']
+  const args = ['--single-threaded', '--require', MEMORY, BIN, 'translate', '--from', id, '--to', 'json']
   const child = spawn(process.execPath, [...args, ...(whole ? ['--whole'] : []), path], {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, DMOG_STREAMING_MEMORY: report, DMOG_STREAMING_LIMIT: String(limit) },
