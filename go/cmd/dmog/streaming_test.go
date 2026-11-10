@@ -109,17 +109,6 @@ var ruledWhole = map[string]string{
 const goUnpruned = "and a run that does not prune keeps the Go engine's whole rule history, which transduce " +
 	"bounds only for a pruning run"
 
-// goChurn is why a format whose Go stream holds a flat live heap is still
-// registered: transduce bounds its rule history for a pruning run, which
-// keeps what the parse holds flat (0.8 MB and 0.9 MB of live heap over 2,000
-// and 20,000 JSON records, in transduce's go/history_test.go), but the
-// bound's copies are garbage the collector reaches late, so the peak
-// resident set this gate measures swings by about a third from run to run
-// and passes the bound in some runs.
-const goChurn = "transduce bounds the Go engine's rule history for a pruning run, so the live heap is flat, " +
-	"but the bound's copies make the peak resident set, which this gate measures, swing by about a third " +
-	"from run to run"
-
 // notStreaming is the formats that do not stream yet in this runtime, each
 // with the clauses it fails and why. The gate holds each entry to failing
 // exactly those clauses: delete an entry, or a clause of it, once its format
@@ -134,48 +123,38 @@ var notStreaming = map[string]struct {
 		"(admin ADR-33, ruling 7; the streaming plan's step 21, whose ruling is pending)"},
 	"css": {failsFlat, "css is not in transduce's prune suite, so the engine's tree keeps every rule " +
 		"(tabnas/transduce#82); " + goUnpruned},
-	"csv": {failsFlat, goChurn},
 	"ebnf": {failsFlat, "ebnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
 		"(tabnas/transduce#88); " + goUnpruned},
-	"feed": {failsFlat, goChurn},
 	"gbnf": {failsFlat, "gbnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
 		"(tabnas/transduce#88); " + goUnpruned},
-	"ini":   {failsFlat, goChurn},
-	"json":  {failsFlat, goChurn},
-	"json5": {failsFlat, goChurn},
-	"jsonc": {failsFlat, goChurn},
 	"jsonic": {failsBoth, "jsonic's constructor declares no Lex.Window, so the engine reads a document whole " +
 		"before its parse begins (tabnas/jsonic#121)"},
-	"jsonl": {failsFlat, goChurn},
 	"markdown": {failsFlat, "markdown's block phase keeps every block it has finished, linked under the " +
 		"document, until the parse ends (tabnas/markdown#100)"},
 	"pgn": {failsFlat, "Go's transduce prunes no PGN database, since its prune suite runs none (transduce's " +
 		"DIVERGENCE.md, entry 4), so the engine's tree keeps every game; " + goUnpruned},
 	"proto": {failsFlat, "proto's parse builds its whole CST, every definition's node, and its rewind history " +
 		"of 8,192 tokens keeps the window's text back to the oldest of them (tabnas/proto#85); " + goUnpruned},
-	"toml": {failsFlat, goChurn},
-	"xml":  {failsFlat, goChurn},
 	"yaml": {failsFlat, "Go's transduce bounds no yaml rule history: yaml's Go childNode walks a child's Next " +
 		"links, which a bounded history cuts, so a bounded parse loses items of a value (transduce's " +
 		"DIVERGENCE.md, entry 5), and the engine keeps every rule of the parse"},
-	"zon": {failsFlat, goChurn},
 }
 
-// streamingBound is how far the peak resident set over ten times the
-// document may pass the peak over the document: 1.5 times it. No format's
-// memory is flat in Go yet, so the bound is set from the runtime's own
-// variation and from what a held document costs: the same run's peak varies
-// by under a tenth (json over 300 items, eight runs one after another and
-// nine three at a time: 18.0 MB to 20.6 MB), and a live heap that stays flat
-// keeps the resident set within the collector's headroom of it at both
-// sizes, since GOGC=100 lets the heap reach twice what is live before a
-// collection. A run that holds its document grows with it, measured one run
-// at a time with test/streaming.json's documents (300 items, about 315 KB,
-// and 3,000): json 18.88 MB and 70.62 MB (3.7 times), csv 177.85 MB and
-// 1392.35 MB, xml 27.09 MB and 139.59 MB, and the least, markdown, 17.97 MB
-// and 57.94 MB (3.2 times). JSON read whole (--whole) holds 14.40 MB and
-// 40.40 MB (2.8 times), which TestADocumentHeldWholeFailsTheBound holds to
-// fail the bound.
+// streamingBound is how far what a run holds over ten times the document
+// may pass what it holds over the document: 1.5 times it. Measured with
+// test/streaming.json's documents (300 items, about 315 KB, and 3,000), each
+// run to its end, five runs of each on four cores busy with a Rust build,
+// the formats that stream hold at most 1.38 times as much at ten times, csv
+// 1.02 MB and 1.41 MB, and the rest 0.98 (toml) to 1.29 (xml) times: most of
+// what they add is the Go lexer's intern pool filling to its cap of 4,096
+// strings, which it reaches between the two documents (tabnas/parser#324),
+// and past it they hold what they held, csv 1.42 MB over 30,000 items. A
+// format that holds something of its document grows with it: the least,
+// jsonic, read whole, 0.98 MB and 3.89 MB (3.96 to 4.01 times), then
+// markdown, which keeps every block (4.5 times), the grammar notations (6.4
+// to 6.6), css (7.4), yaml and pgn (7.8 to 8.0), proto (8.7) and c (9.0 to
+// 9.2). JSON read whole (--whole) holds 0.87 MB and 4.90 MB (5.6 to 5.7
+// times), which TestADocumentHeldWholeFailsTheBound holds to fail the bound.
 const streamingBound = 1.5
 
 // streamingTemplate is a format's document in test/streaming.json: head,

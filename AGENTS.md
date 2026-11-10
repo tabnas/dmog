@@ -345,7 +345,7 @@ bound, or shorten a document, to pass a format: register it.
 Three formats are held at once in Rust and TypeScript, and Go's formats
 run in parallel. On four busy cores the gate took three to five minutes in
 Rust's debug run and two to three in TypeScript, where the parts run
-slowest and csv's run over ten times its document takes longest, and under
+slowest and csv's run over ten times its document takes longest, and about
 a minute in Go, whose memory clause stops every run past the bound.
 
 ## Build and test
