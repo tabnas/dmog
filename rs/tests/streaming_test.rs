@@ -93,7 +93,7 @@ const RULED_WHOLE: [(&str, &str); 2] = [
 /// clauses it fails and why. The gate holds each entry to failing exactly
 /// those clauses: delete an entry, or a clause of it, once its format
 /// passes.
-const NOT_STREAMING: [(&str, Fails, &str); 9] = [
+const NOT_STREAMING: [(&str, Fails, &str); 7] = [
     (
         "abnf",
         Fails::Flat,
@@ -131,23 +131,10 @@ const NOT_STREAMING: [(&str, Fails, &str); 9] = [
          before its parse begins (tabnas/jsonic#121)",
     ),
     (
-        "markdown",
-        Fails::Flat,
-        "markdown's block phase keeps every block it has finished, in its arena, until the \
-         parse ends (tabnas/markdown#100)",
-    ),
-    (
         "proto",
         Fails::Flat,
         "proto's parse builds its whole CST, every definition's node, and its rewind history \
          of 8,192 tokens keeps the window's text back to the oldest of them (tabnas/proto#85)",
-    ),
-    (
-        "toml",
-        Fails::Flat,
-        "toml finds each table by its path from the document's root cell, so no close pass \
-         carries a table and pruning never empties an array of tables, and the parse keeps \
-         about ten entries per table in the context's bag (tabnas/toml#121)",
     ),
 ];
 
@@ -160,10 +147,13 @@ const NOT_STREAMING: [(&str, Fails, &str); 9] = [
 /// that holds something of its document grows with it, run to its end:
 /// jsonic, read whole, 2.35 MB and 19.31 MB (8.2 times), css 2.76 MB and
 /// 10.10 MB, ini, whose sections stay in the engine's tree, 2.36 MB and
-/// 6.64 MB (2.8 times), and the least, markdown, which keeps a node of every
-/// block, 2.13 MB and 3.61 MB (1.7 times). JSON read whole (`--whole`) holds
-/// 2.60 MB and 23.48 MB (9 times), which
-/// [`a_document_held_whole_fails_the_bound`] holds to fail it.
+/// 6.64 MB (2.8 times), and the least, markdown, which kept a node of every
+/// block until tabnas/markdown#100, 2.13 MB and 3.61 MB (1.7 times; since
+/// then 1.92 MB and 1.92 MB). toml, which keeps an emptied slot of its array
+/// of tables for every table before the one it reads, holds 1.99 MB and
+/// 2.38 MB (1.2 times). JSON read whole (`--whole`) holds 2.60 MB and
+/// 23.48 MB (9 times), which [`a_document_held_whole_fails_the_bound`] holds
+/// to fail it.
 const BOUND: f64 = 1.25;
 
 /// The entry of `id`, if it has one.
