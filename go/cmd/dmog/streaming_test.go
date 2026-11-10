@@ -111,38 +111,33 @@ var notStreaming = map[string]struct {
 	why   string
 }{
 	"abnf": {failsBoth, "abnf's tree parser declares no Lex.Window, so the engine reads a document whole before " +
-		"its parse begins (tabnas/abnf#129); a grammar's rules are an array no rule's node is, which pruning never " +
-		"empties, and abnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#81); and " + goMemory},
+		"its parse begins (tabnas/abnf#129); abnf is not in transduce's prune suite, so the engine's tree keeps " +
+		"every rule (tabnas/transduce#88); and " + goMemory},
 	"c": {failsBoth, "it has no transducer part: a translation unit is read whole as the parser's value " +
 		"(admin ADR-33, ruling 7; the streaming plan's step 21, whose ruling is pending)"},
 	"css": {failsFlat, "css is not in transduce's prune suite, so the engine's tree keeps every rule " +
 		"(tabnas/transduce#82); and " + goMemory},
 	"csv": {failsFlat, goMemory},
 	"ebnf": {failsBoth, "ebnf's tree parser declares no Lex.Window, so the engine reads a document whole before " +
-		"its parse begins (tabnas/ebnf#75); a grammar's rules are an array no rule's node is, which pruning never " +
-		"empties, and ebnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#81); and " + goMemory},
+		"its parse begins (tabnas/ebnf#75); ebnf is not in transduce's prune suite, so the engine's tree keeps " +
+		"every rule (tabnas/transduce#88); and " + goMemory},
 	"feed": {failsFlat, goMemory},
 	"gbnf": {failsBoth, "gbnf's tree parser declares no Lex.Window, so the engine reads a document whole before " +
-		"its parse begins (tabnas/gbnf#75); a grammar's rules are an array no rule's node is, which pruning never " +
-		"empties, and gbnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#81); and " + goMemory},
-	"ini": {failsFlat, "every section is a member of the document's root map, and pruning empties no map " +
-		"(tabnas/transduce#81); and " + goMemory},
+		"its parse begins (tabnas/gbnf#75); gbnf is not in transduce's prune suite, so the engine's tree keeps " +
+		"every rule (tabnas/transduce#88); and " + goMemory},
+	"ini":   {failsFlat, goMemory},
 	"json":  {failsFlat, goMemory},
 	"json5": {failsFlat, goMemory},
 	"jsonc": {failsFlat, goMemory},
 	"jsonic": {failsBoth, "jsonic's constructor declares no Lex.Window, so the engine reads a document whole " +
 		"before its parse begins (tabnas/jsonic#121)"},
 	"jsonl": {failsFlat, goMemory},
-	"markdown": {failsFlat, "a document's blocks array is no rule's node, so pruning never empties it, and " +
-		"each block's node stays (tabnas/transduce#81); and " + goMemory},
+	"markdown": {failsFlat, "markdown's block phase keeps every block it has finished, linked under the " +
+		"document, until the parse ends (tabnas/markdown#100); and " + goMemory},
 	"pgn": {failsFlat, goMemory},
 	"proto": {failsBoth, "the check of its nesting that proto's parse makes first counts the whole document, " +
 		"and proto's grammar declares no Lex.Window, so a document is read whole first (tabnas/proto#81)"},
-	"toml": {failsFlat, "an array of tables is no rule's node, so pruning never empties it, and each table " +
-		"stays whole (tabnas/transduce#81); and " + goMemory},
+	"toml": {failsFlat, goMemory},
 	"xml":  {failsFlat, goMemory},
 	"yaml": {failsFlat, goMemory},
 	"zon":  {failsFlat, goMemory},
