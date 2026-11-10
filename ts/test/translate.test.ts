@@ -190,7 +190,8 @@ function why(err: unknown): string {
 
 // Whether a translation failed because the source's transducer part
 // cannot stream the document (a repeated member, a stream of several YAML
-// documents, a merge key): its code, and the route that reads it named,
+// documents, two plain `<<` in one YAML mapping, a YAML merge source that
+// repeats a merged key): its code, and the route that reads it named,
 // since the output streams and is never written twice (admin ADR-33).
 function unstreamed(err: unknown): boolean {
   const fail = err as { code?: string; message?: string } | undefined
@@ -1627,7 +1628,7 @@ describe('translate', () => {
   // transduce's fixtures, one document per format at least, and the
   // documents of JSONTestSuite every JSON parser must accept.
   it('every document translates into every format', () => {
-    matrix(corpus(), { floor: 151, tooDeep: 0, tooLarge: 4, whole: 12, refusals: 1084, grammarsWritten: 36, samplesCompared: 236 })
+    matrix(corpus(), { floor: 151, tooDeep: 0, tooLarge: 4, whole: 11, refusals: 1084, grammarsWritten: 36, samplesCompared: 236 })
   })
 
   // Each registered reader defect still stands: a version past 2^53 - 1

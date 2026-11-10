@@ -558,7 +558,8 @@ fn translate_whole(from: &Format, to: &Format, text: &str) -> Result<String, Fai
 
 /// Whether a translation failed because the source's transducer part cannot
 /// stream the document (a repeated member, a stream of several YAML
-/// documents, a merge key): its code, and the route that reads it named,
+/// documents, two plain `<<` in one YAML mapping, a YAML merge source that
+/// repeats a merged key): its code, and the route that reads it named,
 /// since the output streams and is never written twice (admin ADR-33).
 fn unstreamed(fail: &Fail) -> bool {
     matches!(
@@ -2136,7 +2137,7 @@ fn every_document_translates_into_every_format() {
         too_deep: 0,
         size: DEFAULT_SIZE_BOUND,
         too_large: 0,
-        whole: 12,
+        whole: 11,
         refusals: 1000,
         grammars_written: 0,
         defective_pairs: &[],
@@ -2166,7 +2167,7 @@ fn every_fixture_of_every_format_translates_into_every_format() {
         too_deep: 2,
         size: SIZE_BOUND,
         too_large: 1,
-        whole: 90,
+        whole: 85,
         refusals: 29898,
         grammars_written: 132,
         defective_pairs: &DEFECTIVE_PAIRS,

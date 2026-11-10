@@ -1978,8 +1978,9 @@ type bounds struct {
 
 // unstreamed is whether a translation failed because the source's
 // transducer part cannot stream the document (a repeated member, a stream
-// of several YAML documents, a merge key): its code, and the route that
-// reads it named, since the output streams and is never written twice
+// of several YAML documents, two plain << in one YAML mapping, a YAML merge
+// source that repeats a merged key): its code, and the route that reads it
+// named, since the output streams and is never written twice
 // (admin ADR-33).
 func unstreamed(f *tt.Fail) bool {
 	return f != nil && (f.Code == tt.CodeStreamabilityUnknown || f.Code == tt.CodeDuplicateMember) &&
@@ -2217,7 +2218,7 @@ func TestParsePathReadsKeysAndIndexes(t *testing.T) {
 // parser must accept, and the grammar notations' example grammars, into
 // every format.
 func TestEveryDocumentTranslatesIntoEveryFormat(t *testing.T) {
-	matrix(t, corpus(t), bounds{floor: 151, tooDeep: 0, tooLarge: 4, whole: 12, refusals: 1087, grammarsWritten: 33,
+	matrix(t, corpus(t), bounds{floor: 151, tooDeep: 0, tooLarge: 4, whole: 11, refusals: 1087, grammarsWritten: 33,
 		samplesCompared: 191, notation: notationSamples(t)})
 }
 
