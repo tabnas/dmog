@@ -46,10 +46,10 @@ package main
 // twice what is live and a busy machine widens. On four busy cores, six
 // runs of json over 300 items held 16.64 MB to 21.01 MB, and json's two
 // documents measured 1.10 to 1.77 times apart, while jsonic, read whole,
-// measured 1.15 to 1.32 times and markdown, which keeps every block, 1.22 to
+// measured 1.15 to 1.32 times and markdown, which kept every block, 1.22 to
 // 1.32: what a run holds of its document was lost in the rest. With GOGC=25
 // the resident set varied less and saw still less, jsonic 1.00 times and
-// markdown 1.01, where the live heap measures them 3.98 and 4.54 times, run
+// markdown 1.01, where the live heap measured them 3.98 and 4.54 times, run
 // after run.
 
 import (
@@ -129,12 +129,8 @@ var notStreaming = map[string]struct {
 		"(tabnas/transduce#88); " + goUnpruned},
 	"jsonic": {failsBoth, "jsonic's constructor declares no Lex.Window, so the engine reads a document whole " +
 		"before its parse begins (tabnas/jsonic#121)"},
-	"markdown": {failsFlat, "markdown's block phase keeps every block it has finished, linked under the " +
-		"document, until the parse ends (tabnas/markdown#100)"},
 	"pgn": {failsFlat, "Go's transduce prunes no PGN database, since its prune suite runs none (transduce's " +
 		"DIVERGENCE.md, entry 4), so the engine's tree keeps every game; " + goUnpruned},
-	"proto": {failsFlat, "proto's parse builds its whole CST, every definition's node, and its rewind history " +
-		"of 8,192 tokens keeps the window's text back to the oldest of them (tabnas/proto#85); " + goUnpruned},
 	"yaml": {failsFlat, "Go's transduce bounds no yaml rule history: yaml's Go childNode walks a child's Next " +
 		"links, which a bounded history cuts, so a bounded parse loses items of a value (transduce's " +
 		"DIVERGENCE.md, entry 5), and the engine keeps every rule of the parse"},
@@ -151,10 +147,12 @@ var notStreaming = map[string]struct {
 // and past it they hold what they held, csv 1.42 MB over 30,000 items. A
 // format that holds something of its document grows with it: the least,
 // jsonic, read whole, 0.98 MB and 3.89 MB (3.96 to 4.01 times), then
-// markdown, which keeps every block (4.5 times), the grammar notations (6.4
-// to 6.6), css (7.4), yaml and pgn (7.8 to 8.0), proto (8.7) and c (9.0 to
-// 9.2). JSON read whole (--whole) holds 0.87 MB and 4.90 MB (5.6 to 5.7
-// times), which TestADocumentHeldWholeFailsTheBound holds to fail the bound.
+// markdown, which kept every block (4.5 times; since tabnas/markdown#100 and
+// transduce 0.6.4, 1.07 MB to 1.08 MB and 1.11 MB to 1.12 MB, three runs),
+// the grammar notations (6.4 to 6.6), css (7.4), yaml and pgn (7.8 to 8.0),
+// proto (8.7) and c (9.0 to 9.2). JSON read whole (--whole) holds 0.87 MB
+// and 4.90 MB (5.6 to 5.7 times), which TestADocumentHeldWholeFailsTheBound
+// holds to fail the bound.
 const streamingBound = 1.5
 
 // streamingTemplate is a format's document in test/streaming.json: head,

@@ -96,18 +96,6 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
       "jsonic's constructor declares no lex.window, so the engine reads a document whole before its " +
       'parse begins (tabnas/jsonic#121)',
   },
-  markdown: {
-    fails: 'flat',
-    why:
-      "markdown's block phase keeps every block it has finished, linked under the document, until the " +
-      'parse ends (tabnas/markdown#100)',
-  },
-  proto: {
-    fails: 'flat',
-    why:
-      "proto's parse builds its whole CST, every definition's node, and its rewind history of 8,192 tokens " +
-      "keeps the window's text back to the oldest of them (tabnas/proto#85)",
-  },
 }
 
 // How far what a run holds over ten times the document may pass what it
@@ -117,8 +105,9 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
 // times: json5 0.96 MB and 1.00 MB, yaml 1.19 MB and 1.24 MB (1.04 times
 // each), and the rest 1.02 to 1.04 times (on Node 22, 1.05 to 1.11 times).
 // A format that holds something of its document grows with it: the least,
-// markdown, which keeps a node of every block, 1.23 MB and 2.43 MB (1.98
-// times; 1.95 on Node 22), then toml (3.4 times), ini and css (3.8 and 3.9),
+// markdown, which kept a node of every block until tabnas/markdown#100,
+// 1.23 MB and 2.43 MB (1.98 times; 1.95 on Node 22; since then 1.18 MB and
+// 1.42 MB, 1.20 times), then toml (3.4 times), ini and css (3.8 and 3.9),
 // whose sections and rules stay in the engine's tree, and the formats read
 // whole, 3.6 times (proto) to 7.2 times (gbnf). JSON read whole (`--whole`)
 // holds 0.67 MB and 4.76 MB (7.1 times), which 'a document held whole fails
