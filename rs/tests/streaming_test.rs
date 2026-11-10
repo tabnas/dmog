@@ -44,8 +44,9 @@ use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::io::{self, Read, Write};
+use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
@@ -559,6 +560,36 @@ struct Fed {
     stderr: String,
 }
 
+/// A child the test spawned, killed if it still runs and waited on when it
+/// is dropped, so that no way out of a run, a panic among them, leaves the
+/// command running or unreaped; once a wait has reaped it, the kill does
+/// nothing and the wait gives the status it kept. Holding it so also
+/// answers clippy's `zombie_processes` on the MSRV toolchain (1.85), which
+/// reads the `?` in `feed`'s writer thread as a return from `feed` before
+/// its wait.
+struct Reaped(Child);
+
+impl Drop for Reaped {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+impl Deref for Reaped {
+    type Target = Child;
+
+    fn deref(&self) -> &Child {
+        &self.0
+    }
+}
+
+impl DerefMut for Reaped {
+    fn deref_mut(&mut self) -> &mut Child {
+        &mut self.0
+    }
+}
+
 /// Run `dmog translate --from id --to json` over a document handed over in
 /// two parts by `route`: `first`, then, once the command has written or
 /// `wait` has passed, `rest`, and the end of the input. Standard output and
@@ -578,16 +609,18 @@ fn feed(id: &str, route: Route, first: Vec<u8>, rest: Vec<u8>, wait: Duration, d
         }
     };
     let started = Instant::now();
-    let mut child = Command::new(env!("CARGO_BIN_EXE_dmog"))
-        .args(["translate", "--from", id, "--to", "json", &input])
-        .stdin(match route {
-            Route::Stdin => Stdio::piped(),
-            Route::Fifo => Stdio::null(),
-        })
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("the dmog binary starts");
+    let mut child = Reaped(
+        Command::new(env!("CARGO_BIN_EXE_dmog"))
+            .args(["translate", "--from", id, "--to", "json", &input])
+            .stdin(match route {
+                Route::Stdin => Stdio::piped(),
+                Route::Fifo => Stdio::null(),
+            })
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("the dmog binary starts"),
+    );
     let (wrote, first_byte) = mpsc::channel::<()>();
     let mut stdout = child.stdout.take().expect("a piped stdout");
     let reading = thread::spawn(move || {
