@@ -103,12 +103,6 @@ var ruledWhole = map[string]string{
 	"semver": "a version is made only once its whole text is accepted; admin ADR-33, ruling 4",
 }
 
-// goUnpruned is what a run that does not prune keeps in Go besides the
-// tree: the engine's rule history, which transduce bounds only for a run
-// that prunes a grammar it verified (transduce's BoundsHistory).
-const goUnpruned = "and a run that does not prune keeps the Go engine's whole rule history, which transduce " +
-	"bounds only for a pruning run"
-
 // notStreaming is the formats that do not stream yet in this runtime, each
 // with the clauses it fails and why. The gate holds each entry to failing
 // exactly those clauses: delete an entry, or a clause of it, once its format
@@ -117,18 +111,11 @@ var notStreaming = map[string]struct {
 	fails failing
 	why   string
 }{
-	"abnf": {failsFlat, "abnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#88); " + goUnpruned},
 	"c": {failsBoth, "it has no transducer part: a translation unit is read whole as the parser's value " +
-		"(admin ADR-33, ruling 7; the streaming plan's step 21, whose ruling is pending)"},
-	"css": {failsFlat, "css is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#82); " + goUnpruned},
-	"ebnf": {failsFlat, "ebnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#88); " + goUnpruned},
-	"gbnf": {failsFlat, "gbnf is not in transduce's prune suite, so the engine's tree keeps every rule " +
-		"(tabnas/transduce#88); " + goUnpruned},
-	"pgn": {failsFlat, "Go's transduce prunes no PGN database, since its prune suite runs none (transduce's " +
-		"DIVERGENCE.md, entry 4), so the engine's tree keeps every game; " + goUnpruned},
+		"(admin ADR-33, ruling 7, as amended on 2026-11-11: its declaration structuring moves into its " +
+		"grammar's rules, then it ships a part; the streaming plan's step 27)"},
+	"pgn": {failsFlat, "chess's Go plugin keeps its database as a typed *Database, which no pruning shape " +
+		"empties, so a pruned Go run keeps every game (transduce's DIVERGENCE.md, entry 8; tabnas/chess#74)"},
 }
 
 // streamingBound is how far what a run holds over ten times the document may
@@ -144,12 +131,14 @@ var notStreaming = map[string]struct {
 // whole, 0.98 MB and 3.89 MB (3.96 to 4.01 times), then markdown, which kept
 // every block (4.5 times; since tabnas/markdown#100 and transduce 0.6.4, 1.07
 // MB to 1.08 MB and 1.11 MB to 1.12 MB, three runs), the grammar notations
-// (6.4 to 6.6), css (7.4), yaml and pgn (7.8 to 8.0; yaml, since yaml 0.5.32
-// and transduce 0.6.5 bound its rule history, 1.42 MB and 1.48 MB), proto
-// (8.7; since proto 0.7.1's streaming parser, 2.09 MB to 2.15 MB and 2.32 MB
-// to 2.35 MB) and c (9.0 to 9.2). JSON read whole (--whole) holds 0.87 MB and
-// 4.90 MB (5.6 to 5.7 times), which TestADocumentHeldWholeFailsTheBound holds
-// to fail the bound.
+// (6.4 to 6.6) and css (7.4), both until transduce 0.6.7 pruned them in Go
+// (abnf 1.26 MB and 1.64 MB, ebnf 1.22 MB and 1.58 MB, gbnf 1.15 MB at both
+// sizes, css 1.09 MB at both), yaml and pgn (7.8 to 8.0; yaml, since yaml
+// 0.5.32 and transduce 0.6.5 bound its rule history, 1.42 MB and 1.48 MB),
+// proto (8.7; since proto 0.7.1's streaming parser, 2.09 MB to 2.15 MB and
+// 2.32 MB to 2.35 MB) and c (9.0 to 9.2). JSON read whole (--whole) holds
+// 0.87 MB and 4.90 MB (5.6 to 5.7 times), which
+// TestADocumentHeldWholeFailsTheBound holds to fail the bound.
 const streamingBound = 1.5
 
 // streamingTemplate is a format's document in test/streaming.json: head,

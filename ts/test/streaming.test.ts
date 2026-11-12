@@ -68,27 +68,19 @@ const RULED_WHOLE: Record<string, string> = {
 // it fails and why. The gate holds each entry to failing exactly those
 // clauses: delete an entry, or a clause of it, once its format passes.
 const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
-  abnf: {
-    fails: 'flat',
-    why: "abnf is not in transduce's prune suite, so the engine's tree keeps every rule (tabnas/transduce#88)",
-  },
   c: {
     fails: 'both',
     why:
       "it has no transducer part: a translation unit is read whole as the parser's value (admin " +
-      "ADR-33, ruling 7; the streaming plan's step 21, whose ruling is pending)",
+      "ADR-33, ruling 7, as amended on 2026-11-11: its declaration structuring moves into its " +
+      "grammar's rules, then it ships a part; the streaming plan's step 27)",
   },
   css: {
     fails: 'flat',
-    why: "css is not in transduce's prune suite, so the engine's tree keeps every rule (tabnas/transduce#82)",
-  },
-  ebnf: {
-    fails: 'flat',
-    why: "ebnf is not in transduce's prune suite, so the engine's tree keeps every rule (tabnas/transduce#88)",
-  },
-  gbnf: {
-    fails: 'flat',
-    why: "gbnf is not in transduce's prune suite, so the engine's tree keeps every rule (tabnas/transduce#88)",
+    why:
+      "transduce's TypeScript prunes css's arrays but not its maps: css's TypeScript port appends a " +
+      'finished rule to a list a map holds, which emptying the map deletes, so PRUNES_MAPS leaves it ' +
+      "out and the pruned tree keeps every rule (transduce's DIVERGENCE.md, entry 7; tabnas/css#79)",
   },
 }
 
