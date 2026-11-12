@@ -700,7 +700,8 @@ func feedTree(text string) (any, *tt.Fail) {
 }
 
 // pgnTree is a PGN database as chess's module reads one (its Parse), the
-// tree its parts declare: the parser builds it as a typed Database.
+// tree its parts declare: Parse builds it as a typed Database from the games
+// the parser keeps in a list of the engine's own (from chess 0.2.0).
 func pgnTree(text string) (any, *tt.Fail) {
 	database, err := tabnaschess.Parse(text)
 	if err != nil {

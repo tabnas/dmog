@@ -114,8 +114,6 @@ var notStreaming = map[string]struct {
 	"c": {failsBoth, "it has no transducer part: a translation unit is read whole as the parser's value " +
 		"(admin ADR-33, ruling 7, as amended on 2026-11-11: its declaration structuring moves into its " +
 		"grammar's rules, then it ships a part; the streaming plan's step 27)"},
-	"pgn": {failsFlat, "chess's Go plugin keeps its database as a typed *Database, which no pruning shape " +
-		"empties, so a pruned Go run keeps every game (transduce's DIVERGENCE.md, entry 8; tabnas/chess#74)"},
 }
 
 // streamingBound is how far what a run holds over ten times the document may
@@ -134,8 +132,9 @@ var notStreaming = map[string]struct {
 // (6.4 to 6.6) and css (7.4), both until transduce 0.6.7 pruned them in Go
 // (abnf 1.26 MB and 1.64 MB, ebnf 1.22 MB and 1.58 MB, gbnf 1.15 MB at both
 // sizes, css 1.09 MB at both), yaml and pgn (7.8 to 8.0; yaml, since yaml
-// 0.5.32 and transduce 0.6.5 bound its rule history, 1.42 MB and 1.48 MB),
-// proto (8.7; since proto 0.7.1's streaming parser, 2.09 MB to 2.15 MB and
+// 0.5.32 and transduce 0.6.5 bound its rule history, 1.42 MB and 1.48 MB,
+// and pgn, since chess 0.2.0 keeps its games in a list transduce 0.6.9
+// empties, 1.45 MB to 1.50 MB and 1.87 MB, three runs), proto (8.7; since proto 0.7.1's streaming parser, 2.09 MB to 2.15 MB and
 // 2.32 MB to 2.35 MB) and c (9.0 to 9.2). JSON read whole (--whole) holds
 // 0.87 MB and 4.90 MB (5.6 to 5.7 times), which
 // TestADocumentHeldWholeFailsTheBound holds to fail the bound.
