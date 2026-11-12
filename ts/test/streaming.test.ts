@@ -75,13 +75,6 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
       "ADR-33, ruling 7, as amended on 2026-11-11: its declaration structuring moves into its " +
       "grammar's rules, then it ships a part; the streaming plan's step 27)",
   },
-  css: {
-    fails: 'flat',
-    why:
-      "transduce's TypeScript prunes css's arrays but not its maps: css's TypeScript port appends a " +
-      'finished rule to a list a map holds, which emptying the map deletes, so PRUNES_MAPS leaves it ' +
-      "out and the pruned tree keeps every rule (transduce's DIVERGENCE.md, entry 7; tabnas/css#79)",
-  },
 }
 
 // How far what a run holds over ten times the document may pass what it
