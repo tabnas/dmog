@@ -1933,11 +1933,19 @@ mod tests {
                 "{id}: not pruned"
             );
         }
-        let css = format("css").expect("css is a format");
-        assert!(!capability::prunable("css"));
-        let text = "a { color: red; }\nb { margin: 0 1px 2px; }\n";
-        assert_eq!(left(css, text, true), left(css, text, false));
-        assert!(left(css, text, true) > 0);
+        // proto is not listed: its parts read the passes of the streaming
+        // parser, which builds no tree, and a pruning run leaves it as it is
+        // and runs.
+        let proto = format("proto").expect("proto is a format");
+        assert!(!capability::prunable("proto"));
+        let text =
+            "syntax = \"proto3\";\nmessage A { int32 a = 1; }\nmessage B { string b = 1; }\n";
+        for prune in [true, false] {
+            let source = proto.passes(text).expect("the format is parsed");
+            let source = if prune { proto.pruned(source) } else { source };
+            let (outcome, _, _) = source.run_owned_with_value(Vec::new());
+            outcome.expect("an unlisted grammar's passes stream, pruned or not");
+        }
     }
 
     /// Every format with a parser answers its rule passes; one read as a
