@@ -90,12 +90,6 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
     fails: 'flat',
     why: "gbnf is not in transduce's prune suite, so the engine's tree keeps every rule (tabnas/transduce#88)",
   },
-  jsonic: {
-    fails: 'both',
-    why:
-      "jsonic's constructor declares no lex.window, so the engine reads a document whole before its " +
-      'parse begins (tabnas/jsonic#121)',
-  },
 }
 
 // How far what a run holds over ten times the document may pass what it

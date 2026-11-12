@@ -65,7 +65,7 @@ import { make as makeIni, translate as iniParts } from '@tabnas/ini'
 import { make as makeJson, translate as jsonParts } from '@tabnas/json'
 import { make as makeJson5, translate as json5Parts } from '@tabnas/json5'
 import { make as makeJsonc, translate as jsoncParts } from '@tabnas/jsonc'
-import { jsonic, translate as jsonicParts } from '@tabnas/jsonic'
+import { jsonic, makeTabnas, translate as jsonicParts } from '@tabnas/jsonic'
 import { make as makeJsonl, translate as jsonlParts } from '@tabnas/jsonl'
 import { make as makeMarkdown, translate as markdownParts } from '@tabnas/markdown'
 import { Tabnas } from '@tabnas/parser'
@@ -479,7 +479,7 @@ function packages(): Array<[Described | undefined, Reading]> {
     [descriptor('tabnas-json', jsonParts()), () => makeJson()],
     [descriptor('tabnas-json5', json5Parts()), () => makeJson5()],
     [descriptor('tabnas-jsonc', jsoncParts()), () => makeJsonc()],
-    [descriptor('tabnas-jsonic', jsonicParts()), () => new Tabnas().use(jsonic)],
+    [descriptor('tabnas-jsonic', jsonicParts()), () => makeTabnas()],
     [descriptor('tabnas-jsonl', jsonlParts()), () => makeJsonl()],
     [descriptor('tabnas-markdown', markdownParts()), () => makeMarkdown()],
     [descriptor('tabnas-proto', protoParts()), { parser: () => makeProtoStreaming(), tree: protoTree }],

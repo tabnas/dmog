@@ -93,44 +93,13 @@ const RULED_WHOLE: [(&str, &str); 2] = [
 /// clauses it fails and why. The gate holds each entry to failing exactly
 /// those clauses: delete an entry, or a clause of it, once its format
 /// passes.
-const NOT_STREAMING: [(&str, Fails, &str); 6] = [
-    (
-        "abnf",
-        Fails::Flat,
-        "abnf is not in transduce's prune suite, so the engine's tree keeps every rule \
-         (tabnas/transduce#88)",
-    ),
-    (
-        "c",
-        Fails::Both,
-        "it has no transducer part: a translation unit is read whole as the tree c's parse \
-         realizes (admin ADR-33, ruling 7; the streaming plan's step 21, whose ruling is pending)",
-    ),
-    (
-        "css",
-        Fails::Flat,
-        "css is not in transduce's prune suite, so the engine's tree keeps every rule \
-         (tabnas/transduce#82)",
-    ),
-    (
-        "ebnf",
-        Fails::Flat,
-        "ebnf is not in transduce's prune suite, so the engine's tree keeps every rule \
-         (tabnas/transduce#88)",
-    ),
-    (
-        "gbnf",
-        Fails::Flat,
-        "gbnf is not in transduce's prune suite, so the engine's tree keeps every rule \
-         (tabnas/transduce#88)",
-    ),
-    (
-        "jsonic",
-        Fails::Both,
-        "jsonic's constructor declares no lex.window, so the engine reads a document whole \
-         before its parse begins (tabnas/jsonic#121)",
-    ),
-];
+const NOT_STREAMING: [(&str, Fails, &str); 1] = [(
+    "c",
+    Fails::Both,
+    "it has no transducer part: a translation unit is read whole as the tree c's parse \
+     realizes (admin ADR-33, ruling 7, as amended on 2026-11-11: its declaration structuring \
+     moves into its grammar's rules, then it ships a part; the streaming plan's step 27)",
+)];
 
 /// How far the peak over ten times the document may pass the peak over the
 /// document: 1.25 times it. Measured with `test/streaming.json`'s documents
@@ -139,8 +108,10 @@ const NOT_STREAMING: [(&str, Fails, &str); 6] = [
 /// falls: json 1.67 MB and 1.66 MB, csv 1.74 MB and 1.74 MB, yaml 2.24 MB
 /// and 2.24 MB, json5 1.86 MB and 1.78 MB, xml 1.72 MB and 1.72 MB. A format
 /// that holds something of its document grows with it, run to its end:
-/// jsonic, read whole, 2.35 MB and 19.31 MB (8.2 times), css 2.76 MB and
-/// 10.10 MB, ini, whose sections stay in the engine's tree, 2.36 MB and
+/// jsonic, read whole until 0.7.12 declared the window, 2.35 MB and 19.31
+/// MB (8.2 times), css 2.76 MB and 10.10 MB (1.95 MB and 1.89 MB since
+/// transduce 0.6.6 prunes it, as it does abnf, 1.88 MB at both sizes, ebnf
+/// and gbnf), ini, whose sections stay in the engine's tree, 2.36 MB and
 /// 6.64 MB (2.8 times), and the least, markdown, which kept a node of every
 /// block until tabnas/markdown#100, 2.13 MB and 3.61 MB (1.7 times; since
 /// then 1.92 MB and 1.92 MB). toml, which keeps an emptied slot of its array

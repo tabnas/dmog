@@ -53,7 +53,7 @@
     "@tabnas/json": ">=0.5.20",
     "@tabnas/json5": ">=0.5.18",
     "@tabnas/jsonc": ">=0.5.17",
-    "@tabnas/jsonic": ">=0.7.11",
+    "@tabnas/jsonic": ">=0.7.12",
     "@tabnas/jsonl": ">=0.1.20",
     "@tabnas/markdown": ">=0.7.14",
     "@tabnas/parser": ">=0",
