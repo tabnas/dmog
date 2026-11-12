@@ -12,7 +12,7 @@ require (
 	github.com/tabnas/abnf/go v0.5.1
 	github.com/tabnas/alchemy/go v0.4.0
 	github.com/tabnas/c/go v0.5.16
-	github.com/tabnas/chess/go v0.1.19
+	github.com/tabnas/chess/go v0.2.0
 	github.com/tabnas/css/go v0.5.20
 	github.com/tabnas/csv/go v0.6.10
 	github.com/tabnas/ebnf/go v0.2.2
@@ -30,7 +30,7 @@ require (
 	github.com/tabnas/render/go v0.2.7
 	github.com/tabnas/semver/go v0.0.11
 	github.com/tabnas/toml/go v0.5.22
-	github.com/tabnas/transduce/go v0.6.8
+	github.com/tabnas/transduce/go v0.6.9
 	github.com/tabnas/xml/go v0.7.20
 	github.com/tabnas/yaml/go v0.5.32
 	github.com/tabnas/zon/go v0.5.19

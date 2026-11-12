@@ -127,8 +127,8 @@ declare it is each package's to say, in the constructor this command
 calls in each runtime (`make()` in Rust and TypeScript, `Make()` or
 `MakeJsonic()` in Go): JSON, JSON Lines, JSONC, JSON5, CSV, CSS, INI,
 TOML, XML, ZON, feeds and PGN do from the releases of 2026-11-09, and
-Markdown and YAML from their releases of 2026-11-10, while jsonic's base
-constructor, which most relaxed grammars build on, does not. JSON5's check that a document holds a value reads only its leading
+Markdown and YAML from their releases of 2026-11-10, and jsonic from its
+release of 2026-11-12 (`makeTabnas()` in TypeScript). JSON5's check that a document holds a value reads only its leading
 white space and comments, so a JSON5 document is read a window at a time
 after them. `translate` reads a file or standard input
 that way on the route through its format's transducer part, with or
