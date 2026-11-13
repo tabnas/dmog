@@ -4,8 +4,8 @@ github.com/tabnas/alchemy/go v0.4.0 h1:GEkL8ihJwXl27K5ckc7O8eXyNP8nLAxz5h+U4znwC
 github.com/tabnas/alchemy/go v0.4.0/go.mod h1:xvryoA4eXZ04A9p88cVMlimzb5ue30GWd0QvoTIt/s4=
 github.com/tabnas/bnf/go v0.1.33 h1:D+fkcIQYxgp6i21dIl51g07Mi7/N5boZGmtTDnxMDXg=
 github.com/tabnas/bnf/go v0.1.33/go.mod h1:JEiPdU/LKw8sJpxtFpswmOTN/RyBWEzE030yP4eRVBk=
-github.com/tabnas/c/go v0.5.16 h1:weY14ZWmxQ2U7EUryB2rNJdHrVVLHwgtmPD5Tbjv9+k=
-github.com/tabnas/c/go v0.5.16/go.mod h1:m3U2nEymdZoBEKpCJkyt6xc6hzcR7QncWM4XUrUND/A=
+github.com/tabnas/c/go v0.6.0 h1:WkaDhsHV+6gGUT5JulU89BatR2p/T6l0kG64MAqAIGw=
+github.com/tabnas/c/go v0.6.0/go.mod h1:h069UPRXViEJ6qxXrvfu9t7Ps5Zsn0vEzELUfC9WlA8=
 github.com/tabnas/chess/go v0.2.0 h1:EEEP1Whmse0D0Lcj5qEf9kB/ej3/AB9oUkyy1kfk3uc=
 github.com/tabnas/chess/go v0.2.0/go.mod h1:+mu7TygC1QkoY5M/B/OBeHnrnvIIS0jrzM3rjY1lA8Y=
 github.com/tabnas/css/go v0.5.20 h1:trREUjilzYD8obOTXC5cMdYO/aGJ8yjH69uAXIcx/Sg=
@@ -16,8 +16,8 @@ github.com/tabnas/debug/go v0.3.13 h1:Y4iIyMVftR6uZgOYmVmWy9WpWeAsYHNF4UwIuIqp1b
 github.com/tabnas/debug/go v0.3.13/go.mod h1:tfu9bTyKlwrYdmKItt6LrGKKckCrWcNCrHMGzSxMcbM=
 github.com/tabnas/ebnf/go v0.2.2 h1:CkSwgE4ag5qafYkcJq1xbt3KcBeiG7qkj2eGGSboEnM=
 github.com/tabnas/ebnf/go v0.2.2/go.mod h1:GTIawDQEAkXEBdIPbFh4riDwTASoHC7qkDaUY9okg+I=
-github.com/tabnas/expr/go v0.6.0 h1:1cGlpqVXCsV/YXtuhMfh5WtH18ORgJ8KFnkwyhh6wyE=
-github.com/tabnas/expr/go v0.6.0/go.mod h1:4OhQ5lJSWpis7ynjogVTf8eESkLHjCTpv4N3XWxJ+9Y=
+github.com/tabnas/expr/go v0.6.2 h1:p8NpPcpBQ69Ipzer8j2GQFmRdKYLiAba3uEVmNKQgNE=
+github.com/tabnas/expr/go v0.6.2/go.mod h1:4OhQ5lJSWpis7ynjogVTf8eESkLHjCTpv4N3XWxJ+9Y=
 github.com/tabnas/feed/go v0.6.21 h1:17YYQhWtbe182RJrx6kvMKMr6Ii05h+Hp03jJF8sIm4=
 github.com/tabnas/feed/go v0.6.21/go.mod h1:sHRdkpuhQ93FiZK/RP9H+Quyv45Rc91Dtb+zOn7c31s=
 github.com/tabnas/gbnf/go v0.2.1 h1:Ga8U+eM8w7zo539f+4Xecz/mXh6DsrArAbi3yXwGug0=

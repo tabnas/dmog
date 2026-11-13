@@ -71,9 +71,9 @@ const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
   c: {
     fails: 'both',
     why:
-      "it has no transducer part: a translation unit is read whole as the parser's value (admin " +
-      "ADR-33, ruling 7, as amended on 2026-11-11: its declaration structuring moves into its " +
-      "grammar's rules, then it ships a part; the streaming plan's step 27)",
+      "it has no transducer part yet: a translation unit is read whole as the parser's value. " +
+      "From c 0.6.0 its grammar's rules build every declaration (admin ADR-33, ruling 7, as " +
+      "amended on 2026-11-11), and its part is the streaming plan's step 27",
   },
 }
 
