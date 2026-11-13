@@ -96,9 +96,9 @@ const RULED_WHOLE: [(&str, &str); 2] = [
 const NOT_STREAMING: [(&str, Fails, &str); 1] = [(
     "c",
     Fails::Both,
-    "it has no transducer part: a translation unit is read whole as the tree c's parse \
-     realizes (admin ADR-33, ruling 7, as amended on 2026-11-11: its declaration structuring \
-     moves into its grammar's rules, then it ships a part; the streaming plan's step 27)",
+    "it has no transducer part yet: a translation unit is read whole as the tree c's parse \
+     realizes. From c 0.6.0 its grammar's rules build every declaration (admin ADR-33, ruling \
+     7, as amended on 2026-11-11), and its part is the streaming plan's step 27",
 )];
 
 /// How far the peak over ten times the document may pass the peak over the
