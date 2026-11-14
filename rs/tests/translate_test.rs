@@ -369,6 +369,182 @@ fn a_proto_file_reads_as_the_tree_its_package_builds() {
     );
 }
 
+/// What a C document reads as through C's transducer part
+/// ([`Format::read`], the part's events collected as a tree) and read
+/// whole (`tabnas_c::parse`, which dmog's `--whole` reads): the same value,
+/// compared with every object's members in key order, or the same refusal
+/// (its code, message and position, as `translate` and `--whole` write
+/// it), and whether the trees are the same text, member order included.
+/// A document whose tree nests past the default `max_depth` is refused
+/// through the part and by `--whole` alike, and its trees are compared
+/// with no limits. The trees are compared as values, not as the JSON they
+/// are written as: a Csmith program's tree nests past what a JSON reader
+/// takes. `name` names the document in a failure.
+fn c_through_the_part(name: &str, text: &str) -> Outcome {
+    let c = format("c");
+    let tree = || {
+        tabnas_c::parse(text)
+            .map(|tree| Datum::from_tabnas(&tree))
+            .unwrap_or_else(|e| {
+                panic!("{name}: c's reader refuses it ({e}), and the part reads it")
+            })
+    };
+    match c.read(text, &Limits::default()) {
+        Ok(part) => {
+            let whole = tree();
+            the_same_tree(name, &part, &whole);
+            if part.to_string() == whole.to_string() {
+                Outcome::Read
+            } else {
+                Outcome::Reordered
+            }
+        }
+        Err(part) if past_the_depth(&part) => {
+            let whole = translate_whole(c, format("json"), text);
+            assert!(
+                whole.as_ref().is_err_and(past_the_depth),
+                "{name}: the part refuses it past max_depth, and --whole does not: {whole:?}"
+            );
+            let part = c
+                .read(text, &Limits::unlimited())
+                .unwrap_or_else(|f| panic!("{name}: with no limits, the part refuses it: {f:?}"));
+            the_same_tree(name, &part, &tree());
+            Outcome::Deep
+        }
+        Err(_) => {
+            let json = format("json");
+            let refusal = |outcome: Result<String, Fail>| {
+                let f = outcome.expect_err("a refusal");
+                (f.code, f.message, f.row, f.column)
+            };
+            assert_eq!(
+                refusal(translate_text(c, json, text, None)),
+                refusal(translate_whole(c, json, text)),
+                "{name}"
+            );
+            Outcome::Refused
+        }
+    }
+}
+
+/// Whether `fail` is a refusal of a document nested past `max_depth`.
+fn past_the_depth(fail: &Fail) -> bool {
+    fail.code == Code::ResourceLimitExceeded
+        && fail
+            .limit
+            .as_ref()
+            .is_some_and(|limit| limit.name == "max_depth")
+}
+
+/// `part` and `whole` hold the same values, whatever their member order.
+fn the_same_tree(name: &str, part: &Datum, whole: &Datum) {
+    let sorted = |datum: &Datum| {
+        let mut out = String::new();
+        sorted_json(datum, &mut out);
+        out
+    };
+    assert!(
+        sorted(part) == sorted(whole),
+        "{name}: the part's tree is not the reader's"
+    );
+}
+
+/// `datum` as JSON with every object's members in key order, so that two
+/// trees holding the same values in any member order write the same.
+fn sorted_json(datum: &Datum, out: &mut String) {
+    match datum {
+        Datum::Array(items) => {
+            out.push('[');
+            for (i, item) in items.iter().enumerate() {
+                if i > 0 {
+                    out.push(',');
+                }
+                sorted_json(item, out);
+            }
+            out.push(']');
+        }
+        Datum::Object(members) => {
+            let mut members: Vec<(&Box<str>, &Datum)> = members.iter().collect();
+            members.sort_by(|a, b| a.0.cmp(b.0));
+            out.push('{');
+            for (i, (key, value)) in members.into_iter().enumerate() {
+                if i > 0 {
+                    out.push(',');
+                }
+                out.push_str(&Datum::String(key.clone()).to_string());
+                out.push(':');
+                sorted_json(value, out);
+            }
+            out.push('}');
+        }
+        scalar => out.push_str(&scalar.to_string()),
+    }
+}
+
+/// How a C document read through C's part compares with the same document
+/// read whole.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Outcome {
+    /// The same tree, written as the same text.
+    Read,
+    /// The same tree, its members written in another order: the part
+    /// writes a node's `span` after its children and trivia where the
+    /// node's first token is held behind trivia, and c's reader after
+    /// `kind` (tabnas/c#79).
+    Reordered,
+    /// Refused with `RESOURCE_LIMIT_EXCEEDED`, naming `max_depth`, through
+    /// the part and by `--whole` alike, since its tree nests past the 256
+    /// levels the default limits hold a container and a `scan-emit` state
+    /// to; read with no limits, the same tree.
+    Deep,
+    /// Refused alike.
+    Refused,
+}
+
+/// C reads through its transducer part as c's API reads it whole
+/// (`tabnas_c::parse`), over every document of c's own fixtures, each
+/// once and in the plain mode a host reads C in, since a row's options are
+/// its runner's and not a host's: the same tree, or the same refusal. C's
+/// grammar builds its tree in its rules, and the part rebuilds that tree
+/// from their passes, placing each operator from its own copy of C's
+/// operator table, so a change to either that the other does not follow
+/// fails here (the maintainer's ruling of 2026-11-13). It takes minutes in
+/// a debug run, so this is the release run's (ignored in a debug run).
+#[test]
+#[ignore]
+fn every_c_fixture_reads_through_the_part_as_c_reads_it() {
+    let dir = siblings().join("c/test/spec");
+    let files = tabnas_support::load_spec_dir(&dir, &tabnas_support::SpecOptions::default())
+        .unwrap_or_else(|e| panic!("c: cannot read {}: {e}", dir.display()));
+    let outcomes = on_stack(|| {
+        let mut seen = HashSet::new();
+        let mut outcomes = Vec::new();
+        for file in &files {
+            for row in &file.rows {
+                let text = row.unesc_named("input");
+                if seen.insert(text.clone()) {
+                    let name = format!("c/{}:{}", file.file, row.line);
+                    outcomes.push(c_through_the_part(&name, &text));
+                }
+            }
+        }
+        outcomes
+    });
+    let count = |outcome| outcomes.iter().filter(|o| **o == outcome).count();
+    let counts = (
+        count(Outcome::Read),
+        count(Outcome::Reordered),
+        count(Outcome::Deep),
+        count(Outcome::Refused),
+    );
+    eprintln!(
+        "c's fixtures through the part: {} read as the reader reads them, {} in another member \
+         order, {} past the default depth, {} refused alike",
+        counts.0, counts.1, counts.2, counts.3
+    );
+    assert_eq!(counts, (103, 33, 0, 32));
+}
+
 // ---------------------------------------------------------------------
 // The refusals the targets declare
 // ---------------------------------------------------------------------

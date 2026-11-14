@@ -95,10 +95,10 @@ const RULED_WHOLE: [(&str, &str); 2] = [
 /// passes.
 const NOT_STREAMING: [(&str, Fails, &str); 1] = [(
     "c",
-    Fails::Both,
-    "it has no transducer part yet: a translation unit is read whole as the tree c's parse \
-     realizes. From c 0.6.0 its grammar's rules build every declaration (admin ADR-33, ruling \
-     7, as amended on 2026-11-11), and its part is the streaming plan's step 27",
+    Fails::Flat,
+    "its part streams a translation unit from c 0.6.1, but the parser whose passes it reads \
+     keeps every node and token of the parse (the parse state's nodes and tokens), so what a run \
+     holds grows with the document: tabnas/c#78",
 )];
 
 /// How far the peak over ten times the document may pass the peak over the

@@ -111,9 +111,9 @@ var notStreaming = map[string]struct {
 	fails failing
 	why   string
 }{
-	"c": {failsBoth, "it has no transducer part yet: a translation unit is read whole as the parser's " +
-		"value. From c 0.6.0 its grammar's rules build every declaration (admin ADR-33, ruling 7, as " +
-		"amended on 2026-11-11), and its part is the streaming plan's step 27"},
+	"c": {failsFlat, "its part streams a translation unit from c 0.6.1, but the parser whose passes it " +
+		"reads keeps every declaration in the engine's tree, which transduce does not prune for c, and " +
+		"the engine's rule history is unbounded, so what a run holds grows with the document: tabnas/c#78"},
 }
 
 // streamingBound is how far what a run holds over ten times the document may
