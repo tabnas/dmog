@@ -69,11 +69,11 @@ const RULED_WHOLE: Record<string, string> = {
 // clauses: delete an entry, or a clause of it, once its format passes.
 const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
   c: {
-    fails: 'both',
+    fails: 'flat',
     why:
-      "it has no transducer part yet: a translation unit is read whole as the parser's value. " +
-      "From c 0.6.0 its grammar's rules build every declaration (admin ADR-33, ruling 7, as " +
-      "amended on 2026-11-11), and its part is the streaming plan's step 27",
+      'its part streams a translation unit from c 0.6.1, but the parser whose passes it reads ' +
+      "keeps every declaration in the engine's tree, which transduce does not prune for c, and " +
+      "the engine's rule history is unbounded, so what a run holds grows with the document: tabnas/c#78",
   },
 }
 

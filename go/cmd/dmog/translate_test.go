@@ -136,9 +136,9 @@ func TestFormatsPrintsTheRegistryAsJSON(t *testing.T) {
 	// the sentence its manifest gives. PGN's says nothing: it streams a
 	// game at a time through its transducer part, here as there, and so
 	// do proto's, a declaration at a time, Markdown's, a block at a time,
-	// and the grammar notations', a rule at a time.
+	// the grammar notations', a rule at a time, and C's, a translation
+	// unit's items as each ends.
 	for id, manifest := range map[string]string{
-		"c":      tabnasc.Translate().Manifest,
 		"expr":   tabnasexpr.Translate().Manifest,
 		"semver": tabnassemver.Translate().Manifest,
 	} {
@@ -177,13 +177,14 @@ func TestFormatsPrintsTheRegistryAsJSON(t *testing.T) {
 			t.Errorf("%s: whole %v, its manifest's %q", id, byID[id]["whole"], *m.Translate.Whole)
 		}
 	}
-	for _, id := range []string{"abnf", "ebnf", "gbnf", "json", "markdown", "pgn", "proto"} {
+	for _, id := range []string{"abnf", "c", "ebnf", "gbnf", "json", "markdown", "pgn", "proto"} {
 		if byID[id]["whole"] != nil {
 			t.Errorf("%s: whole %v", id, byID[id]["whole"])
 		}
 	}
 	for id, entry := range map[string]string{
 		"abnf": tabnasabnf.Translate().Transduce.Entry,
+		"c":    tabnasc.Translate().Transduce.Entry,
 		"ebnf": tabnasebnf.Translate().Transduce.Entry,
 		"gbnf": tabnasgbnf.Translate().Transduce.Entry,
 	} {

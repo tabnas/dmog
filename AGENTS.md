@@ -230,8 +230,12 @@ document, read whole (`Reader::Tree` in Rust, `tree` in Go, `{ tree }` in
 TypeScript), with the checks the package's API makes first:
 - expressions, as the simplified tree (`parse_simplified`,
   `parseSimplified`, `SimplifyOrdered`);
-- C, as the realized tree in Rust (`tabnas_c::parse`); TypeScript and Go
-  walk the parser's value;
+- C, as the realized tree in Rust (`tabnas_c::parse`), where TypeScript
+  and Go walk the parser's value. A translation unit is read so only where
+  it is read whole: otherwise C's transducer part reads it over the rule
+  passes of the parser `make()` builds (`MakeC()` in Go), from c 0.6.1,
+  which reads a window at a time from a reader, so Rust carries both the
+  parser and the tree (`Reader::ParsedTree`);
 - Go's feeds and PGN databases, whose modules build typed values, through
   their JSON encoding (`plainTree`). A feed or a PGN database is read so
   only where its transducer part refuses it: otherwise the part reads it
@@ -280,6 +284,27 @@ name order, its match tokens' order in a list of its own; it now writes
 the order the compiler emits, as TypeScript and Rust do.) A defect is the
 package's to repair; never register one to make a pair pass without
 naming it, and never work around one here in silence.
+
+## C's part and C's reader
+
+C's transducer part rebuilds the tree c's grammar's rules build, and it
+places each operator itself, from its own copy of C's operator table
+(admin ADR-33, as amended on 2026-11-13). c holds its copy to the table;
+the part's tree is held to the reader's here, since only this repository
+runs the part. Rust's release run (`rs/tests/translate_test.rs`) reads
+every document of c's fixtures (`test/spec/*.tsv`, each once) through
+the part (`Format::read`) and whole (`tabnas_c::parse`), in the plain
+mode a host reads C in.
+
+Each document must come out as the same tree, compared as a value, or be
+refused alike: the same code, message and position. A tree that nests
+past the default `max_depth` is refused on that limit by both routes,
+through the part and by `--whole`, and its trees are then compared with
+no limits. The default is 256 levels, and a C tree takes two JSON levels
+a node, so this happens past about 128 nodes deep. One of c's defects is
+counted and pinned until c repairs it: the part writes some nodes'
+members in another order than the reader does, `span` after `children`
+and `trivia` (tabnas/c#79).
 
 ## The streaming gate
 
