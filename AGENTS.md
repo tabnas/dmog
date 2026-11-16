@@ -291,20 +291,35 @@ C's transducer part rebuilds the tree c's grammar's rules build, and it
 places each operator itself, from its own copy of C's operator table
 (admin ADR-33, as amended on 2026-11-13). c holds its copy to the table;
 the part's tree is held to the reader's here, since only this repository
-runs the part. Rust's release run (`rs/tests/translate_test.rs`) reads
-every document of c's fixtures (`test/spec/*.tsv`, each once) through
-the part (`Format::read`) and whole (`tabnas_c::parse`), in the plain
-mode a host reads C in.
+runs the part. Each runtime reads every document of c's fixtures
+(`test/spec/*.tsv` in the sibling checkout, each once) through the part
+and whole, in the plain mode a host reads C in: Rust's release run
+(`rs/tests/translate_test.rs`, `Format::read` against `tabnas_c::parse`),
+`ts/test/translate.test.ts` and `go/translate/c_part_test.go` (each
+`translate` into JSON against `--whole`). Rust's release run reads every
+Csmith program of c's corpus (`ts/test/csmith-corpus`) too, each after a
+header that declares csmith.h's type names. A program goes through the
+part at about 4 KB a second in release, so the programs run on up to four
+threads, the longest first. TypeScript and Go leave the Csmith programs
+out, where the part runs slower still. The CI workflows clone c for its
+fixtures (the maintainer's instruction of 2026-11-16).
 
 Each document must come out as the same tree, compared as a value, or be
 refused alike: the same code, message and position. A tree that nests
 past the default `max_depth` is refused on that limit by both routes,
-through the part and by `--whole`, and its trees are then compared with
-no limits. The default is 256 levels, and a C tree takes two JSON levels
-a node, so this happens past about 128 nodes deep. One of c's defects is
-counted and pinned until c repairs it: the part writes some nodes'
-members in another order than the reader does, `span` after `children`
-and `trivia` (tabnas/c#79).
+through the part and by `--whole`; Rust then compares its trees with no
+limits. The default is 256 levels, and a C tree takes two JSON levels a
+node, so this happens past about 128 nodes deep. What else each run
+meets is counted and pinned:
+- the part writes some nodes' members in another order than the reader
+  does, `span` after `children` and `trivia` (tabnas/c#79);
+- Go's whole read writes every node's members in the order its reader's
+  maps keep them, so in Go nearly every document reads as the same tree
+  in another member order;
+- in TypeScript, the part fails on one document of c's fixtures before
+  the parser's refusal arrives (`C_PART_DEFECTS`, tabnas/c#82): an entry
+  must still read otherwise, so a fix fails the test until the entry is
+  deleted.
 
 ## The streaming gate
 
@@ -389,7 +404,8 @@ proxy. For those two, sibling checkouts are optional as code:
 `ci/polyglot/run.sh` links them over the registry copies, and admin's
 `scripts/link.sh` does the same locally. They are not optional as
 fixtures: the tests of alchemy's programs read `../alchemy` and
-`../transduce`, as above. The CI workflows name the list.
+`../transduce`, as above, and the checks of C's part read `../c`. The CI
+workflows name the list.
 
 - TypeScript, from `ts/`: `npm install`, then `npm test`.
 - Go, from `go/`: `gofmt -l .`, `go vet ./...`, `go test ./...`, with a

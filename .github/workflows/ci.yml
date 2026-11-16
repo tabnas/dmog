@@ -19,7 +19,9 @@ jobs:
   # path. jsonc is here for its checkout all the same: translate's cross
   # product (go/translate's test, as rs/tests/translate_test.rs) reads the
   # JSONTestSuite documents it vendors; so are abnf, ebnf and gbnf, whose
-  # example grammars it reads too (gbnf after abnf, which its build takes).
+  # example grammars it reads too (gbnf after abnf, which its build takes),
+  # and c, whose fixtures the tests that hold C's transducer part to C's
+  # reader read (the maintainer's instruction of 2026-11-16).
   # debug is here though nothing in this repository imports it: json's
   # nested test module (go/debugtest) replaces debug with its sibling
   # checkout, the shared go job's workspace takes in every module it finds,
@@ -28,7 +30,7 @@ jobs:
   ci:
     uses: tabnas/.github/.github/workflows/polyglot-ci.yml@main
     with:
-      deps: "parser debug json jsonic jsonc csv abnf ebnf gbnf alchemy transduce render"
+      deps: "parser debug json jsonic jsonc csv abnf ebnf gbnf c alchemy transduce render"
 
   # The shared workflow runs `go test ./...` with no build tags. transduce
   # builds its rule-event adapter only under the `tabnas_nodecell` tag,
@@ -61,7 +63,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          for dep in parser debug json jsonic jsonc csv abnf ebnf gbnf alchemy transduce render; do
+          for dep in parser debug json jsonic jsonc csv abnf ebnf gbnf c alchemy transduce render; do
             git clone --depth 1 "https://github.com/tabnas/$dep.git" "$dep"
           done
 

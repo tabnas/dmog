@@ -509,7 +509,8 @@ enum Outcome {
 /// from their passes, placing each operator from its own copy of C's
 /// operator table, so a change to either that the other does not follow
 /// fails here (the maintainer's ruling of 2026-11-13). It takes minutes in
-/// a debug run, so this is the release run's (ignored in a debug run).
+/// a debug run, so this is the release run's (ignored in a debug run), as
+/// [`every_csmith_program_reads_through_the_part_as_c_reads_it`] is.
 #[test]
 #[ignore]
 fn every_c_fixture_reads_through_the_part_as_c_reads_it() {
@@ -543,6 +544,153 @@ fn every_c_fixture_reads_through_the_part_as_c_reads_it() {
         counts.0, counts.1, counts.2, counts.3
     );
     assert_eq!(counts, (103, 33, 0, 32));
+}
+
+/// The names csmith.h declares as types, which c's own Csmith tests
+/// register as typedef names before they parse a program
+/// (`ts/test/csmith-common.ts`): a host reads a program after a header
+/// that declares them.
+const CSMITH_TYPEDEFS: [&str; 20] = [
+    "int8_t",
+    "int16_t",
+    "int32_t",
+    "int64_t",
+    "uint8_t",
+    "uint16_t",
+    "uint32_t",
+    "uint64_t",
+    "size_t",
+    "ssize_t",
+    "ptrdiff_t",
+    "intptr_t",
+    "uintptr_t",
+    "wchar_t",
+    "wint_t",
+    "time_t",
+    "clock_t",
+    "off_t",
+    "FILE",
+    "va_list",
+];
+
+/// Every Csmith program of c's corpus (`ts/test/csmith-corpus`) reads
+/// through C's transducer part as c's API reads it whole, each after a
+/// header that declares csmith.h's type names (`typedef int int8_t;` and
+/// the rest): the same tree, or the same refusal, as
+/// [`every_c_fixture_reads_through_the_part_as_c_reads_it`] holds c's
+/// fixtures. Through the part a program takes from half a second to a
+/// minute and a half in release, about 4 KB a second, so the programs run
+/// on a few threads, the longest first, and this is the release run's
+/// (ignored in a debug run).
+#[test]
+#[ignore]
+fn every_csmith_program_reads_through_the_part_as_c_reads_it() {
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+    let dir = siblings().join("c/ts/test/csmith-corpus");
+    let mut programs: Vec<(u64, PathBuf)> = std::fs::read_dir(&dir)
+        .unwrap_or_else(|e| panic!("c: cannot read {}: {e}", dir.display()))
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.extension().is_some_and(|e| e == "c"))
+        .map(|p| (std::fs::metadata(&p).map_or(0, |m| m.len()), p))
+        .collect();
+    programs.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+    let total = programs.len();
+    assert_eq!(total, 100, "c's Csmith corpus");
+    let mut header = String::new();
+    for name in CSMITH_TYPEDEFS {
+        header.push_str("typedef int ");
+        header.push_str(name);
+        header.push_str(";\n");
+    }
+    let queue = Mutex::new(std::collections::VecDeque::from(programs));
+    let (done, finished) = (AtomicUsize::new(0), AtomicBool::new(false));
+    let (outcomes, otherwise) = (Mutex::new(Vec::new()), Mutex::new(Vec::new()));
+    let started = Instant::now();
+    let workers = std::thread::available_parallelism().map_or(2, |n| n.get().clamp(1, 4));
+    std::thread::scope(|scope| {
+        scope.spawn(|| {
+            let mut beat = 0;
+            while !finished.load(Ordering::SeqCst) {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                let secs = started.elapsed().as_secs();
+                if secs >= beat + 25 {
+                    beat = secs;
+                    let k = done.load(Ordering::SeqCst);
+                    eprintln!(
+                        "c's Csmith programs: {k} of {total} ({}%), {secs} s",
+                        k * 100 / total
+                    );
+                }
+            }
+        });
+        let handles: Vec<_> = (0..workers)
+            .map(|_| {
+                std::thread::Builder::new()
+                    .stack_size(tabnas_alchemy::STACK_BYTES)
+                    .spawn_scoped(scope, || loop {
+                        let Some((_, path)) = queue.lock().unwrap().pop_front() else {
+                            break;
+                        };
+                        let name = format!("c/{}", path.file_name().unwrap().to_string_lossy());
+                        let program = std::fs::read_to_string(&path)
+                            .unwrap_or_else(|e| panic!("{name}: cannot read it: {e}"));
+                        let one = Instant::now();
+                        let text = format!("{header}{program}");
+                        let outcome =
+                            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                c_through_the_part(&name, &text)
+                            }));
+                        let k = done.fetch_add(1, Ordering::SeqCst) + 1;
+                        eprintln!(
+                            "c's Csmith programs: {k} of {total} ({}%) {name}: {}, {:.1} s",
+                            k * 100 / total,
+                            outcome
+                                .as_ref()
+                                .map_or("read otherwise (above)".to_string(), |o| format!("{o:?}")),
+                            one.elapsed().as_secs_f64()
+                        );
+                        match outcome {
+                            Ok(outcome) => outcomes.lock().unwrap().push(outcome),
+                            Err(_) => otherwise.lock().unwrap().push(name),
+                        }
+                    })
+                    .unwrap()
+            })
+            .collect();
+        let joined: Vec<_> = handles.into_iter().map(|h| h.join()).collect();
+        finished.store(true, Ordering::SeqCst);
+        for result in joined {
+            if let Err(panic) = result {
+                std::panic::resume_unwind(panic);
+            }
+        }
+    });
+    let mut otherwise = otherwise.into_inner().unwrap();
+    otherwise.sort();
+    assert!(
+        otherwise.is_empty(),
+        "{} Csmith programs read otherwise through the part (above): {}",
+        otherwise.len(),
+        otherwise.join(", ")
+    );
+    let outcomes = outcomes.into_inner().unwrap();
+    let count = |outcome| outcomes.iter().filter(|o| **o == outcome).count();
+    let counts = (
+        count(Outcome::Read),
+        count(Outcome::Reordered),
+        count(Outcome::Deep),
+        count(Outcome::Refused),
+    );
+    eprintln!(
+        "c's Csmith programs through the part: {} read as the reader reads them, {} in another \
+         member order, {} past the default depth, {} refused alike, in {:.0} s",
+        counts.0,
+        counts.1,
+        counts.2,
+        counts.3,
+        started.elapsed().as_secs_f64()
+    );
+    assert_eq!(counts, (0, 91, 9, 0));
 }
 
 // ---------------------------------------------------------------------
