@@ -596,10 +596,12 @@ fn every_csmith_program_reads_through_the_part_as_c_reads_it() {
     programs.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
     let total = programs.len();
     assert_eq!(total, 100, "c's Csmith corpus");
-    let header: String = CSMITH_TYPEDEFS
-        .iter()
-        .map(|name| format!("typedef int {name};\n"))
-        .collect();
+    let mut header = String::new();
+    for name in CSMITH_TYPEDEFS {
+        header.push_str("typedef int ");
+        header.push_str(name);
+        header.push_str(";\n");
+    }
     let queue = Mutex::new(std::collections::VecDeque::from(programs));
     let (done, finished) = (AtomicUsize::new(0), AtomicBool::new(false));
     let (outcomes, otherwise) = (Mutex::new(Vec::new()), Mutex::new(Vec::new()));
