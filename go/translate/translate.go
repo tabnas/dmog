@@ -459,10 +459,10 @@ func modules() []module {
 		}, transduce: func() *at.PartText {
 			return partText((*modulePart)(tabnasc.Translate().Transduce))
 		}, parser: func() *tabnas.Tabnas {
-			parser, err := tabnasc.MakeC()
+			parser, err := tabnasc.MakeStreaming()
 			installed("tabnas-c", err)
 			return parser
-		}},
+		}, tree: cTree},
 		{descriptor: func() at.Descriptor {
 			p := tabnaschess.Translate()
 			return descriptor("tabnas-chess", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
@@ -685,6 +685,21 @@ func exprTree(text string) (any, *tt.Fail) {
 // that deep.
 func protoTree(text string) (any, *tt.Fail) {
 	tree, err := tabnasproto.ParseTree(text)
+	if err != nil {
+		return nil, engineFailure(err)
+	}
+	return tree, nil
+}
+
+// cTree is a C translation unit read whole, the tree c's grammar's rules
+// build: the value of the parser MakeC builds. The transducer part reads the
+// rule passes of the parser MakeStreaming builds (from c 0.6.2), whose
+// passes are MakeC's and which builds no tree, so a stream holds no
+// declaration it has closed.
+func cTree(text string) (any, *tt.Fail) {
+	parser, err := tabnasc.MakeC()
+	installed("tabnas-c", err)
+	tree, err := parser.Parse(text)
 	if err != nil {
 		return nil, engineFailure(err)
 	}

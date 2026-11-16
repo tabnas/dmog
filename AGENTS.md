@@ -230,12 +230,16 @@ document, read whole (`Reader::Tree` in Rust, `tree` in Go, `{ tree }` in
 TypeScript), with the checks the package's API makes first:
 - expressions, as the simplified tree (`parse_simplified`,
   `parseSimplified`, `SimplifyOrdered`);
-- C, as the realized tree in Rust (`tabnas_c::parse`), where TypeScript
-  and Go walk the parser's value. A translation unit is read so only where
-  it is read whole: otherwise C's transducer part reads it over the rule
-  passes of the parser `make()` builds (`MakeC()` in Go), from c 0.6.1,
-  which reads a window at a time from a reader, so Rust carries both the
-  parser and the tree (`Reader::ParsedTree`);
+- C, as the realized tree in Rust (`tabnas_c::parse`), and as the value
+  of the parser `make()` builds in TypeScript and Go (`MakeC()` in Go). A
+  translation unit is read so only where it is read whole: otherwise C's
+  transducer part reads it over the rule passes of c's streaming parser
+  (`makeStreaming()`, `MakeStreaming()`, `make_streaming()`, from c
+  0.6.2), whose passes are those of the parser `make()` builds and which
+  builds no tree, so a stream holds no declaration it has closed. It reads
+  a window at a time from a reader. So every runtime carries both the
+  parser and the tree (`Reader::ParsedTree` in Rust, `parser` with `tree`
+  in Go, `{ parser, tree }` in TypeScript);
 - Go's feeds and PGN databases, whose modules build typed values, through
   their JSON encoding (`plainTree`). A feed or a PGN database is read so
   only where its transducer part refuses it: otherwise the part reads it
@@ -309,17 +313,13 @@ refused alike: the same code, message and position. A tree that nests
 past the default `max_depth` is refused on that limit by both routes,
 through the part and by `--whole`; Rust then compares its trees with no
 limits. The default is 256 levels, and a C tree takes two JSON levels a
-node, so this happens past about 128 nodes deep. What else each run
-meets is counted and pinned:
-- the part writes some nodes' members in another order than the reader
-  does, `span` after `children` and `trivia` (tabnas/c#79);
-- Go's whole read writes every node's members in the order its reader's
-  maps keep them, so in Go nearly every document reads as the same tree
-  in another member order;
-- in TypeScript, the part fails on one document of c's fixtures before
-  the parser's refusal arrives (`C_PART_DEFECTS`, tabnas/c#82): an entry
-  must still read otherwise, so a fix fails the test until the entry is
-  deleted.
+node, so this happens past about 128 nodes deep. Each run pins its
+counts. Go's whole read writes every node's members in the order its
+reader's maps keep them, so in Go every document that parses reads as the
+same tree in another member order. A document the part reads otherwise in
+TypeScript, for a defect of c's, is registered there with its issue
+(`C_PART_DEFECTS`) and held to still reading otherwise, so a fix fails the
+test until its entry is deleted; none is registered.
 
 ## The streaming gate
 

@@ -53,7 +53,7 @@ import { closeSync, openSync, readFileSync, readSync } from 'node:fs'
 import { make as makeAbnf, translate as abnfParts } from '@tabnas/abnf'
 import { Program, compile as compileProgram, compileSources, isFail, translate } from '@tabnas/alchemy'
 import type { CompileOptions } from '@tabnas/alchemy'
-import { make as makeC, translate as cParts } from '@tabnas/c'
+import { make as makeC, makeStreaming as makeCStreaming, translate as cParts } from '@tabnas/c'
 import { make as makeChess, translate as chessParts } from '@tabnas/chess'
 import { make as makeCss, translate as cssParts } from '@tabnas/css'
 import { make as makeCsv, translate as csvParts } from '@tabnas/csv'
@@ -467,7 +467,7 @@ function descriptor(pkg: string, parts: Parts | undefined): Described | undefine
 function packages(): Array<[Described | undefined, Reading]> {
   return [
     [descriptor('tabnas-abnf', abnfParts()), () => makeAbnf()],
-    [descriptor('tabnas-c', cParts()), () => makeC()],
+    [descriptor('tabnas-c', cParts()), { parser: () => makeCStreaming(), tree: cTree }],
     [descriptor('tabnas-chess', chessParts()), () => makeChess()],
     [descriptor('tabnas-css', cssParts()), () => makeCss()],
     [descriptor('tabnas-csv', csvParts()), () => makeCsv()],
@@ -515,6 +515,14 @@ function treeOf(read: () => unknown): unknown {
 // each operator as the object that describes it, token and all.
 function exprTree(text: string): unknown {
   return treeOf(() => parseSimplified(new Tabnas().use(jsonic).use(Expr), text))
+}
+
+// A C translation unit read whole, the tree c's grammar's rules build: the
+// value of make()'s parser. The transducer part reads the rule passes of
+// makeStreaming()'s (from c 0.6.2), whose passes are make()'s and which
+// builds no tree, so a stream holds no declaration it has closed.
+function cTree(text: string): unknown {
+  return treeOf(() => makeC().parse(text))
 }
 
 // A .proto file read whole as proto's package reads one, the tree its

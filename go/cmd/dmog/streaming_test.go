@@ -110,11 +110,7 @@ var ruledWhole = map[string]string{
 var notStreaming = map[string]struct {
 	fails failing
 	why   string
-}{
-	"c": {failsFlat, "its part streams a translation unit from c 0.6.1, but the parser whose passes it " +
-		"reads keeps every declaration in the engine's tree, which transduce does not prune for c, and " +
-		"the engine's rule history is unbounded, so what a run holds grows with the document: tabnas/c#78"},
-}
+}{}
 
 // streamingBound is how far what a run holds over ten times the document may
 // pass what it holds over the document: 1.5 times it. Measured with
