@@ -47,6 +47,7 @@ import * as expr from '@tabnas/expr'
 import { jsonic } from '@tabnas/jsonic'
 import { Tabnas } from '@tabnas/parser'
 import { BytesWriter } from '@tabnas/render'
+import { loadSpecDir } from '@tabnas/support'
 import type { Writer } from '@tabnas/render'
 import { Datum, Limits, Metrics, toText } from '@tabnas/transduce'
 
@@ -1788,5 +1789,126 @@ describe('translate', () => {
         String(takes),
       )
     }
+  })
+})
+
+// ---------------------------------------------------------------------
+// C's part and C's reader
+// ---------------------------------------------------------------------
+
+// How a C document read through C's transducer part compares with the
+// same document read whole (`--whole`, the parser's value walked): the same
+// text; the same tree with some members in another order, `span` after
+// `children` and `trivia` (tabnas/c#79); refused on `max_depth` by both
+// routes, a tree past the default limit; or refused alike.
+type COutcome = 'read' | 'reordered' | 'deep' | 'refused'
+
+// `value` with every object's members in key order, so that two trees
+// holding the same values in any member order compare equal.
+function sortedJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortedJson)
+  if (null !== value && 'object' === typeof value) {
+    const object = value as Record<string, unknown>
+    return Object.fromEntries(
+      Object.keys(object)
+        .sort()
+        .map((key) => [key, sortedJson(object[key])]),
+    )
+  }
+  return value
+}
+
+// Whether a failure is a refusal of a document nested past `max_depth`.
+function pastTheDepth(err: unknown): boolean {
+  const fail = err as { code?: string; limit?: { name?: string } } | undefined
+  return 'RESOURCE_LIMIT_EXCEEDED' === fail?.code && 'max_depth' === fail?.limit?.name
+}
+
+// A C document translated into JSON through C's part and read whole: the
+// same tree, compared as a value, or the same refusal, its code, message
+// and position. `name` names the document in a failure.
+function cThroughThePart(name: string, text: string): COutcome {
+  const [c, json] = [format('c'), format('json')]
+  const attempt = (whole: boolean): { out?: string; err?: unknown } => {
+    try {
+      return { out: translateText(c, json, text, undefined, whole) }
+    } catch (err) {
+      return { err }
+    }
+  }
+  const [part, whole] = [attempt(false), attempt(true)]
+  if (undefined !== part.out && undefined !== whole.out) {
+    if (part.out === whole.out) return 'read'
+    assert.deepStrictEqual(
+      sortedJson(JSON.parse(part.out)),
+      sortedJson(JSON.parse(whole.out)),
+      `${name}: the part's tree is not the reader's`,
+    )
+    return 'reordered'
+  }
+  if (undefined !== part.err && undefined !== whole.err) {
+    if (pastTheDepth(part.err) && pastTheDepth(whole.err)) return 'deep'
+    const refusal = (err: unknown): unknown[] => {
+      const fail = err as { code?: string; message?: string; row?: number; col?: number }
+      return [fail?.code, fail?.message, fail?.row, fail?.col]
+    }
+    assert.deepStrictEqual(refusal(part.err), refusal(whole.err), name)
+    return 'refused'
+  }
+  const said = (attempt: { err?: unknown }): string => (undefined === attempt.err ? 'a tree' : why(attempt.err))
+  assert.fail(`${name}: through the part ${said(part)}, whole ${said(whole)}`)
+}
+
+// The documents of c's fixtures that C's part reads otherwise than c's
+// reader in this runtime, each with its defect. An entry must still read
+// otherwise, so that a fix fails the test below until the entry is deleted.
+const C_PART_DEFECTS: Record<string, string> = {
+  // The part fails on a token it never registered, before the parser's
+  // refusal of the `=` arrives, where Rust and Go refuse it alike.
+  'c/unfinished.tsv:16': 'tabnas/c#82',
+}
+
+// C's transducer part rebuilds the tree c's grammar's rules build, placing
+// each operator from its own copy of C's operator table, and only this
+// repository runs it, so its tree is held to the reader's here (the
+// maintainer's ruling of 2026-11-13, admin ADR-33): every document of c's
+// fixtures, each once, from the sibling checkout's `test/spec`, as Rust's
+// release run reads them.
+describe("C's part and C's reader", () => {
+  it("every document of c's fixtures reads through the part as c reads it", () => {
+    const seen = new Set<string>()
+    const counts: Record<COutcome, number> = { read: 0, reordered: 0, deep: 0, refused: 0 }
+    const otherwise: string[] = []
+    const repaired: string[] = []
+    const met = new Set<string>()
+    for (const file of loadSpecDir(sibling('c', 'test', 'spec'))) {
+      for (const row of file.rows) {
+        const text = row.unescNamed('input')
+        if (seen.has(text)) continue
+        seen.add(text)
+        const name = `c/${row.file}:${row.line}`
+        if (undefined !== C_PART_DEFECTS[name]) met.add(name)
+        let outcome: COutcome | undefined
+        try {
+          outcome = cThroughThePart(name, text)
+        } catch (err) {
+          if (undefined === C_PART_DEFECTS[name]) {
+            otherwise.push(String((err as Error)?.message ?? err).split('\n').slice(0, 8).join(' '))
+          }
+        }
+        if (undefined === outcome) continue
+        if (undefined !== C_PART_DEFECTS[name]) repaired.push(`${name} (${C_PART_DEFECTS[name]})`)
+        counts[outcome]++
+      }
+    }
+    assert.deepStrictEqual(otherwise, [], `${otherwise.length} documents read otherwise through the part`)
+    assert.deepStrictEqual(repaired, [], 'these read alike now: delete their entries from C_PART_DEFECTS')
+    assert.deepStrictEqual(
+      Object.keys(C_PART_DEFECTS).filter((name) => !met.has(name)),
+      [],
+      "these name no document of c's fixtures: delete them from C_PART_DEFECTS",
+    )
+    // Rust's counts, but for the registered document, which Rust refuses alike.
+    assert.deepStrictEqual(counts, { read: 103, reordered: 33, deep: 0, refused: 31 })
   })
 })
