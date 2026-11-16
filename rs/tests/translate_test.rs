@@ -687,7 +687,7 @@ fn every_csmith_program_reads_through_the_part_as_c_reads_it() {
         counts.3,
         started.elapsed().as_secs_f64()
     );
-    assert_eq!(counts, (0, 91, 9, 0));
+    assert_eq!(counts, (91, 0, 9, 0));
 }
 
 // ---------------------------------------------------------------------
