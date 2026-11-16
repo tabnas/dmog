@@ -456,6 +456,8 @@ func modules() []module {
 		{descriptor: func() at.Descriptor {
 			p := tabnasc.Translate()
 			return descriptor("tabnas-c", p.Manifest, (*modulePart)(p.Lift), (*modulePart)(p.Embed), (*modulePart)(p.Render))
+		}, transduce: func() *at.PartText {
+			return partText((*modulePart)(tabnasc.Translate().Transduce))
 		}, parser: func() *tabnas.Tabnas {
 			parser, err := tabnasc.MakeC()
 			installed("tabnas-c", err)

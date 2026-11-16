@@ -740,11 +740,11 @@ fn formats_lists_the_formats_translate_reads_and_writes() {
     // TOML's, which stream a member at a time, nor feed's, which streams
     // an entry at a time, nor proto's, which streams a declaration at a
     // time, nor Markdown's, which streams a block at a time, nor the
-    // grammar notations', which stream a rule at a time, each through the
+    // grammar notations', which stream a rule at a time, nor C's, which
+    // streams a translation unit's items as each ends, each through the
     // part it ships.
     let by_id = |id: &str| formats.iter().find(|f| f["id"] == id).expect("a format");
     for (id, manifest) in [
-        ("c", tabnas_c::translate().unwrap().manifest),
         ("expr", tabnas_expr::translate().unwrap().manifest),
         ("semver", tabnas_semver::translate().unwrap().manifest),
     ] {
@@ -764,7 +764,7 @@ fn formats_lists_the_formats_translate_reads_and_writes() {
     assert_eq!(by_id("proto")["schema"], "proto-ast");
     assert!(by_id("markdown")["whole"].is_null());
     assert_eq!(by_id("markdown")["transduce"], "markdown-transduce");
-    for id in ["abnf", "ebnf", "gbnf"] {
+    for id in ["abnf", "c", "ebnf", "gbnf"] {
         assert!(by_id(id)["whole"].is_null(), "{id}");
         assert_eq!(by_id(id)["transduce"], format!("{id}-transduce"), "{id}");
     }
@@ -1209,9 +1209,9 @@ fn run_takes_a_grammar_whose_rule_passes_the_program_reads() {
         assert_eq!(
             fail["message"],
             format!(
-                "--grammar takes a format whose documents are parsed (abnf, css, csv, ebnf, feed, \
-                 gbnf, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, toml, \
-                 xml, yaml or zon), not {name:?}"
+                "--grammar takes a format whose documents are parsed (abnf, c, css, csv, ebnf, \
+                 feed, gbnf, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, proto, semver, \
+                 toml, xml, yaml or zon), not {name:?}"
             )
         );
     }

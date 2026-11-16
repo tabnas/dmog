@@ -584,6 +584,7 @@ describe('cli translate', () => {
       formats.filter((f: any) => null !== f.transduce).map((f: any) => [f.id, f.transduce]),
       [
         ['abnf', 'abnf-transduce'],
+        ['c', 'c-transduce'],
         ...shipped('css', cssParts()),
         ['csv', 'csv-transduce'],
         ['ebnf', 'ebnf-transduce'],
@@ -631,10 +632,10 @@ describe('cli translate', () => {
     // every format transduce does not stream, each in the sentence its
     // manifest gives; none for a format read through its transducer part,
     // PGN's among them, which streams a game at a time, proto's, a
-    // declaration at a time, Markdown's, a block at a time, and the grammar
-    // notations', a rule at a time.
+    // declaration at a time, Markdown's, a block at a time, the grammar
+    // notations', a rule at a time, and C's, a translation unit's items as
+    // each ends.
     for (const [id, parts] of [
-      ['c', cParts()],
       ['expr', exprParts()],
       ['semver', semverParts()],
     ] as const) {
@@ -647,6 +648,7 @@ describe('cli translate', () => {
     assert.strictEqual(byId('proto').whole, null)
     for (const [id, parts] of [
       ['abnf', abnfParts()],
+      ['c', cParts()],
       ['ebnf', ebnfParts()],
       ['gbnf', gbnfParts()],
     ] as const) {

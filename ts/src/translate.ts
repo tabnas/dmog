@@ -53,7 +53,7 @@ import { closeSync, openSync, readFileSync, readSync } from 'node:fs'
 import { make as makeAbnf, translate as abnfParts } from '@tabnas/abnf'
 import { Program, compile as compileProgram, compileSources, isFail, translate } from '@tabnas/alchemy'
 import type { CompileOptions } from '@tabnas/alchemy'
-import { C, translate as cParts } from '@tabnas/c'
+import { make as makeC, translate as cParts } from '@tabnas/c'
 import { make as makeChess, translate as chessParts } from '@tabnas/chess'
 import { make as makeCss, translate as cssParts } from '@tabnas/css'
 import { make as makeCsv, translate as csvParts } from '@tabnas/csv'
@@ -467,7 +467,7 @@ function descriptor(pkg: string, parts: Parts | undefined): Described | undefine
 function packages(): Array<[Described | undefined, Reading]> {
   return [
     [descriptor('tabnas-abnf', abnfParts()), () => makeAbnf()],
-    [descriptor('tabnas-c', cParts()), () => new Tabnas().use(jsonic).use(C)],
+    [descriptor('tabnas-c', cParts()), () => makeC()],
     [descriptor('tabnas-chess', chessParts()), () => makeChess()],
     [descriptor('tabnas-css', cssParts()), () => makeCss()],
     [descriptor('tabnas-csv', csvParts()), () => makeCsv()],

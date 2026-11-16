@@ -523,14 +523,22 @@ fn read_proto_parsed() -> Reader {
     Reader::ParsedTree(parsing!(tabnas_proto::make_streaming()), read_proto)
 }
 
-/// A C translation unit as c's API reads one, the tree its parts declare
-/// (`parse`, which realizes the parse into plain values). The parser's own
-/// value is a handle into the parse's per-thread arena, which only the
-/// package's API reads.
+/// A C translation unit read whole as c's API reads one, the tree its
+/// parts declare (`parse`, which realizes the parse into plain values).
+/// The parser's own value is a handle into the parse's per-thread arena,
+/// which only the package's API reads, so a whole read reads this; the
+/// transducer part reads the parser's rule passes.
 fn read_c(text: &str) -> Result<Datum, Fail> {
     tabnas_c::parse(text)
         .map(|tree| Datum::from_tabnas(&tree))
         .map_err(|error| engine_failure(&error))
+}
+
+/// The reader of C's grammar: the rule passes of its parser (`make`, which
+/// reads a reader a window at a time from c 0.6.1), which its transducer
+/// part reads; and its tree, [`read_c`], read whole.
+fn read_c_parsed() -> Reader {
+    Reader::ParsedTree(parsing!(tabnas_c::make()), read_c)
 }
 
 /// Every grammar package this command carries, with its reader.
@@ -541,8 +549,8 @@ fn packages() -> Vec<(Option<Described>, Reader)> {
             reader!(tabnas_abnf),
         ),
         (
-            descriptor!("tabnas-c", tabnas_c, embed),
-            Reader::Tree(read_c),
+            descriptor!("tabnas-c", tabnas_c, embed, transduce),
+            read_c_parsed(),
         ),
         (
             descriptor!("tabnas-chess", tabnas_chess, embed, transduce),
@@ -1481,6 +1489,7 @@ mod tests {
             through,
             [
                 ("abnf", "abnf-transduce"),
+                ("c", "c-transduce"),
                 ("css", "css-transduce"),
                 ("csv", "csv-transduce"),
                 ("ebnf", "ebnf-transduce"),
@@ -1961,22 +1970,22 @@ mod tests {
         assert_eq!(
             parsed,
             [
-                "abnf", "css", "csv", "ebnf", "feed", "gbnf", "ini", "json", "json5", "jsonc",
+                "abnf", "c", "css", "csv", "ebnf", "feed", "gbnf", "ini", "json", "json5", "jsonc",
                 "jsonic", "jsonl", "markdown", "pgn", "proto", "semver", "toml", "xml", "yaml",
                 "zon"
             ]
         );
         assert_eq!(
             parser_names(),
-            "abnf, css, csv, ebnf, feed, gbnf, ini, json, json5, jsonc, jsonic, jsonl, markdown, pgn, \
-             proto, semver, toml, xml, yaml or zon"
+            "abnf, c, css, csv, ebnf, feed, gbnf, ini, json, json5, jsonc, jsonic, jsonl, markdown, \
+             pgn, proto, semver, toml, xml, yaml or zon"
         );
-        let c = format("c").expect("c is a format");
-        assert!(!c.parses());
-        let refused = c.passes("int x;").err().expect("a tree has no passes");
+        let expr = format("expr").expect("expr is a format");
+        assert!(!expr.parses());
+        let refused = expr.passes("1+2").err().expect("a tree has no passes");
         assert_eq!(refused.code, Code::InputInvalid);
         assert!(
-            refused.message.starts_with("c is read as a tree"),
+            refused.message.starts_with("expr is read as a tree"),
             "{refused}"
         );
         let json5 = format("json5").expect("json5 is a format");
