@@ -487,10 +487,7 @@ fn sorted_json(datum: &Datum, out: &mut String) {
 enum Outcome {
     /// The same tree, written as the same text.
     Read,
-    /// The same tree, its members written in another order: the part
-    /// writes a node's `span` after its children and trivia where the
-    /// node's first token is held behind trivia, and c's reader after
-    /// `kind` (tabnas/c#79).
+    /// The same tree, its members written in another order.
     Reordered,
     /// Refused with `RESOURCE_LIMIT_EXCEEDED`, naming `max_depth`, through
     /// the part and by `--whole` alike, since its tree nests past the 256
@@ -543,7 +540,7 @@ fn every_c_fixture_reads_through_the_part_as_c_reads_it() {
          order, {} past the default depth, {} refused alike",
         counts.0, counts.1, counts.2, counts.3
     );
-    assert_eq!(counts, (103, 33, 0, 32));
+    assert_eq!(counts, (137, 0, 0, 32));
 }
 
 /// The names csmith.h declares as types, which c's own Csmith tests
@@ -690,7 +687,7 @@ fn every_csmith_program_reads_through_the_part_as_c_reads_it() {
         counts.3,
         started.elapsed().as_secs_f64()
     );
-    assert_eq!(counts, (0, 91, 9, 0));
+    assert_eq!(counts, (91, 0, 9, 0));
 }
 
 // ---------------------------------------------------------------------

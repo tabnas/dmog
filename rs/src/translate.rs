@@ -527,18 +527,20 @@ fn read_proto_parsed() -> Reader {
 /// parts declare (`parse`, which realizes the parse into plain values).
 /// The parser's own value is a handle into the parse's per-thread arena,
 /// which only the package's API reads, so a whole read reads this; the
-/// transducer part reads the parser's rule passes.
+/// transducer part reads the rule passes of c's streaming parser.
 fn read_c(text: &str) -> Result<Datum, Fail> {
     tabnas_c::parse(text)
         .map(|tree| Datum::from_tabnas(&tree))
         .map_err(|error| engine_failure(&error))
 }
 
-/// The reader of C's grammar: the rule passes of its parser (`make`, which
-/// reads a reader a window at a time from c 0.6.1), which its transducer
-/// part reads; and its tree, [`read_c`], read whole.
+/// The reader of C's grammar: the rule passes of its streaming parser
+/// (`make_streaming`, from c 0.6.2), whose passes are those of the parser
+/// `make` builds and which builds no tree, so a stream holds no declaration
+/// it has closed, read a window at a time from a reader; and its tree,
+/// [`read_c`], read whole.
 fn read_c_parsed() -> Reader {
-    Reader::ParsedTree(parsing!(tabnas_c::make()), read_c)
+    Reader::ParsedTree(parsing!(tabnas_c::make_streaming()), read_c)
 }
 
 /// Every grammar package this command carries, with its reader.

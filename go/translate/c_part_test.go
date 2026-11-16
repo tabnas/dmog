@@ -118,7 +118,7 @@ func TestEveryCFixtureReadsThroughThePartAsCReadsIt(t *testing.T) {
 	got := [4]int{counts[cRead], counts[cReordered], counts[cDeep], counts[cRefused]}
 	t.Logf("c's fixtures through the part: %d read as the reader reads them, %d in another member order, "+
 		"%d past the default depth, %d refused alike", got[0], got[1], got[2], got[3])
-	if want := [4]int{0, 136, 0, 32}; got != want {
+	if want := [4]int{0, 137, 0, 32}; got != want {
 		t.Errorf("counts %v, want %v", got, want)
 	}
 }

@@ -93,13 +93,7 @@ const RULED_WHOLE: [(&str, &str); 2] = [
 /// clauses it fails and why. The gate holds each entry to failing exactly
 /// those clauses: delete an entry, or a clause of it, once its format
 /// passes.
-const NOT_STREAMING: [(&str, Fails, &str); 1] = [(
-    "c",
-    Fails::Flat,
-    "its part streams a translation unit from c 0.6.1, but the parser whose passes it reads \
-     keeps every node and token of the parse (the parse state's nodes and tokens), so what a run \
-     holds grows with the document: tabnas/c#78",
-)];
+const NOT_STREAMING: [(&str, Fails, &str); 0] = [];
 
 /// How far the peak over ten times the document may pass the peak over the
 /// document: 1.25 times it. Measured with `test/streaming.json`'s documents
@@ -116,7 +110,9 @@ const NOT_STREAMING: [(&str, Fails, &str); 1] = [(
 /// block until tabnas/markdown#100, 2.13 MB and 3.61 MB (1.7 times; since
 /// then 1.92 MB and 1.92 MB). toml, which keeps an emptied slot of its array
 /// of tables for every table before the one it reads, holds 1.99 MB and
-/// 2.38 MB (1.2 times). JSON read whole (`--whole`) holds 2.60 MB and
+/// 2.38 MB (1.2 times). c, through its streaming parser from c 0.6.2, holds
+/// the most of the formats that stream, alike at both sizes: 5.18 MB and
+/// 5.01 MB. JSON read whole (`--whole`) holds 2.60 MB and
 /// 23.48 MB (9 times), which [`a_document_held_whole_fails_the_bound`] holds
 /// to fail it.
 const BOUND: f64 = 1.25;

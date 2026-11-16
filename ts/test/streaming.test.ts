@@ -67,15 +67,7 @@ const RULED_WHOLE: Record<string, string> = {
 // The formats that do not stream yet in this runtime, each with the clauses
 // it fails and why. The gate holds each entry to failing exactly those
 // clauses: delete an entry, or a clause of it, once its format passes.
-const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {
-  c: {
-    fails: 'flat',
-    why:
-      'its part streams a translation unit from c 0.6.1, but the parser whose passes it reads ' +
-      "keeps every declaration in the engine's tree, which transduce does not prune for c, and " +
-      "the engine's rule history is unbounded, so what a run holds grows with the document: tabnas/c#78",
-  },
-}
+const NOT_STREAMING: Record<string, { fails: Fails; why: string }> = {}
 
 // How far what a run holds over ten times the document may pass what it
 // holds over the document: 1.5 times it. Measured with test/streaming.json's

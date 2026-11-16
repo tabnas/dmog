@@ -86,8 +86,9 @@ at a time, its tree the file's declarations in source order (the schema
 first; read whole, it is the same tree, which proto's package builds,
 since its grammar's own value is the syntax tree. A C translation unit
 streams an item at a time, and a function definition a statement at a
-time, through C's part (from c 0.6.1), its tree the one c's grammar's
-rules build (the schema `c`). A document the part
+time, through C's part (from c 0.6.1) over the passes of c's streaming
+parser, which builds no tree (from c 0.6.2); its tree is the one c's
+grammar's rules build (the schema `c`). A document the part
 cannot stream fails with its code part way, after what it wrote, with
 `"output": "partial"` in the failure where bytes had left: a repeated key, which
 the grammar's value keeps once (`DUPLICATE_MEMBER`, status 1), and a
@@ -132,7 +133,8 @@ calls in each runtime (`make()` in Rust and TypeScript, `Make()` or
 TOML, XML, ZON, feeds and PGN do from the releases of 2026-11-09,
 Markdown and YAML from their releases of 2026-11-10, jsonic from its
 release of 2026-11-12 (`makeTabnas()` in TypeScript), and C from its
-release of 2026-11-13 (`MakeC()` in Go). JSON5's check that a document holds a value reads only its leading
+release of 2026-11-13, through its streaming parser from 2026-11-16's
+(`makeStreaming()`, `MakeStreaming()`, `make_streaming()`). JSON5's check that a document holds a value reads only its leading
 white space and comments, so a JSON5 document is read a window at a time
 after them. `translate` reads a file or standard input
 that way on the route through its format's transducer part, with or

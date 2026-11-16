@@ -1797,10 +1797,10 @@ describe('translate', () => {
 // ---------------------------------------------------------------------
 
 // How a C document read through C's transducer part compares with the
-// same document read whole (`--whole`, the parser's value walked): the same
-// text; the same tree with some members in another order, `span` after
-// `children` and `trivia` (tabnas/c#79); refused on `max_depth` by both
-// routes, a tree past the default limit; or refused alike.
+// same document read whole (`--whole`, the tree c's reader builds): the
+// same text; the same tree with some members in another order; refused on
+// `max_depth` by both routes, a tree past the default limit; or refused
+// alike.
 type COutcome = 'read' | 'reordered' | 'deep' | 'refused'
 
 // `value` with every object's members in key order, so that two trees
@@ -1862,11 +1862,7 @@ function cThroughThePart(name: string, text: string): COutcome {
 // The documents of c's fixtures that C's part reads otherwise than c's
 // reader in this runtime, each with its defect. An entry must still read
 // otherwise, so that a fix fails the test below until the entry is deleted.
-const C_PART_DEFECTS: Record<string, string> = {
-  // The part fails on a token it never registered, before the parser's
-  // refusal of the `=` arrives, where Rust and Go refuse it alike.
-  'c/unfinished.tsv:16': 'tabnas/c#82',
-}
+const C_PART_DEFECTS: Record<string, string> = {}
 
 // C's transducer part rebuilds the tree c's grammar's rules build, placing
 // each operator from its own copy of C's operator table, and only this
@@ -1908,7 +1904,6 @@ describe("C's part and C's reader", () => {
       [],
       "these name no document of c's fixtures: delete them from C_PART_DEFECTS",
     )
-    // Rust's counts, but for the registered document, which Rust refuses alike.
-    assert.deepStrictEqual(counts, { read: 103, reordered: 33, deep: 0, refused: 31 })
+    assert.deepStrictEqual(counts, { read: 137, reordered: 0, deep: 0, refused: 32 })
   })
 })
