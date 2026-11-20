@@ -442,3 +442,99 @@ tags, so neither step pushes one:
 
 alchemy, transduce and render are released before this package (admin
 `publish.sh` ORDER), since the build resolves them from the registry.
+
+## Client work
+
+Never mention or identify a private work-tracking repository, even indirectly,
+in this repository or in anything the client can see. This includes code,
+comments, documentation, configuration, branch names, commits, issues, pull
+requests, chat messages, and visible tool calls or output.
+
+Only plain delivery and task identifiers may be shared from internal tracking.
+For example, “Delivery `rounds`, task `restart`.” Keep repository names,
+URLs, paths, skill names, project and session identifiers, and transcript
+references private. Describe the product work and test results normally.
+
+## Set up the client checkout
+
+`CLAUDE.md` at the repository root is a relative symlink to `AGENTS.md`,
+committed, so an agent that reads either name reads this file. On repeat
+setup, verify `readlink CLAUDE.md` prints `AGENTS.md`. Do not add a
+`CLAUDE.MD` beside it: a name that differs from it only in case collides
+on a case-insensitive filesystem, as macOS and Windows checkouts are, and
+this repository's CI checks out on both. The target belongs to this
+client checkout.
+
+## Track the current session
+
+When you start a delivery, rename the active chat to its plain delivery ID if
+the chat host supports renaming. Update the title when you switch deliveries.
+Keep the private session key stable. If renaming is unavailable, continue
+recording the worked tasks in the same session.
+
+In the deliverable description README, link to the session that worked on it.
+Use the host's existing client-accessible conversation URL for a client README.
+Keep private tracking links inside the private delivery report. Record the
+real chat URL privately when available and link every worked task so the
+report can link the session record even when the host supplies no URL.
+Keep links to earlier sessions when another session takes over.
+
+Record a timestamped session history entry of `working` when work starts or
+resumes. Once the final response has been delivered and work is waiting on the
+user, record `awaiting_input`. Keep `working` through progress updates. If
+the host exposes delivery only after the turn ends, use its completion hook
+or record the observed event on resume. Use `unknown` if activity cannot be
+confirmed. Refresh the reports after a transition.
+
+Capture each turn once in the session's private `turns.csv`. Use the capture
+helper to maintain `requests.idx`, which lists only the physical CSV line
+numbers of user requests. Preserve the exact message, role and turn number.
+
+## Describe the goal
+
+For every private node you create or update, keep both fields short and to the
+point. Use as many sentences as needed to make the goal or its state clear.
+
+- **`desc`** states the intended outcome. For a project or delivery, name the
+  capability it will provide. For a task, name the result that would finish it.
+- **`statusDetail`** states where that goal stands. Say what is possible now
+  and, if it affects the plan, name the remaining gap, blocker or decision.
+
+Apply the same rule to the overall collection, sessions and messages. A
+session summarizes its goal and where the work stood at handoff. A message
+annotation captures the request or decision and its disposition. Preserve
+the original message verbatim.
+
+For example, a rounds delivery could have `desc` “Let players play a series
+of rounds” and `statusDetail` “Players can start another round. The score still
+resets between rounds.”
+
+Keep PR and issue details, links, branch names, commit IDs, implementation
+steps and test logs out of both fields. Put supporting references and
+verification evidence in private history notes. When updating an older
+summary that reads like a work log, condense it to the current goal and outcome.
+At handoff, keep the task state and its history in sync. Update a parent
+summary when the goal it describes has moved forward or its outlook has changed.
+
+## Before and after a product pull request
+
+1. **Before opening the product PR**, set each task whose implementation is
+   ready to submit to `awaiting_merge` in its private record. In its history,
+   record what was tested, the readiness time, and the branch or commit. Refresh
+   the affected delivery and project summaries and reports. Open a private
+   tracking PR, merge it, and confirm the update is on the tracking default
+   branch. Only then submit the product PR.
+2. **During review**, keep those tasks in `awaiting_merge` while the change
+   is ready and waiting. If changes are requested that require more work,
+   return the affected tasks to `in_progress` and record the reason. If the
+   PR closes unmerged, record whether the work has resumed or returned to
+   the queue.
+3. **After the product PR merges**, verify the merge on the intended target
+   branch. Set each task fully delivered by that merge to `done`. Append the
+   actual merge time, product PR reference and merge commit to its private
+   history. Refresh the summaries and reports, then open and merge a second
+   private tracking PR. Confirm the completed tasks are on the tracking
+   default branch.
+
+Keep all tracking operations and references private under the sharing rules
+above. The product PR describes the product change and its tests.
