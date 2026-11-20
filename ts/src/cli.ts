@@ -83,7 +83,7 @@ import * as translate from './translate'
 // admin/publish.sh rewrites both, and test/version.test.ts fails the build
 // if they drift. Mirrors `const VERSION` in go/cmd/dmog/main.go and
 // `VERSION` in rs/src/bin/dmog.rs.
-export const VERSION = '0.2.0'
+export const VERSION = '0.3.0'
 
 // What every program is compiled with: transduce's routers and the
 // renderers `./translate` composes of render's, the stages alchemy builds a
