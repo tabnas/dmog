@@ -1,4 +1,4 @@
-# Target: tabnas/alchemy-cli -> .github/workflows/github-release.yml
+# Target: tabnas/dmog -> .github/workflows/github-release.yml
 #
 # The GitHub Release for a TOOL (admin ADR-19): a notes-only Release. A
 # COMPONENT gets its Release from clib-release.yml instead, with its C

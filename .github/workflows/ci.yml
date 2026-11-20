@@ -47,7 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          path: alchemy-cli
+          path: dmog
 
       # cache: false, as in support's job: setup-go looks for go.mod in
       # $GITHUB_WORKSPACE, non-recursively, and the checkout is one level
@@ -79,11 +79,11 @@ jobs:
           done
 
       - name: Build with the tag
-        working-directory: alchemy-cli/go
+        working-directory: dmog/go
         run: go build -tags tabnas_nodecell ./...
 
       - name: Vet and test with the tag
-        working-directory: alchemy-cli/go
+        working-directory: dmog/go
         run: |
           go vet -tags tabnas_nodecell ./...
           go test -tags tabnas_nodecell -v ./...

@@ -1,6 +1,6 @@
-# Target: tabnas/alchemy-cli -> .github/workflows/release.yml
+# Target: tabnas/dmog -> .github/workflows/release.yml
 #
-# Publishes @tabnas/alchemy-cli to npm via GitHub OIDC Trusted Publishing (no
+# Publishes @tabnas/dmog to npm via GitHub OIDC Trusted Publishing (no
 # token), and writes the release tags. The fleet-standard TOOL shape
 # (admin ADR-20) — see lsp__release.yml in admin's rollout/workflows/,
 # where the reasoning is worked through at length.
@@ -32,9 +32,9 @@
 # no credential. The tag job installs nothing, and holds contents: write.
 #
 # ONE VERSION. ts/package.json is what this workflow reads, and it must
-# equal the VERSION consts in ts/src/cli.ts and go/cmd/alchemy/main.go and
-# the [package] version in rs/Cargo.toml (rs/src/bin/alchemy.rs reads
-# VERSION from it): ts/test/version.test.ts, go/cmd/alchemy/version_test.go
+# equal the VERSION consts in ts/src/cli.ts and go/cmd/dmog/main.go and
+# the [package] version in rs/Cargo.toml (rs/src/bin/dmog.rs reads
+# VERSION from it): ts/test/version.test.ts, go/cmd/dmog/version_test.go
 # and the binary's own test fail the bump PR when they drift, and
 # crates-release.yml refuses a tag whose crate and package disagree.
 #
@@ -43,11 +43,11 @@
 # registry), so a failing build never publishes; ci.yml gates the bump
 # PR across the full matrix. The build resolves @tabnas/alchemy,
 # @tabnas/transduce and @tabnas/render from the registry, all three of
-# which the command composes, so they are released before alchemy-cli
+# which the command composes, so they are released before dmog
 # (admin publish.sh ORDER).
 #
 # THE FIRST PUBLISH IS THE MAINTAINER'S, BY HAND. npm registers a trusted
-# publisher only for a package that already exists, so @tabnas/alchemy-cli
+# publisher only for a package that already exists, so @tabnas/dmog
 # first reaches the registry through a maintainer's `npm publish` of the
 # bump commit (admin rollout/setup-npm-trusted-publishing.sh). This
 # workflow then fails open on the version already on npm, and does the
@@ -204,8 +204,8 @@ jobs:
             # tarball was built from, is the only record of it: tag HEAD only
             # if it is that commit, or once main has moved on the tags would
             # name a commit npm never served.
-            if npm view "@tabnas/alchemy-cli@$V" version >/dev/null 2>&1; then
-              GH="$(npm view "@tabnas/alchemy-cli@$V" gitHead 2>/dev/null || true)"
+            if npm view "@tabnas/dmog@$V" version >/dev/null 2>&1; then
+              GH="$(npm view "@tabnas/dmog@$V" gitHead 2>/dev/null || true)"
               if [ -z "$GH" ]; then
                 echo "::error::$V is on npm, no tag names it, and npm records no gitHead for it, so nothing says which commit it was built from — tag that commit by hand, or bump the version"
                 exit 1
@@ -217,7 +217,7 @@ jobs:
             fi
             ANCHOR="$HEAD_C"
           elif [ "$ANCHOR" != "$HEAD_C" ]; then
-            if ! npm view "@tabnas/alchemy-cli@$V" version >/dev/null 2>&1; then
+            if ! npm view "@tabnas/dmog@$V" version >/dev/null 2>&1; then
               echo "::error::$V is tagged at $ANCHOR but is not on npm — publishing would ship HEAD while the tags name an older commit; resolve by hand"
               exit 1
             fi
@@ -236,8 +236,8 @@ jobs:
         run: |
           V="${{ steps.v.outputs.version }}"
           npm install -g npm@latest
-          if npm view "@tabnas/alchemy-cli@$V" version >/dev/null 2>&1; then
-            echo "@tabnas/alchemy-cli@$V is already on npm — skipping publish"
+          if npm view "@tabnas/dmog@$V" version >/dev/null 2>&1; then
+            echo "@tabnas/dmog@$V is already on npm — skipping publish"
           else
             npm i
             npm run build --if-present
