@@ -1,4 +1,4 @@
-# Target: tabnas/alchemy-cli -> .github/workflows/deps-gate.yml
+# Target: tabnas/dmog -> .github/workflows/deps-gate.yml
 #
 # Calls the fleet deps gate: no committed dependency may name a local path.
 # See the reusable workflow for why this is npm-only.

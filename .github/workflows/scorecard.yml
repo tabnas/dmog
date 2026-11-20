@@ -1,4 +1,4 @@
-# Target: tabnas/alchemy-cli -> .github/workflows/scorecard.yml
+# Target: tabnas/dmog -> .github/workflows/scorecard.yml
 #
 name: scorecard
 

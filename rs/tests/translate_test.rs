@@ -2550,7 +2550,7 @@ fn every_fixture_of_every_format_translates_into_every_format() {
         too_deep: 2,
         size: SIZE_BOUND,
         too_large: 0,
-        whole: 85,
+        whole: 87,
         refusals: 31171,
         grammars_written: 450,
         defective_pairs: &DEFECTIVE_PAIRS,

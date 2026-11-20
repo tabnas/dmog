@@ -38,7 +38,7 @@ jobs:
       # relative to rs/, so the siblings sit beside this checkout.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          path: alchemy-cli
+          path: dmog
 
       # A sibling is taken from the branch of the same name when it has one,
       # else from main: cross-repository work lands on same-named branches
@@ -48,7 +48,7 @@ jobs:
         run: |
           set -euo pipefail
           BRANCH="${{ github.head_ref || github.ref_name }}"
-          SIBLINGS=$(sed -n 's/^\(TS_\)\?SIBLINGS="\(.*\)"$/\2/p' alchemy-cli/ci/rust/run.sh)
+          SIBLINGS=$(sed -n 's/^\(TS_\)\?SIBLINGS="\(.*\)"$/\2/p' dmog/ci/rust/run.sh)
           n=0; total=$(echo "$SIBLINGS" | wc -w)
           for s in $SIBLINGS; do
             n=$((n+1))
@@ -62,7 +62,7 @@ jobs:
 
       - name: Install the MSRV toolchain
         run: |
-          MSRV=$(awk -F'"' '/^rust-version = /{print $2; exit}' alchemy-cli/rs/Cargo.toml)
+          MSRV=$(awk -F'"' '/^rust-version = /{print $2; exit}' dmog/rs/Cargo.toml)
           rustup toolchain install "$MSRV" --profile minimal --component rustfmt,clippy
           rustup default "$MSRV"
 
@@ -77,7 +77,7 @@ jobs:
           go-version: 1.24.x
 
       - name: Gate TypeScript and Go
-        run: alchemy-cli/ci/polyglot/run.sh
+        run: dmog/ci/polyglot/run.sh
 
       - name: Gate Rust
-        run: alchemy-cli/ci/rust/run.sh
+        run: dmog/ci/rust/run.sh

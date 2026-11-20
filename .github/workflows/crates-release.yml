@@ -1,4 +1,4 @@
-# Target: tabnas/alchemy-cli -> .github/workflows/crates-release.yml
+# Target: tabnas/dmog -> .github/workflows/crates-release.yml
 #
 # crates.io publishing for this repository's Rust crate, rs/ (admin
 # ADR-21).
