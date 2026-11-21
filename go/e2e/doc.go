@@ -2,7 +2,7 @@
 
 // Package e2e holds alchemy's end-to-end tests: programs compiled by
 // github.com/tabnas/alchemy/go and run on transduce's Routers and render's
-// Renderers, the stages the alchemy command composes. alchemy depends on
+// Renderers, the stages the dmog command composes. alchemy depends on
 // neither (a host hands Compile both), so the tests that run a program, or
 // hold it to what transduce or render do themselves, live here, in the
 // composition root that builds all three; alchemy's own tests stop at the
