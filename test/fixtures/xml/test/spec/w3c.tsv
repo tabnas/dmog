@@ -1,0 +1,20 @@
+# name	input	expected	opts
+# Standardised / real-world XML parse cases. Inputs include examples taken
+# or adapted from W3C conformance documents (XML 1.0 appendix, XHTML,
+# Atom, SVG, SOAP, RSS) and canonical "not well-formed" counterexamples.
+# Document structure is verified; full specification conformance is not.
+
+xml-decl-basic	<?xml version="1.0"?><doc/>	{"name":"doc","localName":"doc","attributes":{},"children":[]}
+xml-decl-standalone	<?xml version="1.0" standalone="yes"?><doc/>	{"name":"doc","localName":"doc","attributes":{},"children":[]}
+xmltest-valid-001	<?xml version="1.0"?>\n<doc>Hello, World!</doc>	{"name":"doc","localName":"doc","attributes":{},"children":["Hello, World!"]}
+xmltest-valid-attr	<doc attr1="value1" attr2="value2"/>	{"name":"doc","localName":"doc","attributes":{"attr1":"value1","attr2":"value2"},"children":[]}
+xmltest-valid-nested	<doc><child1/><child2><nested>text</nested></child2></doc>	{"name":"doc","localName":"doc","attributes":{},"children":[{"name":"child1","localName":"child1","attributes":{},"children":[]},{"name":"child2","localName":"child2","attributes":{},"children":[{"name":"nested","localName":"nested","attributes":{},"children":["text"]}]}]}
+atom-entry	<entry xmlns="http://www.w3.org/2005/Atom"><title>Example</title><id>urn:uuid:1</id></entry>	{"name":"entry","localName":"entry","namespace":"http://www.w3.org/2005/Atom","attributes":{"xmlns":"http://www.w3.org/2005/Atom"},"children":[{"name":"title","localName":"title","namespace":"http://www.w3.org/2005/Atom","attributes":{},"children":["Example"]},{"name":"id","localName":"id","namespace":"http://www.w3.org/2005/Atom","attributes":{},"children":["urn:uuid:1"]}]}
+soap-envelope	<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><m:GetPrice xmlns:m="https://example.com"><m:Item>Apples</m:Item></m:GetPrice></soap:Body></soap:Envelope>	{"name":"soap:Envelope","prefix":"soap","localName":"Envelope","namespace":"http://schemas.xmlsoap.org/soap/envelope/","attributes":{"xmlns:soap":"http://schemas.xmlsoap.org/soap/envelope/"},"children":[{"name":"soap:Body","prefix":"soap","localName":"Body","namespace":"http://schemas.xmlsoap.org/soap/envelope/","attributes":{},"children":[{"name":"m:GetPrice","prefix":"m","localName":"GetPrice","namespace":"https://example.com","attributes":{"xmlns:m":"https://example.com"},"children":[{"name":"m:Item","prefix":"m","localName":"Item","namespace":"https://example.com","attributes":{},"children":["Apples"]}]}]}]}
+svg-rect	<svg xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="10" height="10"/></svg>	{"name":"svg","localName":"svg","namespace":"http://www.w3.org/2000/svg","attributes":{"xmlns":"http://www.w3.org/2000/svg"},"children":[{"name":"rect","localName":"rect","namespace":"http://www.w3.org/2000/svg","attributes":{"x":"0","y":"0","width":"10","height":"10"},"children":[]}]}
+rss-channel	<rss version="2.0"><channel><title>Example</title><link>https://e.example/</link></channel></rss>	{"name":"rss","localName":"rss","attributes":{"version":"2.0"},"children":[{"name":"channel","localName":"channel","attributes":{},"children":[{"name":"title","localName":"title","attributes":{},"children":["Example"]},{"name":"link","localName":"link","attributes":{},"children":["https://e.example/"]}]}]}
+xhtml-paragraph	<p class="greeting">Hello <em>bold</em> world.</p>	{"name":"p","localName":"p","attributes":{"class":"greeting"},"children":["Hello ",{"name":"em","localName":"em","attributes":{},"children":["bold"]}," world."]}
+notes-document	<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE note>\n<note><to>Tove</to><from>Jani</from><body>Don't forget me &amp; cheers</body></note>	{"name":"note","localName":"note","attributes":{},"children":[{"name":"to","localName":"to","attributes":{},"children":["Tove"]},{"name":"from","localName":"from","attributes":{},"children":["Jani"]},{"name":"body","localName":"body","attributes":{},"children":["Don't forget me & cheers"]}]}
+not-wf-no-close	<doc>	ERROR
+not-wf-unclosed-nested	<doc><child></doc>	ERROR
+not-wf-stray-close	</doc>	ERROR

@@ -1,0 +1,47 @@
+input	expected	opts
+# leniency.tsv - jsonic base leniency must NOT leak through the CSS plugin.
+#
+# The documented setup is `new Tabnas().use(jsonic).use(Css)` (TS) /
+# `jsonic.Make()` + `UseDefaults(Css, ...)` (Go). jsonic is a RELAXED JSON
+# dialect, and across the tabnas grammar plugins its base leniency leaking
+# through a plugin has been a recurring source of over-acceptance. None of the
+# documents below is CSS, so a CSS parser must reject every one of them.
+#
+# ts/test/leniency.test.ts additionally asserts the stronger EQUIVALENCE
+# property: the documented stack and `new Tabnas().use(Css)` (no jsonic)
+# classify every probe identically.
+#
+# NOT a probe: `a:{b:1}`. It looks like a jsonic object but it is also a
+# well-formed CSS qualified rule (selector `a:`, block `{b:1}`), and this
+# plugin parses it as one. A fixture demanding ERROR there would be a FALSE
+# oracle, not a real conformance gap.
+#
+# The brace-first documents below (`{a:1}`, `{"a":1}`, `{}`) are where the two
+# CSS authorities disagree: CSS Syntax L3 accepts them as a qualified rule with
+# an EMPTY prelude, while reworkcss/css - the AST model README.md claims, and
+# the bar set in AGENTS.md - throws "selector missing". This plugin follows
+# reworkcss, so ERROR is the expectation here.
+{a:1}	ERROR:unexpected
+{a:1	ERROR:unexpected
+[1,2,3]	ERROR:unexpected
+[1,2,3	ERROR:unexpected
+a:1	ERROR:unexpected
+a:1,b:2	ERROR:unexpected
+true	ERROR:unexpected
+null	ERROR:unexpected
+42	ERROR:unexpected
+"str"	ERROR:unexpected
+'str'	ERROR:unexpected
+`str`	ERROR:unexpected
+a,b,c	ERROR:unexpected
+{"a":1}	ERROR:unexpected
+{}	ERROR:unexpected
+[]	ERROR:unexpected
+a{c:1} # hash comment	ERROR:unexpected
+a{c:1} // line comment	ERROR:unexpected
+a{c:1}}	ERROR:unexpected
+}	ERROR:unexpected
+a{c:1} extra	ERROR:unexpected
+a{c:1};;	ERROR:unexpected
+a{c:1	ERROR:unexpected
+@media screen{	ERROR:unexpected

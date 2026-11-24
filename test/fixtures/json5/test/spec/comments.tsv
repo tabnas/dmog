@@ -1,0 +1,17 @@
+input	expected	opts
+// hello\n42	42
+/* block */ 42	42
+{ a: 1, /* mid */ b: 2 }	{"a":1,"b":2}
+[/* a */ 1, /* b */ 2]	[1,2]
+/* multi\nline\ncomment */ [1,2]	[1,2]
+# a comment\n42	ERROR:unexpected
+# hello\n42	42	{"hashComment":true}
+# A backslash does NOT continue a line comment: the comment ends at the
+# line terminator and the next line is still parsed.
+// c\\\n1	1
+[1] // c\\\n2	ERROR
+/* x \\\n */ 1	1
+# A quote inside a comment opens no string, so a backslash and a line
+# break after one are comment text too, CRLF as much as LF.
+// it's\\\r\n1	1
+/* it's \\\r\n */ 1	1

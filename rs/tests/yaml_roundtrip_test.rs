@@ -1,11 +1,11 @@
 //! YAML's render against YAML's own reader: the round trip the translation
 //! design asks of it (transduce's `docs/translation.md`, step 3). Every
-//! YAML input the sibling tabnas/yaml checkout's fixtures hold, read,
+//! YAML input tabnas/yaml's fixtures hold (vendored into test/fixtures), read,
 //! written through `translate` as YAML, and read back, is the same value.
 //! It lives here rather than in tabnas/yaml because that repository does
 //! not depend on alchemy, and this command composes the three components.
-//! The fixtures are the sibling checkout's, the one `rs/Cargo.toml` takes
-//! tabnas-yaml from by path, so they are the reader's own: the parity rows
+//! The fixtures are those of the tabnas/yaml release `go/go.mod` requires,
+//! which tools/vendor-fixtures.sh vendors: the parity rows
 //! of `test/spec/*.tsv` that parse, and every case of the vendored YAML
 //! Test Suite that is not an error case.
 //!
@@ -56,14 +56,17 @@ impl Write for Buffer {
     }
 }
 
-/// The root of the sibling tabnas/yaml checkout, the one `rs/Cargo.toml`
-/// takes tabnas-yaml from, so the fixtures are the reader's own. Without
-/// it, or without its fixtures, this fails rather than reading none.
+/// tabnas/yaml's test files, vendored into test/fixtures/yaml. Without
+/// them this fails rather than reading none.
 fn yaml_checkout() -> PathBuf {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../yaml");
+    let fixtures = match std::env::var_os("DMOG_FIXTURES") {
+        Some(dir) if !dir.is_empty() => PathBuf::from(dir),
+        _ => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../test/fixtures"),
+    };
+    let root = fixtures.join("yaml");
     assert!(
         root.join("test/spec").is_dir() && root.join("test/yaml-test-suite").is_dir(),
-        "no tabnas/yaml checkout with its fixtures beside this one: {}",
+        "no vendored tabnas/yaml fixtures (run tools/vendor-fixtures.sh): {}",
         root.display()
     );
     root

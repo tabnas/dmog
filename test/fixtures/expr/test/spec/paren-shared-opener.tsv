@@ -1,0 +1,32 @@
+input	expected
+# Two paren operators share the opener `(`: a group, `paren`, whose
+# preval is inactive, and a call, `call`, whose preval is active. A value
+# before the opener selects the call, and no value the group. The
+# runner's evaluator writes each operation as [op.name, ...terms], so a
+# cell names the operator that built each node, which the operators'
+# common source `(` cannot show. Only the last operator declared on an
+# opener used to be active: with `call` last a group read as a call
+# (`(e)` and `e()` were both a call of `e`), and with `paren` last `f(x)`
+# was no call at all. The default `plain` gives way to the table's own
+# group on `(` and `)`. The runners also parse every row with the two
+# operators declared in the other order, which must not matter.
+(e)	["paren-paren","e"]
+e()	["call-paren","e"]
+f(x)	["call-paren","f","x"]
+f()	["call-paren","f"]
+()	["paren-paren"]
+((e))	["paren-paren",["paren-paren","e"]]
+(e)(x)	["call-paren",["paren-paren","e"],"x"]
+f(x)(y)	["call-paren",["call-paren","f","x"],"y"]
+f((x))	["call-paren","f",["paren-paren","x"]]
+(f(x))	["paren-paren",["call-paren","f","x"]]
+f(g(x))	["call-paren","f",["call-paren","g","x"]]
+1+(2)	["addition-infix",1,["paren-paren",2]]
+1+f(2)	["addition-infix",1,["call-paren","f",2]]
+(1)+f(2)	["addition-infix",["paren-paren",1],["call-paren","f",2]]
+-(1)	["negative-prefix",["paren-paren",1]]
+-f(1)	["negative-prefix",["call-paren","f",1]]
+f(1,2)	["call-paren","f",[1,2]]
+(1,2)	["paren-paren",[1,2]]
+[f(1),(2)]	[["call-paren","f",1],["paren-paren",2]]
+{a:f(1),b:(2)}	{"a":["call-paren","f",1],"b":["paren-paren",2]}

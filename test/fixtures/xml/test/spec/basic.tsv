@@ -1,0 +1,35 @@
+# name	input	expected	opts	msg
+# -----------------------------------------------------------------------------
+# Each row is one XML parse test.
+#   name     - unique test identifier
+#   input    - XML source. Escapes: \n (LF) \r (CR) \t (TAB) \\ (backslash)
+#              \uXXXX (BMP code point, for characters that must not be
+#              written literally into the fixture, e.g. a leading BOM)
+#   expected - JSON encoding of the parsed result, OR the literal token
+#              "ERROR" (optionally followed by ":code") to assert a parse
+#              error. The JSON is parsed as-is (standard JSON escapes).
+#   opts     - optional JSON object of plugin options; empty for defaults.
+#   msg      - optional substring the rendered error message must contain
+#              (only meaningful alongside an ERROR expectation).
+# -----------------------------------------------------------------------------
+
+empty-element	<a></a>	{"name":"a","localName":"a","attributes":{},"children":[]}
+self-closing	<a/>	{"name":"a","localName":"a","attributes":{},"children":[]}
+self-closing-space	<br />	{"name":"br","localName":"br","attributes":{},"children":[]}
+text-simple	<a>hello</a>	{"name":"a","localName":"a","attributes":{},"children":["hello"]}
+text-whitespace	<greet>hello world</greet>	{"name":"greet","localName":"greet","attributes":{},"children":["hello world"]}
+text-only-spaces	<p>  hello   world  </p>	{"name":"p","localName":"p","attributes":{},"children":["  hello   world  "]}
+nested-empty	<a><b></b></a>	{"name":"a","localName":"a","attributes":{},"children":[{"name":"b","localName":"b","attributes":{},"children":[]}]}
+nested-text	<a><b>x</b></a>	{"name":"a","localName":"a","attributes":{},"children":[{"name":"b","localName":"b","attributes":{},"children":["x"]}]}
+deeply-nested	<a><b><c>x</c></b></a>	{"name":"a","localName":"a","attributes":{},"children":[{"name":"b","localName":"b","attributes":{},"children":[{"name":"c","localName":"c","attributes":{},"children":["x"]}]}]}
+multiple-children-selfclose	<a><b/><c/></a>	{"name":"a","localName":"a","attributes":{},"children":[{"name":"b","localName":"b","attributes":{},"children":[]},{"name":"c","localName":"c","attributes":{},"children":[]}]}
+multiple-children-text	<a><b>1</b><c>2</c></a>	{"name":"a","localName":"a","attributes":{},"children":[{"name":"b","localName":"b","attributes":{},"children":["1"]},{"name":"c","localName":"c","attributes":{},"children":["2"]}]}
+mixed-content	<a>hello<b>inner</b>world</a>	{"name":"a","localName":"a","attributes":{},"children":["hello",{"name":"b","localName":"b","attributes":{},"children":["inner"]},"world"]}
+multiline	<root>\n  <a>1</a>\n  <b>2</b>\n</root>	{"name":"root","localName":"root","attributes":{},"children":["\n  ",{"name":"a","localName":"a","attributes":{},"children":["1"]},"\n  ",{"name":"b","localName":"b","attributes":{},"children":["2"]},"\n"]}
+tag-name-dash	<a-b>x</a-b>	{"name":"a-b","localName":"a-b","attributes":{},"children":["x"]}
+tag-name-dot	<a.b>x</a.b>	{"name":"a.b","localName":"a.b","attributes":{},"children":["x"]}
+tag-name-underscore	<a_b>x</a_b>	{"name":"a_b","localName":"a_b","attributes":{},"children":["x"]}
+tag-name-unicode-thai	<เจมส์>x</เจมส์>	{"name":"เจมส์","localName":"เจมส์","attributes":{},"children":["x"]}
+tag-name-unicode-greek	<Ωmega>x</Ωmega>	{"name":"Ωmega","localName":"Ωmega","attributes":{},"children":["x"]}
+text-crlf-normalised	<a>line1\r\nline2</a>	{"name":"a","localName":"a","attributes":{},"children":["line1\nline2"]}
+text-cr-normalised	<a>line1\rline2</a>	{"name":"a","localName":"a","attributes":{},"children":["line1\nline2"]}

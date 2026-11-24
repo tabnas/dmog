@@ -18,7 +18,7 @@
 
 import { join } from 'node:path'
 
-import { REPO_ROOT } from './host'
+import { FIXTURES_ROOT } from './host'
 
 // The metadata the worked example carries: three columns by path.
 export const METADATA =
@@ -64,9 +64,9 @@ export function recordsYaml(records: number): string {
   return s
 }
 
-// The transduce checkout beside this one, whose fixtures the Rust tests
-// read (`../../transduce/rs/tests/fixtures` from rs/).
-export const TRANSDUCE = join(REPO_ROOT, '..', 'transduce')
+// transduce's test files, vendored into test/fixtures/transduce, which the
+// Rust tests read too.
+export const TRANSDUCE = join(FIXTURES_ROOT, 'transduce')
 
 // transduce's fixture documents: required, as they are for the Rust
 // tests.

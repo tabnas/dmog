@@ -1,0 +1,4 @@
+input	expected	opts
+[ 1, 2, null, "foo" ]	[1,2,null,"foo"]	{"disallowComments":true}
+{ "hello": [], "world": {} }	{"hello":[],"world":{}}	{"disallowComments":true}
+{ "foo": /*comment*/ true }	ERROR:unexpected	{"disallowComments":true}

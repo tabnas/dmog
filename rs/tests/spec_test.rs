@@ -1,5 +1,4 @@
-// tabnas-alchemy's shared fixture run.tsv, in the sibling checkout's
-// test/spec, run through tabnas_support's runner as alchemy runs its other
+// tabnas-alchemy's shared fixture run.tsv, in its vendored test/spec, run through tabnas_support's runner as alchemy runs its other
 // three: the loader, the escape codec, the `ERROR:<code>` contract and the
 // row loop are the fleet's. A row's input is a program, run over the row's
 // JSON document, and the expected column is the bytes the run writes, as

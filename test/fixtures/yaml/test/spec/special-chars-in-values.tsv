@@ -1,0 +1,33 @@
+input	expected	opts
+a: foo#bar	{"a":"foo#bar"}
+url: http://example.com	{"url":"http://example.com"}
+a long key: value	{"a long key":"value"}
+a: some [text] here	{"a":"some [text] here"}
+a: some {text} here	{"a":"some {text} here"}
+{"d":"a #b","e":1}	{"d":"a #b","e":1}
+{"c":"#fff","bg":"#00ff00 solid","n":3}	{"c":"#fff","bg":"#00ff00 solid","n":3}
+{"d":"issue #123","e":{"f":"PR #5 merged"},"g":2}	{"d":"issue #123","e":{"f":"PR #5 merged"},"g":2}
+[{"m":"a #b","n":1},{"m":"c","n":2}]	[{"m":"a #b","n":1},{"m":"c","n":2}]
+{"e":"a \\" #b","f":1}	{"e":"a \" #b","f":1}
+{'s':'it''s #1','t':2}	{"s":"it's #1","t":2}
+a: "v #1"\nb: 2	{"a":"v #1","b":2}
+a: "x" # note\nb: 2	{"a":"x","b":2}
+﻿	null
+ ﻿\n﻿ 	null
+	""
+a: x﻿	{"a":"x"}
+a: x 	{"a":"x"}
+a: x	{"a":"x"}
+a:\n  1:2:\n    b: 1	{"a":{"1:2":{"b":1}}}	
+127.0.0.1:5000:\n  Name: x	{"127.0.0.1:5000":{"Name":"x"}}	
+22:33:44:55:66:77:\n  ip: 1.2.3.4	{"22:33:44:55:66:77":{"ip":"1.2.3.4"}}	
+12:30: x\n1:2: y	{"12:30":"x","1:2":"y"}	
+{12:30: x}	{"12:30":"x"}	
+- 12:30:\n    a: 1	[{"12:30":{"a":1}}]	
+a: 12:30\nb: 20:03:20	{"a":"12:30","b":"20:03:20"}	
+a: .5 x	{"a":".5 x"}	
+example: .042 mg/L	{"example":".042 mg/L"}	
+a: -.5 x\nb: +.5 y	{"a":"-.5 x","b":"+.5 y"}	
+- .5 x\n- .5	[".5 x",0.5]	
+[.5 x, .5]	[".5 x",0.5]	
+a: .5:1\nb: .5,1	{"a":".5:1","b":".5,1"}	

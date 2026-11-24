@@ -1,0 +1,12 @@
+input	expected
+a = true	{"a":true}
+a = false	{"a":false}
+a = null	{"a":null}
+a = true, false, false	{"a":"true, false, false"}
+a = true false	{"a":"true false"}
+a = null x	{"a":"null x"}
+a = truex	{"a":"truex"}
+a = nullish	{"a":"nullish"}
+a = falsey	{"a":"falsey"}
+a = "true"	{"a":"true"}
+k[] = true\nk[] = x	{"k":[true,"x"]}

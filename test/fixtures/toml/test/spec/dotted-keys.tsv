@@ -1,0 +1,31 @@
+input	expected
+a.b = 1	{"a":{"b":1}}
+a.b.c = 2	{"a":{"b":{"c":2}}}
+a.b.c.d = 1	{"a":{"b":{"c":{"d":1}}}}
+a.b = 1\na.c = 2	{"a":{"b":1,"c":2}}
+# Date-shaped BARE KEYS, the positive control for the T6 range check.
+#
+# A key that merely looks like a date is not a date, so its components are not
+# required to denote a real instant: `2006-01-32 = 1` names a key. Both ports
+# already had a key-context branch in the date matcher for this; the range
+# check added for T6 sits on the VALUE side of that branch, and these rows are
+# what fails if it is ever hoisted above it. Without them, "reject every
+# date-shaped thing whose day is 32" passes the error rows and stays green.
+2006-01-32 = 1	{"2006-01-32":1}
+2100-02-29 = 1	{"2100-02-29":1}
+a.2006-13-01 = 7	{"a":{"2006-13-01":7}}
+# A dotted key is a replace loop (tabnas/toml#78): each segment ending in a
+# dot re-enters the dive rule in the same frame, so rule depth stays what
+# one segment needs however long the key, and the close loop takes the next
+# dotted key without returning to the pair. These rows walk the loop and the
+# tables it reaches: a second dotted key through the loop, back down through
+# tables the first one built, under a header, inside an inline table, and a
+# dotted key whose value holds inline tables with dotted keys of their own,
+# which park a cursor each in the Rust port before the outer key is done.
+a.b = 1\nc.d = 2	{"a":{"b":1},"c":{"d":2}}
+a.b.c = 1\na.b.d = 2\na.e = 3	{"a":{"b":{"c":1,"d":2},"e":3}}
+[t]\na.b = 1\nc.d = 2	{"t":{"a":{"b":1},"c":{"d":2}}}
+a = {b.c = 1, d.e = 2}	{"a":{"b":{"c":1},"d":{"e":2}}}
+x.y = {p.q = {m.n = 1}}	{"x":{"y":{"p":{"q":{"m":{"n":1}}}}}}
+x.y = {p.q = {m.n = 1}, r = 2}\nx.z = 3	{"x":{"y":{"p":{"q":{"m":{"n":1}}},"r":2},"z":3}}
+a.b = {c.d = 1}\na.e = 2	{"a":{"b":{"c":{"d":1}},"e":2}}

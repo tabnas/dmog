@@ -1,0 +1,14 @@
+input	expected	opts
+h1, h2 { margin: 0 }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["h1","h2"],"declarations":[{"type":"declaration","property":"margin","value":"0"}]}]}
+a:not(.x, .y), b { top: 0 }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a:not(.x, .y)","b"],"declarations":[{"type":"declaration","property":"top","value":"0"}]}]}
+.nav > li { padding: 0 }	{"type":"stylesheet","rules":[{"type":"rule","selectors":[".nav > li"],"declarations":[{"type":"declaration","property":"padding","value":"0"}]}]}
+[type="checkbox"], [type="radio"] { padding: 0 }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["[type=\"checkbox\"]","[type=\"radio\"]"],"declarations":[{"type":"declaration","property":"padding","value":"0"}]}]}
+::-webkit-file-upload-button { font: inherit }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["::-webkit-file-upload-button"],"declarations":[{"type":"declaration","property":"font","value":"inherit"}]}]}
+a /*{*/, b { c: d }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a","b"],"declarations":[{"type":"declaration","property":"c","value":"d"}]}]}
+a[x="{;}"], b { c: d }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a[x=\"{;}\"]","b"],"declarations":[{"type":"declaration","property":"c","value":"d"}]}]}
+a\\{, b { c: d }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a\\{","b"],"declarations":[{"type":"declaration","property":"c","value":"d"}]}]}
+a), b { c: d }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a)","b"],"declarations":[{"type":"declaration","property":"c","value":"d"}]}]}
+a(, b { c: d }	ERROR:unexpected
+a, b { c: d } e, f { g: h }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a","b"],"declarations":[{"type":"declaration","property":"c","value":"d"}]},{"type":"rule","selectors":["e","f"],"declarations":[{"type":"declaration","property":"g","value":"h"}]}]}
+a { b, c { d: e } }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"rule","selectors":["b","c"],"declarations":[{"type":"declaration","property":"d","value":"e"}]}]}]}
+a:is(b, (c, d)), e { f: g }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a:is(b, (c, d))","e"],"declarations":[{"type":"declaration","property":"f","value":"g"}]}]}

@@ -1,0 +1,18 @@
+input	expected	opts
+{}	{}
+{ }	{}
+{"a":1}	{"a":1}
+{ "foo": true }	{"foo":true}
+{ "bar": 8, "xoo": "foo" }	{"bar":8,"xoo":"foo"}
+{ "hello": [], "world": {} }	{"hello":[],"world":{}}
+{ "a": false, "b": true, "c": [ 7.4 ] }	{"a":false,"b":true,"c":[7.4]}
+{ "lineComment": "//", "blockComment": ["/*", "*/"], "brackets": [ ["{", "}"], ["[", "]"], ["(", ")"] ] }	{"lineComment":"//","blockComment":["/*","*/"],"brackets":[["{","}"],["[","]"],["(",")"]]}
+{ "hello": { "again": { "inside": 5 }, "world": 1 }}	{"hello":{"again":{"inside":5},"world":1}}
+{ "": true }	{"":true}
+{ "foo": "bar" }	{"foo":"bar"}
+{ "foo": {"bar": 1, "car": 2 } }	{"foo":{"bar":1,"car":2}}
+{ "foo": {"bar": 1, "car": 8 }, "goo": {} }	{"foo":{"bar":1,"car":8},"goo":{}}
+{ "val": 1 }	{"val":1}
+{"id": "$", "v": [ null, null] }	{"id":"$","v":[null,null]}
+{ "foo": { "goo": 3 } }	{"foo":{"goo":3}}
+{ "key1": { "key11": [ "val111", "val112" ] }, "key2": [ { "key21": false, "key22": 221 }, null, [{}] ] }	{"key1":{"key11":["val111","val112"]},"key2":[{"key21":false,"key22":221},null,[{}]]}

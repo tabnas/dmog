@@ -1,0 +1,78 @@
+input	expected
+# Documents expr's render (alchemy/render.alc) writes, as alchemy runs it,
+# each under a comment holding the tree it was given, and the tree every
+# reader reads from them, each operator reduced to its source text as the
+# other fixtures read it. The render reads an operation's operator as that
+# text (the reduced tree, which Go's Simplify and Rust's simplify give) or
+# as the object that describes it, whose src member is that text (the
+# reader's own value, which TypeScript's parse and Rust's give), and the
+# reader's own value of each document below is written as the same
+# document again. A list led by an object whose src a reader reads as an
+# operator that is no default one the render refuses with
+# TARGET_VALUE_UNREPRESENTABLE, since the reader would keep that src
+# alone, so no row holds one; the rows at the end hold the objects with a
+# src that every reader keeps.
+# ["+",1,2], or the reader's own value of 1+2, its operator's description first
+1+2\n	["+",1,2]
+# ["+",1,["*",2,3]]: * binds tighter than +
+1+2*3\n	["+",1,["*",2,3]]
+# ["+",["*",1,2],3]
+1*2+3\n	["+",["*",1,2],3]
+# ["*",["+",1,2],3]: a term that needs grouping is written as a list, since parentheses read back as a group
+["+",1,2]*3\n	["*",["+",1,2],3]
+# ["-",["-",1,2],3]: every infix operator binds to the left
+1-2-3\n	["-",["-",1,2],3]
+# ["-",1,["-",2,3]]
+1-["-",2,3]\n	["-",1,["-",2,3]]
+# ["-",1,["+",2,3]]
+1-["+",2,3]\n	["-",1,["+",2,3]]
+# ["/",8,["*",2,2]]
+8/["*",2,2]\n	["/",8,["*",2,2]]
+# ["%",["/",8,2],["*",3,4]]
+8/2%["*",3,4]\n	["%",["/",8,2],["*",3,4]]
+# ["-",1]
+-1\n	["-",1]
+# ["-",["-",1]]
+--1\n	["-",["-",1]]
+# ["-",["+",1,2]]: a prefix operator binds tighter than any infix one
+-["+",1,2]\n	["-",["+",1,2]]
+# ["+","x"]
++"x"\n	["+","x"]
+# ["*",["-",1],2]
+-1*2\n	["*",["-",1],2]
+# ["(",1]: a group
+(1)\n	["(",1]
+# ["("]: an empty group
+()\n	["("]
+# ["*",["(",["+",1,2]],3]
+(1+2)*3\n	["*",["(",["+",1,2]],3]
+# ["-",["(",["-",2,3]]]
+-(2-3)\n	["-",["(",["-",2,3]]]
+# ["*",1]: a list that only looks like an operation is written as a list
+["*",1]\n	["*",1]
+# ["+",1,2,3]
+["+",1,2,3]\n	["+",1,2,3]
+# [["+",1,2],3]
+[1+2,3]\n	[["+",1,2],3]
+# {"a":["+",1,2],"b":["(",["*",2,3]]}
+{"a":1+2,"b":(2*3)}\n	{"a":["+",1,2],"b":["(",["*",2,3]]}
+# ["a",["-",1,2],{"c":["%",1,2]}]
+["a",1-2,{"c":1%2}]\n	["a",["-",1,2],{"c":["%",1,2]}]
+# [{"a":1},["+",1,2]]: a list whose first element is an object that describes no operator
+[{"a":1},1+2]\n	[{"a":1},["+",1,2]]
+# -1, a negative number: written with its sign, which reads back as the operator - applied to its magnitude
+-1\n	["-",1]
+# [{"src":"+","x":1},1,2]: an object whose src member is a default operator's source text is read as that operator
+1+2\n	["+",1,2]
+# [{"a":1,"src":""},1]: an object first in a list whose src no reader reads, one that is empty, zero, false or null, is written as it is, and reads back as itself
+[{"a":1,"src":""},1]\n	[{"a":1,"src":""},1]
+# [{"src":0},1]
+[{"src":0},1]\n	[{"src":0},1]
+# [{"src":false},1]
+[{"src":false},1]\n	[{"src":false},1]
+# [{"src":null},1]
+[{"src":null},1]\n	[{"src":null},1]
+# {"a":{"src":"x"}}: an object with any src is written as it is where it does not lead a list, and reads back as itself
+{"a":{"src":"x"}}\n	{"a":{"src":"x"}}
+# [1,{"src":"x"}]
+[1,{"src":"x"}]\n	[1,{"src":"x"}]

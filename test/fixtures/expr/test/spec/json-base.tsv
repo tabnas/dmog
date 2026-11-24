@@ -1,0 +1,5 @@
+input	expected
+# JSON base compatibility - default Expr config
+1	1
+"a"	"a"
+true	true

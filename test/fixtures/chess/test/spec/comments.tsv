@@ -1,0 +1,52 @@
+input	expected	opts
+# Commentary, PGN spec 5. A comment attaches to the move it follows; one
+# that follows no move annotates the starting position of its line.
+#
+# --- brace comments ---
+1. e4 {best by test}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"best by test"}]}]}	{"start":"movetext"}
+1. e4 {a} {b}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"a"},{"kind":"brace","text":"b"}]}]}	{"start":"movetext"}
+{intro} 1. e4	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}],"comments":[{"kind":"brace","text":"intro"}]}	{"start":"movetext"}
+# The body is kept verbatim, whitespace included.
+1. e4 { spaced }	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":" spaced "}]}]}	{"start":"movetext"}
+1. e4 {}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":""}]}]}	{"start":"movetext"}
+# 5: a brace comment may span lines, and does not nest — the first `}` ends
+# it, and a `{` or `;` inside loses its meaning.
+1. e4 {two\nlines}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"two\nlines"}]}]}	{"start":"movetext"}
+1. e4 {a ; b}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"a ; b"}]}]}	{"start":"movetext"}
+1. e4 {a { b}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"a { b"}]}]}	{"start":"movetext"}
+# Non-ASCII is permitted in commentary (4.1).
+1. e4 {café naïve}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"café naïve"}]}]}	{"start":"movetext"}
+# --- rest-of-line comments ---
+1. e4 ; a remark\ne5	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"line","text":" a remark"}]},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"}]}	{"start":"movetext"}
+1. e4 ;	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"line","text":""}]}]}	{"start":"movetext"}
+# Braces inside a rest-of-line comment lose their meaning (5).
+1. e4 ; a {b} c\ne5	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"line","text":" a {b} c"}]},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"}]}	{"start":"movetext"}
+# --- [%name arg,arg] markup: a de facto extension, on by default ---
+1. e4 {[%clk 0:05:00]}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"[%clk 0:05:00]","commands":[{"name":"clk","args":["0:05:00"]}]}]}]}	{"start":"movetext"}
+1. e4 {[%eval -1.24]}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"[%eval -1.24]","commands":[{"name":"eval","args":["-1.24"]}]}]}]}	{"start":"movetext"}
+1. e4 {[%cal Ra1a8,Gb1b8]}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"[%cal Ra1a8,Gb1b8]","commands":[{"name":"cal","args":["Ra1a8","Gb1b8"]}]}]}]}	{"start":"movetext"}
+1. e4 {[%csl Ye4]}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"[%csl Ye4]","commands":[{"name":"csl","args":["Ye4"]}]}]}]}	{"start":"movetext"}
+1. e4 {a [%clk 0:01] b}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"a [%clk 0:01] b","commands":[{"name":"clk","args":["0:01"]}]}]}]}	{"start":"movetext"}
+# A command with no argument.
+1. e4 {[%draw]}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"[%draw]","commands":[{"name":"draw","args":[]}]}]}]}	{"start":"movetext"}
+# Switched off, the same comment is text and nothing more.
+1. e4 {[%clk 0:05:00]}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"[%clk 0:05:00]"}]}]}	{"start":"movetext","commands":false}
+# A bracket that is not command markup stays plain text.
+1. e4 {see [1]}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"see [1]"}]}]}	{"start":"movetext"}
+# The supplement's second kind of operand: a double-quoted string, which
+# may hold the comma and the right bracket a bare operand may not. This is
+# why finding the end of a command needs a scanner and not a regex.
+1. e4 {[%src "Lasker, Common Sense in Chess"]}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"[%src \"Lasker, Common Sense in Chess\"]","commands":[{"name":"src","args":["Lasker, Common Sense in Chess"]}]}]}]}	{"start":"movetext"}
+1. e4 {[%note "a ] bracket"] after}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"[%note \"a ] bracket\"] after","commands":[{"name":"note","args":["a ] bracket"]}]}]}]}	{"start":"movetext"}
+# Quoted and bare operands mix, and a quoted one keeps its content only.
+1. e4 {[%mix bare,"quoted, with comma",tail]}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"[%mix bare,\"quoted, with comma\",tail]","commands":[{"name":"mix","args":["bare","quoted, with comma","tail"]}]}]}]}	{"start":"movetext"}
+# An operand list that never closes is not a command at all: it stays in
+# the text, which is what the supplement asks of a reader that cannot make
+# sense of a command.
+1. e4 {[%oops unterminated}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"[%oops unterminated"}]}]}	{"start":"movetext"}
+1. e4 {[%oops "unterminated quote]}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"[%oops \"unterminated quote]"}]}]}	{"start":"movetext"}
+# Two commands in one comment, the first of which holds a bracket.
+1. e4 {[%a "x]y"] mid [%clk 0:01]}	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","comments":[{"kind":"brace","text":"[%a \"x]y\"] mid [%clk 0:01]","commands":[{"name":"a","args":["x]y"]},{"name":"clk","args":["0:01"]}]}]}]}	{"start":"movetext"}
+# --- rejections ---
+1. e4 {never closed	ERROR:unterminated_comment	{"start":"movetext"}
+1. e4 a}	ERROR	{"start":"movetext"}

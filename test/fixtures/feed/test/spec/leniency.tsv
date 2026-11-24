@@ -1,0 +1,35 @@
+input	expected	opts
+# Non-Misc content around the document element: XML 1.0 2.1 says
+#   document ::= prolog element Misc*
+# so only comments, PIs and white space may sit outside the root. The base
+# tabnas engine is a lenient JSON-family lexer, so the standing worry is that
+# ITS notion of top-level content (stray punctuation, `#` / `//` / `/* */`
+# comments) reaches through @tabnas/xml into this plugin.
+#
+# It does not. Every row here is REJECTED by both runtimes as of
+# 2026-08-09, and these rows exist to keep it that way: `test/spec/
+# xml-layer.tsv` already pins `<feed/><extra/>` and `<feed/>junk`, but not
+# the engine-comment or stray-punctuation forms, which are the ones that
+# would come back if the xml layer ever relaxed again.
+#
+# STILL OPEN, deliberately not a row here because it would be red:
+#   <?xml version="1.0"?><?xml version="1.0"?><feed .../>
+# A second XML declaration is accepted. XML 1.0 2.6 reserves the `xml` PI
+# target and 2.8 allows a declaration only as the first thing in the
+# document. Add the row when the parser rejects it.
+#
+# --- content after the document element ----------------------------------
+<feed xmlns="http://www.w3.org/2005/Atom"><title>x</title></feed> trailing	ERROR:character data is not allowed outside the root element
+<rss version="2.0"><channel/></rss>garbage	ERROR:character data is not allowed outside the root element
+<feed xmlns="http://www.w3.org/2005/Atom"/>}	ERROR:character data is not allowed outside the root element
+<feed xmlns="http://www.w3.org/2005/Atom"/>,	ERROR:character data is not allowed outside the root element
+#
+# --- engine line/block comment syntax BEFORE the document element --------
+# `#`, `//` and `/* */` are jsonic/tabnas comment forms, not XML prolog Misc.
+# c\n<feed xmlns="http://www.w3.org/2005/Atom"/>	ERROR:character data is not allowed outside the root element
+// c\n<feed xmlns="http://www.w3.org/2005/Atom"/>	ERROR:character data is not allowed outside the root element
+/* c */<feed xmlns="http://www.w3.org/2005/Atom"/>	ERROR:character data is not allowed outside the root element
+#
+# --- engine line comment syntax AFTER the document element ---------------
+<feed xmlns="http://www.w3.org/2005/Atom"/>// x	ERROR:character data is not allowed outside the root element
+<feed xmlns="http://www.w3.org/2005/Atom"/>\n# x	ERROR:character data is not allowed outside the root element

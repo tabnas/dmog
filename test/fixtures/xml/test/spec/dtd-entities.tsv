@@ -1,0 +1,48 @@
+# name	input	expected	opts	msg
+# DOCTYPE-declared general internal entities. The plugin parses
+# `<!ENTITY name "value">` declarations from the internal subset,
+# stores them per-parse, and uses them to resolve `&name;` in text
+# and attribute values (recursively, with cycle detection).
+
+dtd-entity-basic-text	<!DOCTYPE doc [<!ENTITY foo "bar">]><doc>&foo;</doc>	{"name":"doc","localName":"doc","attributes":{},"children":["bar"]}
+dtd-entity-mixed-text	<!DOCTYPE doc [<!ENTITY x "world">]><doc>hello &x;!</doc>	{"name":"doc","localName":"doc","attributes":{},"children":["hello world!"]}
+dtd-entity-in-attribute	<!DOCTYPE doc [<!ENTITY x "world">]><doc a="hello &x;"/>	{"name":"doc","localName":"doc","attributes":{"a":"hello world"},"children":[]}
+dtd-entity-single-quoted	<!DOCTYPE doc [<!ENTITY x 'plain'>]><doc>&x;</doc>	{"name":"doc","localName":"doc","attributes":{},"children":["plain"]}
+dtd-entity-numeric-ref-in-value	<!DOCTYPE doc [<!ENTITY x "&#65;">]><doc>&x;</doc>	{"name":"doc","localName":"doc","attributes":{},"children":["A"]}
+dtd-entity-recursive	<!DOCTYPE d [<!ENTITY a "AAA"><!ENTITY b "BB&a;BB">]><d>&b;</d>	{"name":"d","localName":"d","attributes":{},"children":["BBAAABB"]}
+dtd-entity-multi-decl	<!DOCTYPE d [<!ENTITY a "1"><!ENTITY b "2"><!ENTITY c "3">]><d>&a;&b;&c;</d>	{"name":"d","localName":"d","attributes":{},"children":["123"]}
+dtd-entity-parameter-ignored	<!DOCTYPE d [<!ENTITY % ignored "X"><!ENTITY g "G">]><d>&g;</d>	{"name":"d","localName":"d","attributes":{},"children":["G"]}
+dtd-entity-external-ignored	<!DOCTYPE d [<!ENTITY ext SYSTEM "ignored.dtd"><!ENTITY g "ok">]><d>&g;</d>	{"name":"d","localName":"d","attributes":{},"children":["ok"]}
+dtd-entity-predefined-overrides	<!DOCTYPE d [<!ENTITY amp "Z">]><d>&amp;</d>	{"name":"d","localName":"d","attributes":{},"children":["&"]}
+
+# XML 1.0 §4.1, WFC "Entity Declared". A non-validating processor is not
+# obliged to read the external subset (or declarations hidden behind a
+# parameter entity), and the spec says so explicitly: when part of the DTD
+# went unread and the document is not standalone="yes", an undeclared
+# entity is NOT a well-formedness error. Unread replacement text cannot be
+# substituted, so the reference is left verbatim in the output.
+ext-subset-system-undeclared-entity-allowed	<!DOCTYPE d SYSTEM "d.dtd"><d>&nodecl;</d>	{"name":"d","localName":"d","attributes":{},"children":["&nodecl;"]}
+ext-subset-public-undeclared-entity-allowed	<!DOCTYPE d PUBLIC "-//X//EN" "d.dtd"><d>&nodecl;</d>	{"name":"d","localName":"d","attributes":{},"children":["&nodecl;"]}
+ext-subset-undeclared-entity-allowed-in-attr	<!DOCTYPE d SYSTEM "d.dtd"><d a="&nodecl;"/>	{"name":"d","localName":"d","attributes":{"a":"&nodecl;"},"children":[]}
+ext-subset-plus-internal-subset-allowed	<!DOCTYPE d SYSTEM "d.dtd" [<!ENTITY g "G">]><d>&g;&nodecl;</d>	{"name":"d","localName":"d","attributes":{},"children":["G&nodecl;"]}
+pe-ref-in-internal-subset-allowed	<!DOCTYPE d [<!ENTITY % p SYSTEM "p.ent">%p;]><d>&nodecl;</d>	{"name":"d","localName":"d","attributes":{},"children":["&nodecl;"]}
+# standalone="yes" asserts nothing outside the internal subset matters, so
+# the constraint applies again (§2.9).
+standalone-yes-with-ext-subset-still-strict	<?xml version="1.0" standalone="yes"?><!DOCTYPE d SYSTEM "d.dtd"><d>&nodecl;</d>	ERROR:undeclared_entity
+standalone-no-with-ext-subset-lenient	<?xml version="1.0" standalone="no"?><!DOCTYPE d SYSTEM "d.dtd"><d>&nodecl;</d>	{"name":"d","localName":"d","attributes":{},"children":["&nodecl;"]}
+# No DTD at all, or an internal subset with no external part, means every
+# declaration was seen — so an undeclared entity IS an error.
+no-doctype-undeclared-entity-rejected	<d>&nodecl;</d>	ERROR:undeclared_entity
+internal-subset-only-undeclared-entity-rejected	<!DOCTYPE d [<!ENTITY g "G">]><d>&nodecl;</d>	ERROR:undeclared_entity
+
+# An `<!ENTITY name SYSTEM "...">` in the internal subset DECLARES the
+# entity, so referencing it is well-formed even though the replacement
+# text is never fetched (§4.4.3, "not included"). Two constraints still
+# bite: §4.1 WFC "No External Entity References" forbids the reference in
+# an attribute value, and WFC "Parsed Entity" forbids referencing an
+# NDATA (unparsed) entity anywhere.
+ext-general-entity-ref-in-text-allowed	<!DOCTYPE d [<!ENTITY e SYSTEM "e.ent">]><d>&e;</d>	{"name":"d","localName":"d","attributes":{},"children":["&e;"]}
+ext-general-entity-public-ref-in-text-allowed	<!DOCTYPE d [<!ENTITY e PUBLIC "-//X//EN" "e.ent">]><d>&e;</d>	{"name":"d","localName":"d","attributes":{},"children":["&e;"]}
+ext-general-entity-ref-in-attr-rejected	<!DOCTYPE d [<!ENTITY e SYSTEM "e.ent">]><d a="&e;"/>	ERROR:external_entity_in_attr
+unparsed-entity-ref-in-text-rejected	<!DOCTYPE d [<!ENTITY e SYSTEM "e.gif" NDATA gif>]><d>&e;</d>	ERROR:unparsed_entity_ref
+unparsed-entity-ref-in-attr-rejected	<!DOCTYPE d [<!ENTITY e SYSTEM "e.gif" NDATA gif>]><d a="&e;"/>	ERROR:unparsed_entity_ref

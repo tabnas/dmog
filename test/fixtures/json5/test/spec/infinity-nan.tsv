@@ -1,0 +1,9 @@
+input	expected	opts
+Infinity	Infinity
++Infinity	Infinity
+-Infinity	-Infinity
+NaN	NaN
++NaN	NaN
+-NaN	NaN
+Infinity	ERROR:unexpected	{"infinity":false}
+NaN	ERROR:unexpected	{"infinity":false}

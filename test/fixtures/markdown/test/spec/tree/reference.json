@@ -1,0 +1,1783 @@
+[
+ {
+  "input": "[foo]\\n\\n[foo]: /url \"title\"",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     19
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       5
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "/url",
+       "title": "title",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "foo"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[foo][]\\n\\n[foo]: /url",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     11
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       7
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "/url",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "foo"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[text][foo]\\n\\n[foo]: /url",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     11
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       11
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "/url",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "text"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "![alt][img]\\n\\n[img]: /i.png",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     13
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       11
+      ]
+     ],
+     "children": [
+      {
+       "type": "image",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "/i.png",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "alt"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "![img]",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     6
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       6
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "![img]"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[undefined] stays a reference",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     29
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       29
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "[undefined] stays a reference"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[Foo  Bar]\\n\\n[foo\\nbar]: /u",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     4,
+     8
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       10
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "/u",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "Foo  Bar"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[a\\\\*b]",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     6
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       6
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "[a*b]"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[ ] and []",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     10
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       10
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "[ ] and []"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[foo][ ]",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     8
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       8
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "[foo][ ]"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[^1]",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     4
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       4
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "[^1]"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "*[foo*]",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     7
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       7
+      ]
+     ],
+     "children": [
+      {
+       "type": "emph",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "[foo"
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "]"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[a](/u) [b]",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     11
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       11
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "/u",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "a"
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": " [b]"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[foo]: /u\\nbar",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     3
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       3
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "bar"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[foo]: /u\\n===",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     3
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       3
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "==="
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[foo]: /u\\nBar\\n===",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     3
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "heading",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       3,
+       3
+      ]
+     ],
+     "level": 1,
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "Bar"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "> [a]: /u\\n> b",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     3
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "block_quote",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       3
+      ]
+     ],
+     "children": [
+      {
+       "type": "paragraph",
+       "sourcepos": [
+        [
+         1,
+         3
+        ],
+        [
+         2,
+         3
+        ]
+       ],
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "b"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "- [a]: /u\\n\\n  b",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     3
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "list",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       3,
+       3
+      ]
+     ],
+     "listData": {
+      "type": "bullet",
+      "tight": true,
+      "start": 1,
+      "delimiter": "",
+      "bulletChar": "-",
+      "padding": 2,
+      "markerOffset": 0
+     },
+     "children": [
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         3,
+         3
+        ]
+       ],
+       "listData": {
+        "type": "bullet",
+        "tight": true,
+        "start": 1,
+        "delimiter": "",
+        "bulletChar": "-",
+        "padding": 2,
+        "markerOffset": 0
+       },
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           3,
+           3
+          ],
+          [
+           3,
+           3
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "b"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "- [a]: /u\\n  b",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     3
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "list",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       3
+      ]
+     ],
+     "listData": {
+      "type": "bullet",
+      "tight": true,
+      "start": 1,
+      "delimiter": "",
+      "bulletChar": "-",
+      "padding": 2,
+      "markerOffset": 0
+     },
+     "children": [
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         2,
+         3
+        ]
+       ],
+       "listData": {
+        "type": "bullet",
+        "tight": true,
+        "start": 1,
+        "delimiter": "",
+        "bulletChar": "-",
+        "padding": 2,
+        "markerOffset": 0
+       },
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           1,
+           3
+          ],
+          [
+           2,
+           3
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "b"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[a]: /1\\n[a]: /2\\n\\n[A]",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     4,
+     3
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       4,
+       1
+      ],
+      [
+       4,
+       3
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "/1",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "A"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[link [inner]]",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     14
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       14
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "[link [inner]]"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[a `]` b]",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     9
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       9
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "[a "
+      },
+      {
+       "type": "code",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "]"
+      },
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": " b]"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "- [x] done\\n\\n[x]: /u",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     7
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "list",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       10
+      ]
+     ],
+     "listData": {
+      "type": "bullet",
+      "tight": true,
+      "start": 1,
+      "delimiter": "",
+      "bulletChar": "-",
+      "padding": 2,
+      "markerOffset": 0
+     },
+     "children": [
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         10
+        ]
+       ],
+       "listData": {
+        "type": "bullet",
+        "tight": true,
+        "start": 1,
+        "delimiter": "",
+        "bulletChar": "-",
+        "padding": 2,
+        "markerOffset": 0
+       },
+       "checked": true,
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           1,
+           3
+          ],
+          [
+           1,
+           10
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "done"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[foo]\\n\\n[foo]: <>",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     9
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       5
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "foo"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "| [a] | b |\\n| - | - |",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     9
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "table",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       9
+      ]
+     ],
+     "tableAlign": [
+      null,
+      null
+     ],
+     "children": [
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         11
+        ]
+       ],
+       "isHeaderRow": true,
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           11
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "[a]"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           11
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "b"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "~~[a]~~",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     7
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       7
+      ]
+     ],
+     "children": [
+      {
+       "type": "del",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "[a]"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[a]: </x y> 't'",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     15
+    ]
+   ],
+   "gfm": true
+  }
+ },
+ {
+  "input": "[ΟΔΟΣ] και [Σα]",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     15
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       15
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "[ΟΔΟΣ] και [Σα]"
+      }
+     ]
+    }
+   ]
+  }
+ }
+]

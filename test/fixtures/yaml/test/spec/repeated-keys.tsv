@@ -1,0 +1,33 @@
+input	expected	opts	keys
+# A repeated mapping key. YAML 1.2 forbids one; this grammar, built on
+# jsonic's, combines the values as jsonic's pair rule does: a later
+# mapping merges deep into an earlier one (`map.extend`, the default), any
+# other later value replaces the earlier, and a null replaces whatever was
+# there. A grammar's `map.merge` function, or `map.extend: false` for the
+# later value alone, changes that; those options are an engine's, not a
+# row's, so the runtimes' own tests pin them. A mapping is combined alike
+# wherever it is: at the root, nested, in flow, and the compact mapping of
+# a sequence entry (`- a: ...`), which kept only the later value before
+# 0.5.26.
+a:\n  b: 1\na:\n  c: 2	{"a":{"b":1,"c":2}}
+a: 1\na: 2	{"a":2}
+a: 1\na:\n  b: 2	{"a":{"b":2}}
+a:\n  b: 1\na: 2	{"a":2}
+a:\n  - 1\na:\n  - 2	{"a":[2]}
+x:\n  a:\n    b: 1\n  a:\n    c: 2	{"x":{"a":{"b":1,"c":2}}}
+a:\n  b:\n    c: 1\na:\n  b:\n    d: 2	{"a":{"b":{"c":1,"d":2}}}
+a:\n  b: 1\na:\n  c: 2\na:\n  d: 3	{"a":{"b":1,"c":2,"d":3}}		ordered
+{a: {b: 1}, a: {c: 2}}	{"a":{"b":1,"c":2}}
+- {a: {b: 1}, a: {c: 2}}	[{"a":{"b":1,"c":2}}]
+- a:\n    b: 1\n  a:\n    c: 2	[{"a":{"b":1,"c":2}}]
+- a: 1\n  a: 2	[{"a":2}]
+- x: 0\n  a:\n    b: 1\n  a:\n    c: 2	[{"x":0,"a":{"b":1,"c":2}}]		ordered
+- a:\n    b: 1\n  a:\n    c: 2\n  a:\n    d: 3	[{"a":{"b":1,"c":2,"d":3}}]
+-\n  a:\n    b: 1\n  a:\n    c: 2	[{"a":{"b":1,"c":2}}]
+x:\n  - a:\n      b: 1\n    a:\n      c: 2	{"x":[{"a":{"b":1,"c":2}}]}
+- y:\n    a:\n      b: 1\n    a:\n      c: 2	[{"y":{"a":{"b":1,"c":2}}}]
+- a:\n    b: 1\n- a:\n    c: 2	[{"a":{"b":1}},{"a":{"c":2}}]
+a:\n  b: 1\na:	{"a":null}
+{a: {b: 1}, a}	{"a":null}
+{a, a: {b: 1}}	{"a":{"b":1}}
+- a:\n    b: 1\n  a:	[{"a":null}]

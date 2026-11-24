@@ -1,0 +1,32 @@
+input	expected
+# Every option of #105 on, as tabnas/c will set them: the cases #105
+# reports, `(e)`, `*p++`, `a.b[1]`, `(long)(int)a` and `f(a b)`, among
+# them.
+# The table every options-*.tsv file shares, a small C: the defaults;
+# `comma` `,` infix (left 1000000, right 1100000); `deref` `*` prefix
+# (right 4000000); `post_inc` `++` suffix (left 5000000); `dot` `.` infix
+# (left 5000000, right 5100000); `paren` `(` `)`, a group; `call` `(`
+# `)`, preval active; `subscript` `[` `]`, preval required. The runner's
+# evaluator writes each operation as [op.name, ...terms].
+*p++	["deref-prefix",["post_inc-suffix","p"]]
+-a++	["negative-prefix",["post_inc-suffix","a"]]
+*p++ + 1	["addition-infix",["deref-prefix",["post_inc-suffix","p"]],1]
+(e)	["paren-paren","e"]
+e()	["call-paren","e"]
+f(x)	["call-paren","f","x"]
+f()	["call-paren","f"]
+()	ERROR:unexpected
+a.b[1]	["subscript-paren",["dot-infix","a","b"],1]
+a.b(1)	["call-paren",["dot-infix","a","b"],1]
+(int)a + b	["addition-infix",["cast-cast","int","a"],"b"]
+(long)(int)a	["cast-cast","long",["cast-cast","int","a"]]
+(a)(b)	["call-paren",["paren-paren","a"],"b"]
+f(a, b)	["call-paren","f","a","b"]
+(a, b)	["paren-paren",["comma-infix","a","b"]]
+[-1, 2]	[["negative-prefix",1],2]
+f(a b)	ERROR:unexpected
+(a b)	ERROR:unexpected
+a.b(1, 2)	["call-paren",["dot-infix","a","b"],1,2]
+(int)a.b(1)	["cast-cast","int",["call-paren",["dot-infix","a","b"],1]]
+f((int)a, (char)b)	["call-paren","f",["cast-cast","int","a"],["cast-cast","char","b"]]
+*a.b[1]++	["deref-prefix",["post_inc-suffix",["subscript-paren",["dot-infix","a","b"],1]]]

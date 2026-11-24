@@ -1,0 +1,16 @@
+# name	input	expected	opts
+# DOCTYPE-supplied default attribute values via <!ATTLIST>. The
+# plugin parses every <!ATTLIST> declaration in the internal subset
+# and, when an element instance does not carry an attribute, fills
+# in the declared default value.
+#
+# #REQUIRED and #IMPLIED contribute nothing because they have no
+# default value; #FIXED "value" and bare quoted defaults are honoured.
+
+attlist-basic-default	<!DOCTYPE doc [<!ELEMENT doc EMPTY><!ATTLIST doc x CDATA "default">]><doc/>	{"name":"doc","localName":"doc","attributes":{"x":"default"},"children":[]}
+attlist-default-overridden	<!DOCTYPE doc [<!ATTLIST doc x CDATA "default">]><doc x="custom"/>	{"name":"doc","localName":"doc","attributes":{"x":"custom"},"children":[]}
+attlist-multiple-defaults	<!DOCTYPE doc [<!ATTLIST doc a CDATA "A" b CDATA "B">]><doc/>	{"name":"doc","localName":"doc","attributes":{"a":"A","b":"B"},"children":[]}
+attlist-fixed	<!DOCTYPE doc [<!ATTLIST doc lang CDATA #FIXED "en">]><doc/>	{"name":"doc","localName":"doc","attributes":{"lang":"en"},"children":[]}
+attlist-enumeration-default	<!DOCTYPE doc [<!ATTLIST doc x (a|b|c) "b">]><doc/>	{"name":"doc","localName":"doc","attributes":{"x":"b"},"children":[]}
+attlist-required-and-implied-no-default	<!DOCTYPE doc [<!ATTLIST doc r CDATA #REQUIRED i CDATA #IMPLIED y CDATA "Y">]><doc/>	{"name":"doc","localName":"doc","attributes":{"y":"Y"},"children":[]}
+attlist-applies-per-element	<!DOCTYPE root [<!ATTLIST a x CDATA "AX"><!ATTLIST b x CDATA "BX">]><root><a/><b/></root>	{"name":"root","localName":"root","attributes":{},"children":[{"name":"a","localName":"a","attributes":{"x":"AX"},"children":[]},{"name":"b","localName":"b","attributes":{"x":"BX"},"children":[]}]}

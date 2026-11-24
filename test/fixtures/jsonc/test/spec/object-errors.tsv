@@ -1,0 +1,13 @@
+input	expected	opts
+{,}	ERROR:unexpected
+{ "foo": true, }	ERROR:unexpected
+{ "bar": 8 "xoo": "foo" }	ERROR:unexpected
+{ ,"bar": 8 }	ERROR:unexpected
+{ ,"bar": 8, "foo" }	ERROR:unexpected
+{ "bar": 8, "foo": }	ERROR:unexpected
+{ 8, "foo": 9 }	ERROR:unexpected
+{ "dep": {"bar": 1, "car": 	ERROR:end_of_source
+{ "dep": {"bar": 1,, "car": 	ERROR:unexpected
+{ "dep": {"bar": "na", "dar": "ma", "car":  } }	ERROR:unexpected
+{  "id": { "foo": { } } , }	ERROR:unexpected
+{"prop1":"foo","prop2":"foo2","prop3":{"prp1":{""}}}	ERROR:unexpected

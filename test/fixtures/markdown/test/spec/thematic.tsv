@@ -1,0 +1,6 @@
+input	expected	opts
+---	{"type":"document","children":[{"type":"thematicBreak"}]}
+***	{"type":"document","children":[{"type":"thematicBreak"}]}
+___	{"type":"document","children":[{"type":"thematicBreak"}]}
+  - - -  	{"type":"document","children":[{"type":"thematicBreak"}]}
+* * *	{"type":"document","children":[{"type":"thematicBreak"}]}

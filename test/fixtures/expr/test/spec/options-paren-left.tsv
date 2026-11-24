@@ -1,0 +1,39 @@
+input	expected
+# A binding power on a preval paren: `call` and `subscript` take
+# `left: 5000000`, which binds like a suffix's. Where the paren binds
+# looser than the operator whose operand precedes it, it takes that
+# operator's expression: `a.b[1]` is (a.b)[1], as in C.
+# The table every options-*.tsv file shares, a small C: the defaults;
+# `comma` `,` infix (left 1000000, right 1100000); `deref` `*` prefix
+# (right 4000000); `post_inc` `++` suffix (left 5000000); `dot` `.` infix
+# (left 5000000, right 5100000); `paren` `(` `)`, a group; `call` `(`
+# `)`, preval active; `subscript` `[` `]`, preval required. The runner's
+# evaluator writes each operation as [op.name, ...terms].
+a.b[1]	["subscript-paren",["dot-infix","a","b"],1]
+a.b(1)	["call-paren",["dot-infix","a","b"],1]
+a.b()	["call-paren",["dot-infix","a","b"]]
+a[1].b	["dot-infix",["subscript-paren","a",1],"b"]
+a[1][2]	["subscript-paren",["subscript-paren","a",1],2]
+g(1)(2)	["call-paren",["call-paren","g",1],2]
+a.b.c[1]	["subscript-paren",["dot-infix",["dot-infix","a","b"],"c"],1]
+a.b[1][2]	["subscript-paren",["subscript-paren",["dot-infix","a","b"],1],2]
+a.b(1)(2)	["call-paren",["call-paren",["dot-infix","a","b"],1],2]
+a.b(1).c	["dot-infix",["call-paren",["dot-infix","a","b"],1],"c"]
+a.b(1)++	["post_inc-suffix",["call-paren",["dot-infix","a","b"],1]]
+-a.b(1)	["negative-prefix",["call-paren",["dot-infix","a","b"],1]]
+-a[1]	["negative-prefix",["subscript-paren","a",1]]
+*p[1]	["deref-prefix",["subscript-paren","p",1]]
+*p++	["deref-prefix",["post_inc-suffix","p"]]
+x+a.b(1)	["addition-infix","x",["call-paren",["dot-infix","a","b"],1]]
+x*a.b[1]+2	["addition-infix",["multiplication-infix","x",["subscript-paren",["dot-infix","a","b"],1]],2]
+a.b(1)+c.d[2]	["addition-infix",["call-paren",["dot-infix","a","b"],1],["subscript-paren",["dot-infix","c","d"],2]]
+f(a.b(1))	["call-paren","f",["call-paren",["dot-infix","a","b"],1]]
+[a.b(1)]	[["call-paren",["dot-infix","a","b"],1]]
+{k:a.b[1]}	{"k":["subscript-paren",["dot-infix","a","b"],1]}
+# An operator after a postfix paren that took the whole expression, inside
+# a list, a map and a call, each of which reads the expression's root.
+[a.b(1)+c]	[["addition-infix",["call-paren",["dot-infix","a","b"],1],"c"]]
+{k:a.b(1)+c}	{"k":["addition-infix",["call-paren",["dot-infix","a","b"],1],"c"]}
+f(a.b(1)+c)	["call-paren","f",["addition-infix",["call-paren",["dot-infix","a","b"],1],"c"]]
+[a.b(1).c]	[["dot-infix",["call-paren",["dot-infix","a","b"],1],"c"]]
+[a.b(1)++]	[["post_inc-suffix",["call-paren",["dot-infix","a","b"],1]]]

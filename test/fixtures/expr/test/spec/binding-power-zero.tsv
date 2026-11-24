@@ -1,0 +1,11 @@
+input	expected
+# A binding power of zero is UNSET, not a power of zero: the canonical
+# reads it as `opdef.left || MIN_SAFE_INTEGER`, so `0` takes the fallback
+# exactly as an omitted power does. Only a partner with a NEGATIVE power
+# separates the two readings, because `0 <= -1900000` is false while
+# `MIN_SAFE_INTEGER <= -1900000` is true. `~` is the zero-power operator,
+# `@` the negative-tier one.
+1@2~3	["~",["@",1,2],3]
+1~2@3	["@",["~",1,2],3]
+1~2~3	["~",["~",1,2],3]
+1@2@3	["@",["@",1,2],3]

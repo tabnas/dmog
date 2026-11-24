@@ -1,0 +1,9 @@
+/* A JSON subset in W3C EBNF. `ST` and `NR` are the engine's built-in
+   string and number lexer tokens, so this grammar is about structure
+   rather than about re-deriving scalars character by character. */
+
+Json   ::= Value
+Value  ::= Object | Array | ST | NR | "true" | "false" | "null"
+Object ::= "{" ( Member ( "," Member )* )? "}"
+Member ::= ST ":" Value
+Array  ::= "[" ( Value ( "," Value )* )? "]"

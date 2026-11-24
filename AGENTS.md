@@ -111,6 +111,8 @@ to 16 MiB before it wrote a byte, which the streaming gate found.
 | `rs/` | `tabnas-dmog`: the `dmog` binary and its tests, and the tests of alchemy's programs (`rs/tests/common/` composes the three) |
 | `examples/` | the worked example of the transducer's design (`export.alc`, `table.alc`, `records.json`), which `rs/tests/cli_test.rs` runs as the README says |
 | `test/` | what the three runtimes' tests share: `notation-samples.json` (the translation matrix) and `streaming.json` (the streaming gate) |
+| `test/fixtures/` | the test files vendored from other tabnas repositories, which all three runtimes read (see *Vendored test fixtures*) |
+| `tools/vendor-fixtures.sh` | writes `test/fixtures/` at the releases `go/go.mod` requires |
 | `ci/rust/run.sh` | the Rust gate `.github/workflows/rust.yml` runs |
 | `ci/polyglot/run.sh` | the TypeScript and Go gate the same workflow runs |
 | `ci/phase.sh` | `phase`, which both gates run each step through: a line every 25 seconds while it runs |
@@ -133,16 +135,17 @@ here, in every runtime:
   grammars' own values.
 
 They read alchemy's `test/spec/` and transduce's `rs/tests/` from the
-sibling checkouts, and fail, naming the path, when either is missing.
+vendored fixtures (`test/fixtures`, below), and fail, naming the path,
+when either is missing.
 alchemy's `.github/workflows/downstream.yml` runs this repository's two
-gates against each change there, so a change to alchemy meets them before
-it merges. A behaviour of alchemy's that a row can express is pinned in
+gates against each change there, with `DMOG_SIBLINGS=1` (see *Build and
+test*), so a change to alchemy meets them before it merges. A behaviour of alchemy's that a row can express is pinned in
 alchemy's `test/spec/`, not here.
 
 ## YAML's round trip
 
 `rs/tests/yaml_roundtrip_test.rs` holds YAML's render to YAML's own
-reader: every YAML input of the sibling tabnas/yaml checkout's fixtures
+reader: every YAML input of tabnas/yaml's vendored fixtures
 (the `test/spec/*.tsv` rows that parse, and every case of its vendored
 YAML Test Suite that is not an error case) is read, written through
 `translate` as YAML, and read back, and must come back as the same value.
@@ -150,8 +153,8 @@ The inputs the reader misreads are a ledger, `READER_DEFECT`, each with
 its issue: an input in it must still come back different, so a fix to the
 reader fails the test until its line is deleted. It lives here because
 tabnas/yaml does not depend on alchemy, and this crate composes the
-three components; the fixtures are the sibling checkout's, the same one
-`rs/Cargo.toml` takes tabnas-yaml from, so they are the reader's own.
+three components; the fixtures are those of the tabnas/yaml release
+`go/go.mod` requires, vendored like the rest.
 
 ## The translation matrix
 
@@ -296,7 +299,7 @@ places each operator itself, from its own copy of C's operator table
 (admin ADR-33, as amended on 2026-11-13). c holds its copy to the table;
 the part's tree is held to the reader's here, since only this repository
 runs the part. Each runtime reads every document of c's fixtures
-(`test/spec/*.tsv` in the sibling checkout, each once) through the part
+(its `test/spec/*.tsv`, vendored, each once) through the part
 and whole, in the plain mode a host reads C in: Rust's release run
 (`rs/tests/translate_test.rs`, `Format::read` against `tabnas_c::parse`),
 `ts/test/translate.test.ts` and `go/translate/c_part_test.go` (each
@@ -305,8 +308,8 @@ Csmith program of c's corpus (`ts/test/csmith-corpus`) too, each after a
 header that declares csmith.h's type names. A program goes through the
 part at about 4 KB a second in release, so the programs run on up to four
 threads, the longest first. TypeScript and Go leave the Csmith programs
-out, where the part runs slower still. The CI workflows clone c for its
-fixtures (the maintainer's instruction of 2026-11-16).
+out, where the part runs slower still. c's fixtures and Csmith corpus are
+vendored, as every other repository's are (`test/fixtures`, below).
 
 Each document must come out as the same tree, compared as a value, or be
 refused alike: the same code, message and position. A tree that nests
@@ -393,33 +396,61 @@ a minute in Go, whose memory clause stops every run past the bound.
 
 ## Build and test
 
-The Rust crate builds against sibling checkouts of alchemy, transduce,
-render and the grammars they use, cloned next to this repository:
-`rs/Cargo.toml` takes them by path, and `ci/rust/run.sh` lists every one
-the graph needs. They are all on crates.io, but the committed manifest
-stays path-only. TypeScript and Go install the published packages
-instead: `npm install` takes the `@tabnas/*` devDependencies from the npm
-registry, and `go/go.mod` requires released versions from the module
-proxy. For those two, sibling checkouts are optional as code:
-`ci/polyglot/run.sh` links them over the registry copies, and admin's
-`scripts/link.sh` does the same locally. They are not optional as
-fixtures: the tests of alchemy's programs read `../alchemy` and
-`../transduce`, as above, and the checks of C's part read `../c`. The CI
-workflows name the list.
+This repository is standalone: a clone of it alone builds and tests in all
+three runtimes. Every tabnas dependency comes from its registry, at its
+latest release, and the three name the same releases: `rs/Cargo.toml`
+requires each crate from crates.io (`rs/Cargo.lock` pins it), `go/go.mod`
+requires each module from the module proxy, and `npm install` takes the
+`@tabnas/*` packages from npm. `go/cmd/dmog/fixtures_test.go` holds
+`rs/Cargo.toml` to `go/go.mod`, so moving a tabnas requirement means
+moving it in both, with `tools/vendor-fixtures.sh` for its test files.
+The tests read only the vendored test files (below).
 
 - TypeScript, from `ts/`: `npm install`, then `npm test`.
-- Go, from `go/`: `gofmt -l .`, `go vet ./...`, `go test ./...`, with a
-  `go.work` outside the repositories when the siblings carry unreleased
-  changes.
-- Rust: `ci/rust/run.sh`, which runs `cargo fmt --check`, the build, the
-  tests and clippy, then compares `rs/Cargo.lock` with what it was before:
-  the gate fails if cargo rewrote anything but the versions of the sibling
-  crates, which move with the checkouts. That comparison is why the gate
-  does not pass `--locked`, as alchemy's, transduce's and render's gates
-  do not.
-- TypeScript and Go together: `ci/polyglot/run.sh`, which builds the
-  TypeScript siblings in order and runs this package's suite, then the Go
-  suite plain and with `-tags tabnas_nodecell`, and vet.
+- Go, from `go/`: `gofmt -l .`, `go vet ./...`, `go test ./...` (with
+  `GOWORK=off` when a `go.work` above this checkout would take it in).
+- Rust: `ci/rust/run.sh`, which runs `cargo fmt --check`, then the build,
+  the tests, the release run of the translation matrix and clippy, all
+  `--locked`.
+- TypeScript and Go together: `ci/polyglot/run.sh`, which runs this
+  package's TypeScript suite, then the Go suite plain and with
+  `-tags tabnas_nodecell`, and vet.
+
+**Against sibling checkouts.** To test unreleased changes in alchemy,
+transduce, render or a grammar, clone them next to this repository and run
+either gate with `DMOG_SIBLINGS=1`. The Rust gate then patches every
+tabnas crate `SIBLINGS` (in `ci/rust/run.sh`) names to its checkout, with
+a `[patch.crates-io]` it passes to cargo, so the committed manifest never
+names a path, and restores `rs/Cargo.lock` afterwards. The polyglot gate
+builds the TypeScript siblings in order and links them over the registry
+copies, and runs Go in a workspace over the siblings' modules. Both set
+`DMOG_FIXTURES` to the checkouts' directory, so the tests read the
+siblings' own test files in place of the vendored ones. alchemy's
+`.github/workflows/downstream.yml` runs both gates so, for each change to
+alchemy.
+
+## Vendored test fixtures
+
+No test reads a file outside this repository. Every test file the three
+ports read from another tabnas repository (alchemy's and every format's
+`test/spec`, transduce's `rs/tests/fixtures` and `rs/tests/support`, the
+grammar notations' example grammars, c's Csmith corpus, and the parts of
+JSONTestSuite and the YAML Test Suite that jsonc and yaml vendor) is
+vendored into `test/fixtures/<repository>/`, at the path it has there, so
+TypeScript, Go and Rust read the same files. `tools/vendor-fixtures.sh`
+writes them, each repository at the release this repository builds
+against: the tag `go/vX.Y.Z` of the version `go/go.mod` requires, which
+npm installs too. `test/fixtures/SOURCES.tsv` records each tag and commit,
+and `go/cmd/dmog/fixtures_test.go` fails when a tag is not the version
+`go/go.mod` requires, so a requirement that moves without its fixtures
+fails by name, not as rows that hold one release's code to another's
+fixtures. Moving a tabnas requirement in `go/go.mod` therefore takes
+`tools/vendor-fixtures.sh` in the same change. Never edit a vendored file
+by hand: a fixture that is wrong is fixed in its repository, released, and
+vendored again. `.gitattributes` keeps them byte for byte on every
+platform. `DMOG_FIXTURES`, when set, names another directory laid out the
+same way, which the tests read instead (the gates set it to the sibling
+checkouts' directory with `DMOG_SIBLINGS=1`).
 
 ## Releasing
 

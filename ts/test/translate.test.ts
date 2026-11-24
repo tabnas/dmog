@@ -20,7 +20,7 @@
 // failure. The grammar notations share a schema, a grammar's rules in
 // source order (`grammar-rules`), so each writes the others' documents.
 //
-// The corpus is the sibling checkouts': transduce's fixtures (aless's: a
+// The corpus is the vendored test files' (test/fixtures): transduce's fixtures (aless's: a
 // document of every format but C, CSS, expressions, PGN, proto, Semantic
 // Versioning and the grammar notations, and more for YAML and ZON), the
 // documents of JSONTestSuite every JSON parser must accept, from the copy
@@ -62,7 +62,7 @@ import {
   runCompiled,
 } from '../dist/translate'
 
-import { sibling } from './host'
+import { vendored } from './host'
 
 const UTF8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
 
@@ -114,9 +114,9 @@ const NOTATION: {
 // The grammar notations' example grammars, each notation's directory in
 // its repository's checkout.
 const NOTATION_EXAMPLES: ReadonlyArray<[string, string]> = [
-  ['abnf', sibling('abnf', 'ts', 'test', 'grammar')],
-  ['ebnf', sibling('ebnf', 'ts', 'test', 'grammar')],
-  ['gbnf', sibling('gbnf', 'test', 'corpus')],
+  ['abnf', vendored('abnf', 'ts', 'test', 'grammar')],
+  ['ebnf', vendored('ebnf', 'ts', 'test', 'grammar')],
+  ['gbnf', vendored('gbnf', 'test', 'corpus')],
 ]
 
 // Every document of the corpus: its name, its format and its text. A
@@ -125,8 +125,8 @@ const NOTATION_EXAMPLES: ReadonlyArray<[string, string]> = [
 function corpus(): Doc[] {
   const docs: Doc[] = []
   const dirs: Array<[string, string, string | undefined, string | undefined]> = [
-    ['transduce', sibling('transduce', 'rs', 'tests', 'fixtures'), undefined, undefined],
-    ['JSONTestSuite', sibling('jsonc', 'test', 'JSONTestSuite', 'test_parsing'), 'y_', undefined],
+    ['transduce', vendored('transduce', 'rs', 'tests', 'fixtures'), undefined, undefined],
+    ['JSONTestSuite', vendored('jsonc', 'test', 'JSONTestSuite', 'test_parsing'), 'y_', undefined],
     ...NOTATION_EXAMPLES.map(([id, dir]): [string, string, undefined, string] => [id, dir, undefined, id]),
   ]
   for (const [name, dir, prefix, only] of dirs) {
@@ -1868,7 +1868,7 @@ const C_PART_DEFECTS: Record<string, string> = {}
 // each operator from its own copy of C's operator table, and only this
 // repository runs it, so its tree is held to the reader's here (the
 // maintainer's ruling of 2026-11-13, admin ADR-33): every document of c's
-// fixtures, each once, from the sibling checkout's `test/spec`, as Rust's
+// fixtures, each once, from its vendored `test/spec`, as Rust's
 // release run reads them.
 describe("C's part and C's reader", () => {
   it("every document of c's fixtures reads through the part as c reads it", () => {
@@ -1877,7 +1877,7 @@ describe("C's part and C's reader", () => {
     const otherwise: string[] = []
     const repaired: string[] = []
     const met = new Set<string>()
-    for (const file of loadSpecDir(sibling('c', 'test', 'spec'))) {
+    for (const file of loadSpecDir(vendored('c', 'test', 'spec'))) {
       for (const row of file.rows) {
         const text = row.unescNamed('input')
         if (seen.has(text)) continue

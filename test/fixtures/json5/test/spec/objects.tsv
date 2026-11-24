@@ -1,0 +1,17 @@
+input	expected	opts
+{}	{}
+{"a":1}	{"a":1}
+{a:1}	{"a":1}
+{a:1,b:2}	{"a":1,"b":2}
+{a:1, b:2, c:"three"}	{"a":1,"b":2,"c":"three"}
+{a:1, 'b':2}	{"a":1,"b":2}
+{ nested: { x: 1, y: 2 } }	{"nested":{"x":1,"y":2}}
+# Every brace must be closed: JSON5 has no end-of-source auto-close.
+{	ERROR:end_of_source
+{a:1	ERROR:end_of_source
+{a:1,	ERROR:end_of_source
+# `{a:` is the exception: a source ending immediately after `[` or `:`
+# reports `unexpected`, not `end_of_source`. Note `{` alone above is
+# `end_of_source`. Left bare rather than pinning that code here.
+{a:	ERROR
+{ a: { b: 1 }	ERROR:end_of_source

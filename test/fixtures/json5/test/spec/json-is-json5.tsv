@@ -1,0 +1,6 @@
+input	expected	opts
+{}	{}
+[]	[]
+{"a":1,"b":"two","c":null,"d":true,"e":false}	{"a":1,"b":"two","c":null,"d":true,"e":false}
+[1,2.5,-3,1e10,"s",null,true,false]	[1,2.5,-3,10000000000,"s",null,true,false]
+{"nested":{"list":[1,{"x":null}]}}	{"nested":{"list":[1,{"x":null}]}}

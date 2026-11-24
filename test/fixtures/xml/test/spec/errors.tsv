@@ -1,0 +1,118 @@
+# name	input	expected	opts	msg
+# Inputs that must raise a parse error. `expected` uses the literal token
+# "ERROR" (optionally ":code" for a specific error code) to indicate that
+# parsing must fail.
+
+mismatched-close	<a></b>	ERROR:xml_mismatched_tag
+unterminated-comment	<a><!-- unterminated	ERROR
+unterminated-cdata	<a><![CDATA[unterminated	ERROR
+unterminated-pi	<a><?target data	ERROR
+unterminated-tag	<a x="unterminated	ERROR
+# XML 1.0 well-formedness constraints the lexer enforces directly. Each
+# raises its own code rather than a generic rejection, so each is pinned by
+# code -- the code is the contract across runtimes, the message is not.
+#
+# `]]>` is forbidden in CharData (XML 1.0 2.4) but NOT in AttValue, so the
+# input has to place it in element content. A bare `]]>` outside any
+# element fails earlier, and more generally, as text_at_top_level.
+cdata-terminator-in-text	<a>]]></a>	ERROR:cdata_terminator_in_text
+# `--` may not appear inside a comment (XML 1.0 2.5).
+comment-double-dash	<a><!-- x -- y --></a>	ERROR:comment_double_dash
+# An attribute name may not repeat within one element (XML 1.0 3.1).
+duplicate-attribute	<a x="1" x="2"/>	ERROR:duplicate_attribute
+# `<` may not appear literally in an attribute value (XML 1.0 3.1).
+attr-value-literal-lt	<a x="<"/>	ERROR:lt_in_attr_value
+# A processing instruction needs a target Name (XML 1.0 2.6).
+pi-target-empty	<a><??></a>	ERROR:pi_target_invalid
+# Characters outside the Char production are rejected wherever they can
+# appear. One row per call site: the census counts CODES, so it would go
+# green on the first of these while the other four paths stayed untested.
+# U+0001 is written with the \uXXXX escape both runners decode (see
+# bom.tsv) -- a literal control byte in a .tsv does not survive editing.
+control-char-in-text	<a>\u0001</a>	ERROR:invalid_xml_char
+control-char-in-comment	<a><!--\u0001--></a>	ERROR:invalid_xml_char
+control-char-in-cdata	<a><![CDATA[\u0001]]></a>	ERROR:invalid_xml_char
+control-char-in-pi	<a><?t \u0001?></a>	ERROR:invalid_xml_char
+control-char-in-attribute	<a b="\u0001"/>	ERROR:invalid_xml_char
+xmlns-redeclare-xmlns	<a xmlns:xmlns="http://example.com"/>	ERROR:reserved_namespace
+xmlns-xml-wrong-uri	<a xmlns:xml="http://example.com"/>	ERROR:reserved_namespace
+xmlns-default-xml-uri	<a xmlns="http://www.w3.org/XML/1998/namespace"/>	ERROR:reserved_namespace
+xmlns-other-prefix-xml-uri	<a xmlns:foo="http://www.w3.org/XML/1998/namespace"/>	ERROR:reserved_namespace
+# An unbound namespace prefix violates Namespaces in XML 1.0, which is a
+# SEPARATE spec from XML 1.0 well-formedness: `<foo:b/>` is a well-formed
+# XML document. The check is therefore opt-in via `strictNamespaces`; the
+# default (accepting) behaviour is pinned in namespaces.tsv.
+unbound-element-prefix-strict	<a><foo:b/></a>	ERROR:unbound_prefix	{"strictNamespaces":true}
+unbound-attribute-prefix-strict	<a foo:bar="x"/>	ERROR:unbound_prefix	{"strictNamespaces":true}
+unbound-nested-prefix-strict	<a xmlns:p="http://p.example"><p:b><q:c/></p:b></a>	ERROR:unbound_prefix	{"strictNamespaces":true}
+
+# A namespace name is a URI reference (Namespaces in XML 1.0 §2), and a URI
+# reference cannot contain white space. Attribute-value normalisation
+# (§3.3.3) turns a literal line break in the declaration into a space
+# first, so both spellings land on the same error.
+ns-uri-with-space	<a xmlns:m="http://x.example/ /y"><m:b/></a>	ERROR:invalid_namespace_uri
+ns-uri-with-newline	<a xmlns:m="http://x.example/\n/y"><m:b/></a>	ERROR:invalid_namespace_uri
+ns-uri-with-tab	<a xmlns:m="http://x.example/\t/y"/>	ERROR:invalid_namespace_uri
+default-ns-uri-with-space	<a xmlns="http://x.example/ /y"/>	ERROR:invalid_namespace_uri
+ns-uri-trailing-space	<a xmlns="http://x.example/ "/>	ERROR:invalid_namespace_uri
+
+# One element can break two namespace rules at once. Every runtime reads an
+# element's attributes in the order the tag writes them, so the code is the
+# one the first offending attribute breaks.
+ns-first-offence-uri	<a xmlns:p="a b" xmlns:xmlns="x"/>	ERROR:invalid_namespace_uri
+ns-first-offence-reserved	<a xmlns:xmlns="x" xmlns:p="a b"/>	ERROR:reserved_namespace
+ns-first-offence-default-reserved	<a xmlns="http://www.w3.org/2000/xmlns/" xmlns:p="a b"/>	ERROR:reserved_namespace
+ns-first-offence-default-uri	<a xmlns:p="a b" xmlns="http://www.w3.org/2000/xmlns/"/>	ERROR:invalid_namespace_uri
+
+# Error templates must interpolate. The `msg` column pins the rendered
+# text, so a template that reverts to a literal `$fsrc` / `$openname`
+# placeholder fails here instead of shipping.
+mismatched-close-message	<a></b>	ERROR:xml_mismatched_tag		closing tag </b> does not match opening tag <a>
+mismatched-close-nested-message	<a><b></c></b></a>	ERROR:xml_mismatched_tag		closing tag </c> does not match opening tag <b>
+mismatched-close-hint-message	<a></b>	ERROR:xml_mismatched_tag		Expected </a> but found </b>.
+invalid-tag-message	<a b>	ERROR:xml_invalid_tag		invalid tag: <a b>
+unterminated-comment-message	<a><!-- x	ERROR:unterminated_comment		unterminated comment: <!-- x
+unterminated-cdata-message	<a><![CDATA[x	ERROR:unterminated_cdata		unterminated CDATA section: <![CDATA[x
+unterminated-pi-message	<a><?t x	ERROR:unterminated_pi		unterminated processing instruction: <?t x
+unterminated-doctype-message	<!DOCTYPE a [<!ENTITY x "y">	ERROR:unterminated_doctype		unterminated DOCTYPE declaration: <!DOCTYPE a
+no-placeholder-leak-mismatched	<a></b>	ERROR:xml_mismatched_tag		does not match opening tag <a>
+
+# The three namespace codes are raised at DOCUMENT CLOSE, once the whole
+# tree is in place, so there is no current token to carry the failure.
+# A port that raises a bare action error there never reaches the template
+# table and hands the caller a literal stand-in instead, which pins by
+# code alone would not catch -- so the rendered text and the hint are
+# pinned here too.
+unbound-prefix-message	<a><foo:b/></a>	ERROR:unbound_prefix	{"strictNamespaces":true}	element or attribute uses an undeclared namespace prefix
+unbound-prefix-hint-message	<a><foo:b/></a>	ERROR:unbound_prefix	{"strictNamespaces":true}	Declare the prefix with xmlns:prefix="..." on this element or one of its ancestors.
+reserved-namespace-message	<a xmlns:xmlns="http://example.com"/>	ERROR:reserved_namespace		invalid use of a reserved namespace prefix or URI
+invalid-namespace-uri-message	<a xmlns="http://x.example/ /y"/>	ERROR:invalid_namespace_uri		namespace name cannot contain white space
+text-after-root	<a/>junk	ERROR:text_at_top_level
+text-before-root	junk<a/>	ERROR:text_at_top_level
+text-between-roots	<a/>junk<b/>	ERROR:text_at_top_level
+text-after-root-with-comment	<a/><!-- ok -->junk	ERROR:text_at_top_level
+
+# The relaxed-JSON engine's own comment syntaxes are not XML markup: at
+# document level they are character data outside the root element, and
+# XML 1.0 §2.1 [1] `document ::= prolog element Misc*` admits only
+# comments, PIs and white space there.
+hash-comment-in-prolog	# not xml\n<a/>	ERROR:text_at_top_level
+line-comment-in-prolog	// not xml\n<a/>	ERROR:text_at_top_level
+block-comment-in-prolog	/* not xml */<a/>	ERROR:text_at_top_level
+hash-comment-after-root	<a/># not xml	ERROR:text_at_top_level
+line-comment-after-root	<a/>// not xml	ERROR:text_at_top_level
+block-comment-after-root	<a/>/* not xml */	ERROR:text_at_top_level
+second-root-element	<a/><b/>	ERROR
+second-root-element-after-comment	<a/><!-- ok --><b/>	ERROR
+
+# XML 1.0 §2.1 `document ::= prolog element Misc*` requires exactly ONE
+# document element. The over-supply is covered above (second-root-element);
+# these pin the under-supply — a prolog alone, a lone comment, white space
+# or nothing at all. Standalone mode only: in embed mode this grammar is a
+# fragment inside a jsonic document and has no document element of its own.
+no-document-element-empty		ERROR
+no-document-element-space	\n\t 	ERROR
+no-document-element-prolog	<?xml version="1.0"?>	ERROR
+no-document-element-comment	<!-- only a comment -->	ERROR
+no-document-element-prolog-comment	<?xml version="1.0"?><!-- c -->	ERROR
+no-document-element-doctype	<!DOCTYPE a>	ERROR

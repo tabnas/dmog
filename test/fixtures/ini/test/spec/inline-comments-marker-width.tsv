@@ -1,0 +1,6 @@
+input	expected
+a=x ## note	{"a":"x ## note"}
+a=x # note	{"a":"x # note"}
+a=x \## note	{"a":"x \\## note"}
+a=x à note	{"a":"x à note"}
+a=x é note	{"a":"x","é note":true}

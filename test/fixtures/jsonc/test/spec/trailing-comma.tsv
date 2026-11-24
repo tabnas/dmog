@@ -1,0 +1,10 @@
+input	expected	opts
+{ "hello": [], }	{"hello":[]}	{"allowTrailingComma":true}
+{ "hello": [] }	{"hello":[]}	{"allowTrailingComma":true}
+{ "hello": [], "world": {}, }	{"hello":[],"world":{}}	{"allowTrailingComma":true}
+{ "hello": [], "world": {} }	{"hello":[],"world":{}}	{"allowTrailingComma":true}
+[ 1, 2, ]	[1,2]	{"allowTrailingComma":true}
+[ 1, 2 ]	[1,2]	{"allowTrailingComma":true}
+{ "hello": [], }	ERROR:unexpected
+{ "hello": [], "world": {}, }	ERROR:unexpected
+[ 1, 2, ]	ERROR:unexpected

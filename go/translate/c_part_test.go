@@ -84,15 +84,15 @@ func cThroughThePart(t *testing.T, name, text string) (cOutcome, error) {
 // placing each operator from its own copy of C's operator table, and only
 // this repository runs it, so its tree is held to the reader's here (the
 // maintainer's ruling of 2026-11-13, admin ADR-33): every document of c's
-// fixtures, each once, from the sibling checkout's test/spec, as Rust's
+// fixtures, each once, from its vendored test/spec, as Rust's
 // release run reads them. Go writes a whole read's members in the order
 // its reader's maps keep them, which is not the part's, so most documents
 // read as the same tree in another member order here.
 func TestEveryCFixtureReadsThroughThePartAsCReadsIt(t *testing.T) {
-	dir := filepath.Join(siblings(t), "c", "test", "spec")
+	dir := filepath.Join(vendored(t), "c", "test", "spec")
 	files, err := support.LoadSpecDir(dir, nil)
 	if err != nil {
-		t.Fatalf("c's fixtures are beside this checkout, at %s: %v", dir, err)
+		t.Fatalf("c's fixtures are vendored, at %s: %v", dir, err)
 	}
 	seen := map[string]bool{}
 	counts := map[cOutcome]int{}

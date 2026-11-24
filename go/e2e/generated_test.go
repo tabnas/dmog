@@ -32,12 +32,12 @@ import (
 	tt "github.com/tabnas/transduce/go"
 )
 
-// abnfSpecDir is abnf's shared fixture directory, beside this checkout.
+// abnfSpecDir is abnf's shared fixture directory, vendored.
 func abnfSpecDir(t testing.TB) string {
 	t.Helper()
 	dir := filepath.Join(repoRoot(t), "..", "abnf", "test", "spec")
 	if _, err := os.Stat(dir); err != nil {
-		t.Fatalf("abnf's fixtures are beside this checkout, at %s: %v", dir, err)
+		t.Fatalf("abnf's fixtures are vendored, at %s: %v", dir, err)
 	}
 	return dir
 }

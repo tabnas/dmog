@@ -1,0 +1,4 @@
+input	expected
+; comment\na = 1	{"a":"1"}
+# comment\na = 1	{"a":"1"}
+; line comment\n# hash comment\na = 1	{"a":"1"}

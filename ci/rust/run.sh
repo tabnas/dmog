@@ -3,36 +3,34 @@
 # quietly drift apart: .github/workflows/rust.yml runs this file, and so can
 # you. This is the full gate.
 #
-# alchemy, transduce, render and the JSON grammar are PATH DEPENDENCIES on
-# sibling checkouts (rs/Cargo.toml: `tabnas-alchemy = { path =
-# "../../alchemy/rs" }` and the like). Clone each repository named in
-# SIBLINGS below next to this one before running.
+# By default it is standalone: every tabnas crate resolves from crates.io
+# at the version rs/Cargo.toml requires, exactly as rs/Cargo.lock records
+# it (`--locked`), and the tests read the test files vendored in
+# test/fixtures. Nothing beside this checkout is read.
+#
+# DMOG_SIBLINGS=1 runs it against sibling checkouts instead, to test
+# unreleased changes (alchemy's downstream workflow does, for each change
+# there): every tabnas crate in SIBLINGS is patched to its checkout next to
+# this one (a [patch.crates-io] passed to cargo, so the committed manifest
+# never names a path), and the tests read the checkouts' test files
+# (DMOG_FIXTURES). rs/Cargo.lock is restored afterwards.
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 # shellcheck source=../phase.sh
 source "$ROOT/ci/phase.sh"
 
-# Every sibling any crate in the graph takes by path: alchemy, transduce
-# and render, the JSON grammar, the engine, and csv and jsonic, which
-# transduce's line sources take; then the other grammars `translate` reads
-# and writes, which the tests of alchemy's programs read too (ini takes
-# hoover, and the grammar notations take bnf, their shared compiler); and
-# this crate's own dev-dependency, the fixture runner. The tests also read
-# alchemy's test/spec, transduce's rs/tests, every grammar's test/spec and
-# the grammar notations' example grammars from the checkouts.
+# Every tabnas crate in the graph, which DMOG_SIBLINGS=1 patches to its
+# checkout: alchemy, transduce and render, the JSON grammar, the engine,
+# and csv and jsonic, which transduce's line sources take; then the other
+# grammars `translate` reads and writes (ini takes hoover, and the grammar
+# notations take bnf, their shared compiler); and this crate's own
+# dev-dependency, the fixture runner. ci/polyglot/run.sh and alchemy's
+# downstream workflow read this list.
 SIBLINGS="parser json jsonic csv alchemy transduce render support hoover ini json5 jsonc jsonl markdown toml xml yaml zon chess css expr feed proto semver bnf abnf ebnf gbnf c"
 
 # TypeScript- and Go-only additions needed by ci/polyglot/run.sh: none.
 TS_SIBLINGS=""
-
-for SIBLING in $SIBLINGS; do
-  if [[ ! -f "$ROOT/../$SIBLING/rs/Cargo.toml" ]]; then
-    echo "no $SIBLING checkout at $ROOT/../$SIBLING/rs" >&2
-    echo "clone https://github.com/tabnas/$SIBLING as a sibling of $(basename "$ROOT")" >&2
-    exit 1
-  fi
-done
 
 cd "$ROOT/rs"
 
@@ -71,49 +69,44 @@ if [[ "$WANT" != "$HAVE" ]]; then
   exit 1
 fi
 
-# The whole resolution is compared before and after, exempting only the
-# recorded VERSION of each sibling path crate, which legitimately moves
-# whenever the sibling checkouts do. Every tabnas crate in the graph is a
-# sibling, so the exemption is by name prefix.
-lock_without_sibling_versions() {
-  awk '
-    /^\[\[package\]\]$/            { sib = 0 }
-    /^name = "tabnas-parser"$/            { sib = 1 }
-    /^name = "tabnas-[a-z0-9]+"$/  { sib = 1 }
-    sib && /^version = /           { print "version = \"<sibling>\""; next }
-                                   { print }
-  ' "$1"
-}
+# fmt reads only this crate, so it never takes the sibling patch.
+FMT=("${CARGO[@]}")
+# `${LOCKED[@]+...}` below: bash 3.2, macOS's, calls an empty array unbound.
+if [[ "${DMOG_SIBLINGS:-}" == 1 ]]; then
+  FLEET_ROOT=$(cd "$ROOT/.." && pwd)
+  PATCH=$(mktemp)
+  LOCK_BEFORE=$(mktemp)
+  cp Cargo.lock "$LOCK_BEFORE"
+  trap 'cp "$LOCK_BEFORE" Cargo.lock; rm -f "$PATCH" "$LOCK_BEFORE"' EXIT
+  echo "[patch.crates-io]" > "$PATCH"
+  for SIBLING in $SIBLINGS; do
+    manifest="$FLEET_ROOT/$SIBLING/rs/Cargo.toml"
+    if [[ ! -f "$manifest" ]]; then
+      echo "DMOG_SIBLINGS=1: no $SIBLING checkout at $FLEET_ROOT/$SIBLING/rs" >&2
+      echo "clone https://github.com/tabnas/$SIBLING as a sibling of $(basename "$ROOT")" >&2
+      exit 1
+    fi
+    name=$(awk -F'"' '/^name = /{print $2; exit}' "$manifest")
+    echo "$name = { path = \"$FLEET_ROOT/$SIBLING/rs\" }" >> "$PATCH"
+  done
+  CARGO+=(--config "$PATCH")
+  LOCKED=()
+  export DMOG_FIXTURES="$FLEET_ROOT"
+  echo "gate: against the sibling checkouts in $FLEET_ROOT"
+else
+  LOCKED=(--locked)
+fi
 
-LOCK_BEFORE=$(mktemp)
-cp Cargo.lock "$LOCK_BEFORE"
-trap 'if [ -f "$LOCK_BEFORE" ] && ! cmp -s "$LOCK_BEFORE" Cargo.lock; then cp "$LOCK_BEFORE" Cargo.lock; fi; rm -f "$LOCK_BEFORE"' EXIT
-
-# Not `--locked`: the siblings resolve from checkouts of main, and their
-# versions move under this lock. Not `--all` on fmt: that reaches into the
-# sibling checkouts.
-phase "gate: fmt" "${CARGO[@]}" fmt --check
-phase "gate: build" "${CARGO[@]}" build --all-targets
-phase "gate: test" "${CARGO[@]}" test --all-targets
+# Not `--all` on fmt: it would reach into a patched sibling checkout.
+phase "gate: fmt" "${FMT[@]}" fmt --check
+phase "gate: build" "${CARGO[@]}" build ${LOCKED[@]+"${LOCKED[@]}"} --all-targets
+phase "gate: test" "${CARGO[@]}" test ${LOCKED[@]+"${LOCKED[@]}"} --all-targets
 # The cross product of every format's own fixture corpus and the grammar
 # notations' example grammars (tests/translate_test.rs, ignored in a debug
 # run): about 84,000 pairs, minutes in release.
 phase "gate: the formats' fixtures, every format into every other (release)" \
-  "${CARGO[@]}" test --release --test translate_test -- --ignored --nocapture
+  "${CARGO[@]}" test ${LOCKED[@]+"${LOCKED[@]}"} --release --test translate_test -- --ignored --nocapture
 # No `test --doc`: the crate is a binary with no library target, which
 # cargo refuses to doc-test.
-phase "gate: clippy" "${CARGO[@]}" clippy --all-targets --all-features -- -D warnings
-
-if ! diff -q <(lock_without_sibling_versions "$LOCK_BEFORE") \
-             <(lock_without_sibling_versions Cargo.lock) >/dev/null; then
-  echo "rs/Cargo.lock does not match rs/Cargo.toml -- cargo rewrote it:" >&2
-  diff <(lock_without_sibling_versions "$LOCK_BEFORE") \
-       <(lock_without_sibling_versions Cargo.lock) >&2 || true
-  echo "run a cargo command and commit the updated rs/Cargo.lock" >&2
-  cp "$LOCK_BEFORE" Cargo.lock
-  exit 1
-fi
-if ! cmp -s "$LOCK_BEFORE" Cargo.lock; then
-  cp "$LOCK_BEFORE" Cargo.lock
-fi
+phase "gate: clippy" "${CARGO[@]}" clippy ${LOCKED[@]+"${LOCKED[@]}"} --all-targets --all-features -- -D warnings
 echo "gate: green"

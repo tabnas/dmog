@@ -1,0 +1,4 @@
+# Vendored test fixtures (tools/vendor-fixtures.sh): stored and checked out
+# byte for byte on every platform, as the repositories they come from hold
+# them, and kept out of the language statistics.
+test/fixtures/** -text linguist-vendored

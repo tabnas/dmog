@@ -1,0 +1,5 @@
+input	expected
+a = hello ; comment	{"a":"hello"}
+a = hello # comment	{"a":"hello"}
+a = x;y	{"a":"x"}
+a = value\nb = other	{"a":"value","b":"other"}

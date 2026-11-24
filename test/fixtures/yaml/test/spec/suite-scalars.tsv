@@ -1,0 +1,36 @@
+input	expected	opts
+a: 42	{"a":42}
+a: -7	{"a":-7}
+a: 3.14	{"a":3.14}
+a: -2.5	{"a":-2.5}
+a: 0	{"a":0}
+a: true	{"a":true}
+a: false	{"a":false}
+a: null	{"a":null}
+a: ~	{"a":null}
+a:	{"a":null}
+a: hello world	{"a":"hello world"}
+a: hello, world!	{"a":"hello, world!"}
+foo: a{{q}}b	{"foo":"a{{q}}b"}
+a: 0o77	{"a":63}
+a: 0xFF	{"a":255}
+a: yes	{"a":true}
+a: no	{"a":false}
+a: on	{"a":true}
+a: off	{"a":false}
+description: 64 characters, hexadecimal.	{"description":"64 characters, hexadecimal."}
+a: 42 things	{"a":"42 things"}
+a: 1st place	{"a":"1st place"}
+a: "hello"	{"a":"hello"}
+a: 'hello'	{"a":"hello"}
+a: "key: value"	{"a":"key: value"}
+a: 'key: value'	{"a":"key: value"}
+a: ""	{"a":""}
+a: ''	{"a":""}
+a: "42"	{"a":"42"}
+a: "true"	{"a":"true"}
+a: !!str 42	{"a":"42"}
+a: !!int "42"	{"a":42}
+a: !!float "3.14"	{"a":3.14}
+a: !!bool "true"	{"a":true}
+a: !!null ""	{"a":null}

@@ -1,0 +1,809 @@
+[
+ {
+  "input": "Hello *world*",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     13
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       13
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "Hello "
+      },
+      {
+       "type": "emph",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "world"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "Hello **world**",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     15
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       15
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "Hello "
+      },
+      {
+       "type": "strong",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "world"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "`code`",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     6
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       6
+      ]
+     ],
+     "children": [
+      {
+       "type": "code",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "code"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "foo_bar_baz",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     11
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       11
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "foo_bar_baz"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "Text with \\\\*escaped\\\\* stars",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     27
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       27
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "Text with *escaped* stars"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[link](https://example.com)",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     27
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       27
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "https://example.com",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "link"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "![alt](https://example.com/img.png)",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     35
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       35
+      ]
+     ],
+     "children": [
+      {
+       "type": "image",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "https://example.com/img.png",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "alt"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "<https://example.com>",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     21
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       21
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "https://example.com",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "https://example.com"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "~~delete~~",
+  "opts": "{\"gfm\":true}",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     10
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       10
+      ]
+     ],
+     "children": [
+      {
+       "type": "del",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "delete"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "~~delete~~",
+  "opts": "{\"gfm\":false}",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     10
+    ]
+   ],
+   "gfm": false,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       10
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "~~delete~~"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[l](/ä)",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     7
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       7
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "/ä",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "l"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "![i](/ö \"t\")",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     12
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       12
+      ]
+     ],
+     "children": [
+      {
+       "type": "image",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "/ö",
+       "title": "t",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "i"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "<https://x.com/ä>",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     17
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       17
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "https://x.com/ä",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "https://x.com/ä"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+]

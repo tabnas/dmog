@@ -1,0 +1,15 @@
+input	expected
+# An operator of the table on a default operator's source, and of its
+# kind, takes the token from it, whatever the two are named: the later
+# entry wins, and the table's entries come after the defaults. The table:
+# `minus` `-` infix (left 12000, right 12001), `unary_n` `-` prefix (right
+# 16000) and `pct` `%` infix (left 13000, right 13001), beside the
+# defaults, whose `subtraction`, `negative` and `remainder` they displace.
+-1-2	["-",["-",1],2]
+1-2-3	["-",["-",1,2],3]
+-1%2	["%",["-",1],2]
+1+2%3	["%",["+",1,2],3]
+2*3%4	["%",["*",2,3],4]
+-1--2	["-",["-",1],["-",2]]
+1%2-3	["-",["%",1,2],3]
+-1+2	["-",["+",1,2]]

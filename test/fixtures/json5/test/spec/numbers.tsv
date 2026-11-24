@@ -1,0 +1,37 @@
+input	expected	opts
+0	0
+42	42
+-42	-42
++42	42
+3.14	3.14
+.5	0.5
+5.	5
+1e10	10000000000
+1.5e-2	0.015
+0x1F	31
+0xDEADBEEF	3735928559
+-0x10	-16
+# A trailing decimal point with an exponent is a DecimalLiteral, but the
+# integer part still may not carry a leading zero.
+5.e4	50000
+0.e4	0
+-0.e4	-0
+05.e4	ERROR
+00.e4	ERROR
+0X1F	31
+010	ERROR
+# An exponent that overflows the double range is Infinity in ECMAScript,
+# not a parse error, and not unquoted text. Both runtimes must agree.
+1e400	Infinity
+-1e400	-Infinity
+1e-400	0
+# A hexadecimal literal wider than the exact double integer range has to be
+# rounded ONCE from the exact integer, the way ECMAScript parseInt does it.
+# A digit-by-digit floating-point fold rounds at every digit and lands one
+# unit in the last place low, which is altered data rather than a different
+# spelling of the same number. Both prefix spellings, and a negative.
+0xa6f2f78f4f9bf44	751871859346751400
+0Xa6f2f78f4f9bf44	751871859346751400
+-0Xa6f2f78f4f9bf44	-751871859346751400
+# Exactly half way, so the tie goes to the even mantissa: 2^53+1 is 2^53.
+0x20000000000001	9007199254740992

@@ -1,0 +1,27 @@
+input	expected
+# Infix operators inside maps within parentheses
+# These cases verify that infix operators (like +) work correctly
+# inside map values when the map is within parentheses.
+# Map with infix in value - no parens (baseline)
+{x:1+2}	{"x":["+",1,2]}
+{x:1+2,y:3}	{"x":["+",1,2],"y":3}
+{x:1,y:2+3}	{"x":1,"y":["+",2,3]}
+{x:1+2,y:3+4}	{"x":["+",1,2],"y":["+",3,4]}
+# Map with infix in value - inside parens
+({x:1+2})	["(",{"x":["+",1,2]}]
+({x:1+2,y:3})	["(",{"x":["+",1,2],"y":3}]
+({x:1,y:2+3})	["(",{"x":1,"y":["+",2,3]}]
+({x:1+2,y:3+4})	["(",{"x":["+",1,2],"y":["+",3,4]}]
+# Multiple keys with mixed expressions
+({a:1+2,b:3,c:4+5})	["(",{"a":["+",1,2],"b":3,"c":["+",4,5]}]
+# Nested parens around map with infix
+(({x:1+2}))	["(",["(",{"x":["+",1,2]}]]
+# Infix after map in parens
+({x:1})+2	["+",["(",{"x":1}],2]
+# Map with expression and list in parens
+({x:1+2},3)	["(",[{"x":["+",1,2]},3]]
+# List inside parens with infix
+([1+2])	["(",[["+",1,2]]]
+([1+2,3+4])	["(",[["+",1,2],["+",3,4]]]
+# List inside map inside parens with infix
+({x:[1+2]})	["(",{"x":[["+",1,2]]}]

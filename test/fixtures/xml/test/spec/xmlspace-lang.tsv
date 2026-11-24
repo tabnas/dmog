@@ -1,0 +1,11 @@
+# name	input	expected	opts
+# xml:space and xml:lang are special attributes (XML 1.0 §2.10 / §2.12)
+# whose values are inherited down the tree. The plugin annotates each
+# element with `space` (when not the default) and `lang` (when set).
+
+xml-space-preserve	<a xml:space="preserve">  hi  </a>	{"name":"a","localName":"a","attributes":{"xml:space":"preserve"},"space":"preserve","children":["  hi  "]}
+xml-space-default-not-annotated	<a xml:space="default">x</a>	{"name":"a","localName":"a","attributes":{"xml:space":"default"},"children":["x"]}
+xml-space-inherited	<a xml:space="preserve"><b>x</b></a>	{"name":"a","localName":"a","attributes":{"xml:space":"preserve"},"space":"preserve","children":[{"name":"b","localName":"b","attributes":{},"space":"preserve","children":["x"]}]}
+xml-lang-set	<a xml:lang="en">hi</a>	{"name":"a","localName":"a","attributes":{"xml:lang":"en"},"lang":"en","children":["hi"]}
+xml-lang-inherited	<a xml:lang="fr"><b>bonjour</b></a>	{"name":"a","localName":"a","attributes":{"xml:lang":"fr"},"lang":"fr","children":[{"name":"b","localName":"b","attributes":{},"lang":"fr","children":["bonjour"]}]}
+xml-lang-overridden	<a xml:lang="en"><b xml:lang="fr"/></a>	{"name":"a","localName":"a","attributes":{"xml:lang":"en"},"lang":"en","children":[{"name":"b","localName":"b","attributes":{"xml:lang":"fr"},"lang":"fr","children":[]}]}

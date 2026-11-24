@@ -1,0 +1,40 @@
+input	expected
+# A record's CONTENT is strict, standard JSON — every rule below is
+# inherited from @tabnas/json, not restated by this plugin. These rows pin
+# that the strict base is really in force per record, and that layering did
+# not quietly re-admit a relaxed-JSON feature.
+#
+# Unquoted keys (jsonic) are not JSON.
+{a:1}	ERROR
+{"a":1}\n{b:2}	ERROR
+# Single-quoted and backtick strings are not JSON.
+{'a':1}	ERROR
+{"a":'v'}	ERROR
+# Comments are not JSON.
+{"a":1} // c	ERROR
+{"a":1} # c	ERROR
+// c\n{"a":1}	ERROR
+# Trailing commas are not JSON.
+{"a":1,}	ERROR
+[1,2,]	ERROR
+# Implicit (brace-less) objects and lists are jsonic, not JSON.
+a:1	ERROR
+1,2	ERROR
+# Non-standard number forms are not JSON.
+{"a":01}	ERROR
+{"a":+1}	ERROR
+{"a":.5}	ERROR
+{"a":1.}	ERROR
+{"a":0x1F}	ERROR
+{"a":1_000}	ERROR
+# Non-standard escapes are not JSON.
+{"a":"\\q"}	ERROR
+{"a":"\\x41"}	ERROR
+# Unterminated and malformed values.
+{"a":1	ERROR
+{"a":}	ERROR
+{"a"}	ERROR
+"unterminated	ERROR
+# A bare word is not a JSON value.
+nope	ERROR
+{"a":undefined}	ERROR

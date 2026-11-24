@@ -1,0 +1,22 @@
+input	expected	opts
+/* only */	{"type":"stylesheet","rules":[{"type":"comment","comment":" only "}]}
+/* head */\na {\n  /* c1 */\n  color: red; /* trailing */\n}	{"type":"stylesheet","rules":[{"type":"comment","comment":" head "},{"type":"rule","selectors":["a"],"declarations":[{"type":"comment","comment":" c1 "},{"type":"declaration","property":"color","value":"red"},{"type":"comment","comment":" trailing "}]}]}
+a /* x */ { color /* y */ : red }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"color","value":"red"}]}]}
+@media x { /* c */ a { b: 1 } }	{"type":"stylesheet","rules":[{"type":"media","media":"x","rules":[{"type":"comment","comment":" c "},{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"b","value":"1"}]}]}]}
+@font-face/*a	ERROR:unterminated_comment
+@import/*red	ERROR:unterminated_comment
+@media/*x	ERROR:unterminated_comment
+a{b:c/*x	ERROR:unterminated_comment
+@keyframes--v 0%\t)/*,	ERROR:unterminated_comment
+a{b:c/*x*/;d:e}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"b","value":"c"},{"type":"declaration","property":"d","value":"e"}]}]}
+b{,/*!important	ERROR:unexpected
+a{b:c;/*	ERROR:unterminated_comment
+@media x{/*	ERROR:unterminated_comment
+a{/*	ERROR:unterminated_comment
+a{:/*	ERROR:unterminated_comment
+b\\(;/*	ERROR:unterminated_comment
+a{b\\(;/*	ERROR:unterminated_comment
+a{b\\"x;"/*	ERROR:unterminated_comment
+@media x{b\\"x;"/*	ERROR:unterminated_comment
+@keyframes k{b\\"x;"/*	ERROR:unterminated_comment
+a{b:c;d\\"x;"/*	ERROR:unterminated_comment

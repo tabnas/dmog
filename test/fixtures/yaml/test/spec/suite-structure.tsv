@@ -1,0 +1,28 @@
+input	expected	opts
+a: 1 # comment\nb: 2	{"a":1,"b":2}
+# this is a comment\na: 1	{"a":1}
+a: # comment\n  b: 1	{"a":{"b":1}}
+# first\na: 1\n# second\nb: 2	{"a":1,"b":2}
+a: &ref hello\nb: *ref	{"a":"hello","b":"hello"}
+a: &x 10\nb: &y 20\nc: *x\nd: *y	{"a":10,"b":20,"c":10,"d":20}
+defaults: &d\n  a: 1\n  b: 2\nresult:\n  <<: *d\n  c: 3	{"defaults":{"a":1,"b":2},"result":{"c":3,"a":1,"b":2}}
+base: &b\n  x: 1\n  y: 2\nchild:\n  <<: *b\n  y: 99	{"base":{"x":1,"y":2},"child":{"y":99,"x":1}}
+---\na: 1	{"a":1}
+a: 1\n...	{"a":1}
+a:\n  b: 1	{"a":{"b":1}}
+a:\n    b: 1	{"a":{"b":1}}
+a:\n  b: 1\n  c: 2\nd: 3	{"a":{"b":1,"c":2},"d":3}
+a:\n  b:\n    c: 1\n  d: 2\ne: 3	{"a":{"b":{"c":1},"d":2},"e":3}
+a:\n  - 1\n  - 2\nb: 3	{"a":[1,2],"b":3}
+a: this is\n  a long string	{"a":"this is a long string"}
+a: line one\n  line two\n  line three	{"a":"line one line two line three"}
+a: 1\r\nb: 2	{"a":1,"b":2}
+a:\r\n  b: 1\r\n  c: 2	{"a":{"b":1,"c":2}}
+a: foo#bar	{"a":"foo#bar"}
+a long key: value	{"a long key":"value"}
+? a\n: 1	{"a":1}
+- name: alice\n  age: 30\n- name: bob\n  age: 25	[{"name":"alice","age":30},{"name":"bob","age":25}]
+a: |\n  line1\n  line2\n  line3	{"a":"line1\nline2\nline3\n"}
+a: |-\n  line1\n  line2	{"a":"line1\nline2"}
+a: >\n  line1\n  line2\n  line3	{"a":"line1 line2 line3\n"}
+a: >-\n  line1\n  line2	{"a":"line1 line2"}

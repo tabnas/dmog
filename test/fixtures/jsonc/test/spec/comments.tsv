@@ -1,0 +1,24 @@
+input	expected	opts
+// this is a comment	UNDEFINED
+// this is a comment\n	UNDEFINED
+/* this is a comment*/	UNDEFINED
+/* this is a \r\ncomment*/	UNDEFINED
+/* this is a \ncomment*/	UNDEFINED
+false//hello	false
+1.2E-3 // comment	0.0012
+{ "foo": /*hello*/true }	{"foo":true}
+/* g */ { "foo": //f\n"bar" }	{"foo":"bar"}
+/* g\r\n */ { "foo": //f\n"bar" }	{"foo":"bar"}
+/* g\n */ { "foo": //f\n"bar"\n}	{"foo":"bar"}
+# JSONC has only // and /* */ comments. The jsonic base grammar also lexes
+# a '#' line comment; the plugin turns that off, so '#' is never trivia.
+#	ERROR:unexpected
+# not a comment\n1	ERROR:unexpected
+1 # not a comment	ERROR:unexpected
+{"a":"b"}#	ERROR:unexpected
+{"a":"b"}#{}	ERROR:unexpected
+{ "a": "#" }	{"a":"#"}
+{ "#": "#" }	{"#":"#"}
+/* this is a	ERROR:unterminated_comment
+/* this is a \ncomment	ERROR:unterminated_comment
+/ ttt	ERROR:unexpected

@@ -1,0 +1,7 @@
+/* Character classes, in the style the XML specification uses them:
+   an explicit start class, then a wider continuation class, with code
+   points written in the #xNN form. */
+
+Name      ::= NameStart NameChar*
+NameStart ::= [A-Z] | "_" | [a-z] | [#xC0-#xD6]
+NameChar  ::= NameStart | "-" | "." | [0-9] | #xB7

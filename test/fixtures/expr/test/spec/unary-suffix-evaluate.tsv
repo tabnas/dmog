@@ -1,0 +1,40 @@
+input	expected
+# Evaluation follows the tree the S-expression shows. The runner's
+# evaluator returns [op.name, ...terms], so each cell is the row's
+# S-expression (unary-suffix-*.tsv) with operator names for sources.
+# A suffix after a prefix drills into it, as the suffix rows show:
+# `-1!` is ["-",["!",1]]. The evaluator used to reduce the prefix
+# expression before the suffix arrived, which gave
+# ["factorial-suffix",["negative-prefix",1]].
+1!	["factorial-suffix",1]
+-1!	["negative-prefix",["factorial-suffix",1]]
+--1!	["negative-prefix",["negative-prefix",["factorial-suffix",1]]]
+-1!!	["negative-prefix",["factorial-suffix",["factorial-suffix",1]]]
+-1!?	["question-suffix",["negative-prefix",["factorial-suffix",1]]]
+# A suffix looser than the prefix wraps it.
+-1?	["question-suffix",["negative-prefix",1]]
+-1?!	["factorial-suffix",["question-suffix",["negative-prefix",1]]]
+1?!	["factorial-suffix",["question-suffix",1]]
+# A prefix inside an operand.
+1+-2!	["addition-infix",1,["negative-prefix",["factorial-suffix",2]]]
+2*-1!	["multiplication-infix",2,["negative-prefix",["factorial-suffix",1]]]
+1+-2	["addition-infix",1,["negative-prefix",2]]
+# The prefix expression as an operand.
+-1!*2	["multiplication-infix",["negative-prefix",["factorial-suffix",1]],2]
+-1!+2	["addition-infix",["negative-prefix",["factorial-suffix",1]],2]
+1-2!	["subtraction-infix",1,["factorial-suffix",2]]
+1+2!	["addition-infix",1,["factorial-suffix",2]]
+0!-1!*2!	["subtraction-infix",["factorial-suffix",0],["multiplication-infix",["factorial-suffix",1],["factorial-suffix",2]]]
+# A suffix wraps a paren group.
+(1)!	["factorial-suffix",["plain-paren",1]]
+-(1)!	["negative-prefix",["factorial-suffix",["plain-paren",1]]]
+(-1)!	["factorial-suffix",["plain-paren",["negative-prefix",1]]]
+-(1+2)!	["negative-prefix",["factorial-suffix",["plain-paren",["addition-infix",1,2]]]]
+# In lists, maps and implicit lists.
+[-1!]	[["negative-prefix",["factorial-suffix",1]]]
+[-1!,-2!]	[["negative-prefix",["factorial-suffix",1]],["negative-prefix",["factorial-suffix",2]]]
+{a:-1!}	{"a":["negative-prefix",["factorial-suffix",1]]}
+x:-1!	{"x":["negative-prefix",["factorial-suffix",1]]}
+-1!,2	[["negative-prefix",["factorial-suffix",1]],2]
+-1! 2	[["negative-prefix",["factorial-suffix",1]],2]
+(-1!,2)	["plain-paren",[["negative-prefix",["factorial-suffix",1]],2]]

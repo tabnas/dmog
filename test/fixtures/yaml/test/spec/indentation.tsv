@@ -1,0 +1,44 @@
+input	expected	opts
+a:\n  b: 1	{"a":{"b":1}}
+a:\n    b: 1	{"a":{"b":1}}
+a:\n  b:\n      c: 1	{"a":{"b":{"c":1}}}
+a:\n  b: 1\n  c: 2\nd: 3	{"a":{"b":1,"c":2},"d":3}
+a:\n  b:\n    c: 1\n  d: 2\ne: 3	{"a":{"b":{"c":1},"d":2},"e":3}
+a:\n  - 1\n  - 2\nb: 3	{"a":[1,2],"b":3}
+a:\n\tb: 1	ERROR:yaml_tab_indent
+  a: 1	{"a":1}
+a: 1\n\nb: 2	{"a":1,"b":2}
+- a\n\n- b	["a","b"]
+  a: 1\n  b: 2	{"a":1,"b":2}	
+---\n  a: 1\n  b:\n    c: 2\n  d: 3	{"a":1,"b":{"c":2},"d":3}	
+   a:\n     - x\n   b: 2	{"a":["x"],"b":2}	
+  "a": 1\n  "b": 2	{"a":1,"b":2}	
+  &x a: 1\n  b: *x	{"a":1,"b":"a"}	
+  ? a\n  : 1\n  b: 2	{"a":1,"b":2}	
+# c\n\n  a: 1\n  b: 2	{"a":1,"b":2}	
+ a: 1\n b: 2\n---\n   c: 3\n   d: 4	[{"a":1,"b":2},{"c":3,"d":4}]	
+  a: 1\nb: 2	ERROR	
+  a: 1\n   b: 2	ERROR	
+    a: 1\n  b: 2	ERROR	
+a:\n  b: 1\n  \tc: 2	ERROR:yaml_tab_indent	
+a:\n\t- x	ERROR:yaml_tab_indent	
+\ta: 1	ERROR:yaml_tab_indent	
+---\n\ta: 1	ERROR:yaml_tab_indent	
+a:\n \t"q": 1	ERROR:yaml_tab_indent	
+a:\n\t? k	ERROR:yaml_tab_indent	
+a:\n \tb	{"a":"b"}	
+a:\n \t"q"	{"a":"q"}	
+\t{a: 1}	{"a":1}	
+\t[\n\t]	[]	
+a: 1\n\t# c\nb: 2	{"a":1,"b":2}	
+a:\n  b: 1\n \t# c\n  d: 2	{"a":{"b":1,"d":2}}	
+a:\t1\nb:\t2	{"a":1,"b":2}	
+a: 1\t\nb: 2	{"a":1,"b":2}	
+a: 1\t	{"a":1}	
+a: true\t	{"a":true}	
+a: [1]\t	{"a":[1]}	
+a: "x"\t	{"a":"x"}	
+- 1\t	[1]	
+a: 1\t \t	{"a":1}	
+a:\t	{"a":null}	
+- \t	[null]	

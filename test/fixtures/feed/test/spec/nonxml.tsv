@@ -1,0 +1,17 @@
+input	expected	opts
+# Inputs that are not XML at all. The documented stack is
+# `new Tabnas().use(jsonic).use(Feed)`, so the obvious worry is that jsonic's
+# own JSON/JSONIC leniency leaks through and makes `{a:1}` or `hello` parse
+# to something instead of raising.
+#
+# As of 2026-08-09 both runtimes REJECT every row. `new Tabnas().use(Feed)`
+# (no jsonic) and `new Tabnas().use(jsonic).use(Xml)` behave identically, so
+# the rejection comes from the xml layer, not from the plugin. These rows
+# pin that: a feed parser handed `hello` must not report success, and must
+# not report success by returning undefined/nil either.
+{a:1}	ERROR:character data is not allowed outside the root element
+{"a":1}	ERROR:character data is not allowed outside the root element
+[1,2,3]	ERROR:character data is not allowed outside the root element
+a:1	ERROR:character data is not allowed outside the root element
+1	ERROR:character data is not allowed outside the root element
+hello	ERROR:character data is not allowed outside the root element

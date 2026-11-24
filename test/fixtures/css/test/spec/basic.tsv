@@ -1,0 +1,10 @@
+input	expected	opts
+   \n  	{"type":"stylesheet","rules":[]}
+a { color: red; }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"color","value":"red"}]}]}
+a { color: red }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"color","value":"red"}]}]}
+a {}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[]}]}
+a { color: red; color: blue }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"color","value":"red"},{"type":"declaration","property":"color","value":"blue"}]}]}
+a { x: 1 } b { y: 2 }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"x","value":"1"}]},{"type":"rule","selectors":["b"],"declarations":[{"type":"declaration","property":"y","value":"2"}]}]}
+p { border: 1px solid #fff; color: rgb(1, 2, 3) }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["p"],"declarations":[{"type":"declaration","property":"border","value":"1px solid #fff"},{"type":"declaration","property":"color","value":"rgb(1, 2, 3)"}]}]}
+a { color: red !important }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"color","value":"red !important"}]}]}
+a { background: url("a;b.png") }	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"background","value":"url(\"a;b.png\")"}]}]}

@@ -99,13 +99,13 @@ func shaped(recordsText string) string {
 	return `{"response":{"metadata":` + metadata + `,"payload":{"deep":{"records":[` + recordsText + `]}}}}`
 }
 
-// transduceFixtures is transduce's fixture directory, beside this
-// checkout as the Rust tests find it (rs/tests/run_test.rs).
+// transduceFixtures is transduce's fixture directory, vendored, as the Rust
+// tests find it (rs/tests/run_test.rs).
 func transduceFixtures(t testing.TB) string {
 	t.Helper()
 	dir := filepath.Join(repoRoot(t), "..", "transduce", "rs", "tests", "fixtures")
 	if _, err := os.Stat(dir); err != nil {
-		t.Fatalf("transduce's fixtures are beside this checkout, at %s: %v", dir, err)
+		t.Fatalf("transduce's fixtures are vendored, at %s: %v", dir, err)
 	}
 	return dir
 }

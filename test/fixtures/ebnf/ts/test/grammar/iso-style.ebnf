@@ -1,0 +1,8 @@
+(* The same language as expr.ebnf, written with the ISO/IEC 14977
+   spellings this front-end accepts: `=` for the definition operator,
+   `,` for concatenation, `;` as a terminator, and this comment form.
+   The operators themselves stay W3C — postfix `*`, not braces. *)
+
+expr   = term , ( ( "+" | "-" ) , term )* ;
+term   = factor , ( ( "*" | "/" ) , factor )* ;
+factor = NR | "(" , expr , ")" ;

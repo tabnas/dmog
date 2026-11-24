@@ -1,0 +1,7 @@
+input	expected	opts
+a: 1 # comment\nb: 2	{"a":1,"b":2}
+# this is a comment\na: 1	{"a":1}
+a: # comment\n  b: 1	{"a":{"b":1}}
+# first\na: 1\n# second\nb: 2	{"a":1,"b":2}
+- a # comment\n- b	["a","b"]
+a: 1\n# middle\nb: 2	{"a":1,"b":2}

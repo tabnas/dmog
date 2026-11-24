@@ -1,0 +1,31 @@
+input	expected	opts
+# Behaviours this repo depends on from @tabnas/xml, pinned in BOTH runtimes.
+# Every row here was a defect or an under-rejection in @tabnas/xml v0.4.1.
+# All are fixed in the published crate and module as well as in the sibling
+# checkout, so these rows are green under every resolution now; they were the
+# difference between the GOWORK=off and workspace-on feedvalidator numbers
+# while the fixes were unreleased (see AGENTS.md).
+#
+# --- accepted, previously rejected ---------------------------------------
+# A UTF-8 BOM before the document element is stripped, not lexed as content.
+﻿<feed xmlns="http://www.w3.org/2005/Atom"/>	{"format":"atom","version":"1.0","entries":[]}
+# XML 1.0 4.1 WFC "Entity Declared": a reference is not an error when the
+# declarations could live in an unread external subset. Left verbatim.
+<!DOCTYPE feed SYSTEM "x.dtd"><feed xmlns="http://www.w3.org/2005/Atom"><title>a&nbsp;b</title></feed>	{"format":"atom","version":"1.0","entries":[],"title":{"type":"text","value":"a&nbsp;b"}}
+# strictNamespaces:false opts out of namespace well-formedness (bare XML 1.0).
+<feed xmlns="http://www.w3.org/2005/Atom"><dc:language>en</dc:language></feed>	{"format":"atom","version":"1.0","entries":[]}	{"strictNamespaces":false}
+#
+# --- rejected --------------------------------------------------------------
+# feed installs Xml with strictNamespaces:true, unlike bare @tabnas/xml.
+<feed xmlns="http://www.w3.org/2005/Atom"><dc:language>en</dc:language></feed>	ERROR:element or attribute uses an undeclared namespace prefix
+# The mismatched-tag message interpolates its operands: it used to read
+# "closing tag </$fsrc> does not match opening tag <$openname>".
+<feed xmlns="http://www.w3.org/2005/Atom"><title>x</feed></title>	ERROR:closing tag </feed> does not match opening tag <title>
+# XML 1.0 [66] admits only a lowercase "&#x"; "&#X26;" is not a reference.
+<feed xmlns="http://www.w3.org/2005/Atom"><title>a&#X26;b</title></feed>	ERROR:malformed entity reference
+# A namespace name may not contain white space.
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:a="http://x\ny"/>	ERROR:namespace name cannot contain white space
+# XML 1.0 2.1: document ::= prolog element Misc* — nothing but Misc may
+# follow the document element.
+<feed xmlns="http://www.w3.org/2005/Atom"/><extra/>	ERROR:unexpected character(s)
+<feed xmlns="http://www.w3.org/2005/Atom"/>junk	ERROR:character data is not allowed outside the root element

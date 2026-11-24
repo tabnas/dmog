@@ -1,0 +1,32 @@
+input	expected	opts
+# Move numbers and side to move, PGN spec 8.2.2.
+#
+# A move number indication states the fullmove number of the move that
+# follows. Where none is written, the parser counts: play alternates from
+# the starting side, so `number` and `side` are always available.
+e4	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]}	{"start":"movetext"}
+e4 e5	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"}]}	{"start":"movetext"}
+e4 e5 Nf3	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"},{"san":"Nf3","piece":"N","to":"f3","number":2,"side":"w"}]}	{"start":"movetext"}
+# A stated number resynchronises the count.
+1. e4 e5 15. Nf3	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"},{"san":"Nf3","piece":"N","to":"f3","number":15,"side":"w"}]}	{"start":"movetext"}
+# 8.2.2.2: one period is the export-format spelling for a White move,
+# three for a Black one — so the periods resynchronise the side.
+4... e5 5. Nf3	{"moves":[{"san":"e5","piece":"P","to":"e5","number":4,"side":"b"},{"san":"Nf3","piece":"N","to":"f3","number":5,"side":"w"}]}	{"start":"movetext"}
+2. e4	{"moves":[{"san":"e4","piece":"P","to":"e4","number":2,"side":"w"}]}	{"start":"movetext"}
+# 8.2.2.1: import format does not prohibit a superfluous indication.
+1. e4 1... e5 2. Nf3 2... Nc6	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"},{"san":"Nf3","piece":"N","to":"f3","number":2,"side":"w"},{"san":"Nc6","piece":"N","to":"c6","number":2,"side":"b"}]}	{"start":"movetext"}
+# No periods at all: the number is taken, the side is left to the count.
+1 e4 e5	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"}]}	{"start":"movetext"}
+# --- 9.7 alternative starting positions ---
+# The FEN tag says where play starts: field 2 is the active colour, field 6
+# the fullmove number.
+[FEN "8/8/8/8/8/8/8/8 b - - 0 12"]\ne5 Nf3	{"tags":{"FEN":"8/8/8/8/8/8/8/8 b - - 0 12"},"moves":[{"san":"e5","piece":"P","to":"e5","number":12,"side":"b"},{"san":"Nf3","piece":"N","to":"f3","number":13,"side":"w"}]}	{"start":"game"}
+[FEN "8/8/8/8/8/8/8/8 w - - 0 30"]\ne4	{"tags":{"FEN":"8/8/8/8/8/8/8/8 w - - 0 30"},"moves":[{"san":"e4","piece":"P","to":"e4","number":30,"side":"w"}]}	{"start":"game"}
+# The standard bounds the fullmove number nowhere, so the count has to
+# carry whatever the tag states and keep going from it.
+[FEN "8/8/8/8/8/8/8/8 b - - 0 4294967295"]\ne5 Nf3	{"tags":{"FEN":"8/8/8/8/8/8/8/8 b - - 0 4294967295"},"moves":[{"san":"e5","piece":"P","to":"e5","number":4294967295,"side":"b"},{"san":"Nf3","piece":"N","to":"f3","number":4294967296,"side":"w"}]}	{"start":"game"}
+# An unreadable FEN tag falls back to move 1, White, rather than guessing.
+[FEN "nonsense"]\ne4	{"tags":{"FEN":"nonsense"},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]}	{"start":"game"}
+[FEN ""]\ne4	{"tags":{"FEN":""},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]}	{"start":"game"}
+# Without a FEN tag, play starts at move 1 with White (8.2.2.2).
+[Event "x"]\ne4	{"tags":{"Event":"x"},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]}	{"start":"game"}

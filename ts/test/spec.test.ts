@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 tabnas, MIT License */
 
-// alchemy's shared fixtures (its test/spec, read from the checkout beside
-// this one) that need the stages, run through @tabnas/support's runner as
+// alchemy's shared fixtures (its test/spec, vendored into
+// test/fixtures/alchemy) that need the stages, run through @tabnas/support's runner as
 // alchemy runs the rest (rs/tests/spec_test.rs is the Rust half): the bytes
 // a run writes (run.tsv), the bytes a run over a grammar's rule passes
 // writes (transduce.tsv), and the catalogue's drift test over the error
@@ -40,10 +40,10 @@ import {
 import { Limits, Metrics } from '@tabnas/alchemy/shared'
 import type { Duplicates } from '@tabnas/alchemy/shared'
 
-import { Collect, OWN_CODES, compile, compileWith, failCode, jsonInto, plainEvents, sibling } from './host'
+import { Collect, OWN_CODES, compile, compileWith, failCode, jsonInto, plainEvents, vendored } from './host'
 
-// alchemy's fixtures, in the checkout beside this one.
-const SPEC_DIR = sibling('alchemy', 'test', 'spec')
+// alchemy's fixtures, vendored into test/fixtures.
+const SPEC_DIR = vendored('alchemy', 'test', 'spec')
 
 // The finer code a row pins, and the position the failure names.
 const runnerOptions = {

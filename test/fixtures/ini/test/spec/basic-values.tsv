@@ -1,0 +1,10 @@
+input	expected
+a = 1	{"a":"1"}
+a = x	{"a":"x"}
+a = y y	{"a":"y y"}
+a = true	{"a":true}
+a = false	{"a":false}
+a = null	{"a":null}
+a =	{"a":""}
+a = 1\nb = x\nc = y y	{"a":"1","b":"x","c":"y y"}
+u = v = 5	{"u":"v = 5"}

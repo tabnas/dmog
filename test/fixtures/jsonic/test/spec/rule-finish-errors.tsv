@@ -1,0 +1,15 @@
+input	expected
+# rule.finish:false makes an unterminated structure an ERROR rather than an
+# implicit close, and `@finish` names the reason: end_of_source. The Go port
+# returned the rejection without the code, so both runtimes rejected these and
+# only TypeScript said why — a contractual code answered two ways, inherited by
+# every grammar built on jsonic with finish off. Pinned here so it cannot go
+# quiet again.
+{a:1	ERROR:end_of_source
+{	ERROR:end_of_source
+[1	ERROR:end_of_source
+[1,	ERROR:end_of_source
+{a:1,	ERROR:end_of_source
+a:{b:	ERROR:end_of_source
+{a:	ERROR:end_of_source
+[	ERROR:end_of_source

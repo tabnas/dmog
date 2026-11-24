@@ -1,0 +1,4 @@
+.{
+    .name = "zon sample",
+    .ok = true,
+}

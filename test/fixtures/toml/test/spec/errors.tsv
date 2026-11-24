@@ -1,0 +1,79 @@
+input	expected
+a = 	ERROR:unexpected
+= 1	ERROR:unexpected
+# An unterminated string is unterminated_string in BOTH runtimes. This row
+# used to pin `unexpected`, which is what TypeScript answered -- not because
+# it diagnosed anything, but because its string matcher returned a VALID
+# token for the truncated text and the leftover character then failed the
+# grammar. When no character was left over, malformed TOML parsed silently.
+"unterminated	ERROR:unterminated_string
+# The cases that used to parse: an unterminated string whose last character
+# is trailing whitespace left nothing over, so TypeScript accepted it and
+# invented the closing quote.
+a = "abc 	ERROR:unterminated_string
+a = 'abc 	ERROR:unterminated_string
+a = """abc 	ERROR:unterminated_string
+# INVALID ESCAPES. Both runtimes reject these; neither used to.
+#
+# `\xAg` was `{"a":"\n"}` in TypeScript: parseInt is not a validator -- it
+# stops at the first non-hex character and returns what it read, so `Ag`
+# decoded as 0x0A and the `g` vanished. Go's strconv.ParseInt errors, which is
+# why only one runtime was wrong. `\xA"` is the same defect eating the CLOSING
+# QUOTE, which is why it used to surface as unterminated_string instead of a
+# bad escape.
+#
+# `\UFFFFFFFF` was a REPLACEMENT CHARACTER in a successful Go parse --
+# WriteRune above 0x10FFFF does not fail, it silently writes U+FFFD -- and in
+# TypeScript it was an uncaught RangeError from String.fromCodePoint, reported
+# as `unexpected`: a crash wearing a diagnostic's clothes, and the reason the
+# isUnicodeCharacter check below it never ran.
+a = "\xAg"	ERROR:invalid_ascii
+a = "\xg1"	ERROR:invalid_ascii
+a = "\xA"	ERROR:invalid_ascii
+a = "\UFFFFFFFF"	ERROR:invalid_unicode
+# A BAD TOKEN IN THE SECOND SLOT of an alternate keeps its own code. When an
+# alternate needs two tokens and the second is the lexer's bad token, the Rust
+# engine once built its "no alternate matched" error from the first token
+# alone, so both rows answered `unexpected` there while TypeScript and Go
+# named the bad token. tabnas/parser#274 repaired that in the engine, and the
+# register rows that held the difference are gone; these two catch a return
+# to `unexpected` in any port.
+["abc	ERROR:unterminated_string
+["tbl\n"]	ERROR:unprintable
+# Date and time RANGE, audit item T6 -- the largest divergence class in this
+# repo and the only one where the two ports agreed on the DECISION and
+# disagreed on the VALUE. Both accepted every row below. TypeScript built a JS
+# Date, which never fails: 1988-02-30 rolled over to 1988-03-01, and
+# 2006-01-32 became an Invalid Date that serialized to null -- the value
+# destroyed outright, no error anywhere. Go kept the source text, so it
+# round-tripped the impossible date back out unchanged. 38 value
+# disagreements, and the shared fixtures contained ZERO date/time inputs,
+# which is why nothing caught it.
+#
+# These pin the DECISION, which is now identical in both ports. The container
+# shape still differs (Date vs {Kind,Src}) and is a representation
+# difference, deliberately not pinned here.
+d = 2006-13-01T00:00:00-00:00	ERROR:invalid_datetime
+d = 2007-00-01T00:00:00-00:00	ERROR:invalid_datetime
+d = 2006-01-32T00:00:00-00:00	ERROR:invalid_datetime
+d = 2006-01-00T00:00:00-00:00	ERROR:invalid_datetime
+# 1988 IS a leap year and February still has no 30th.
+d = 1988-02-30T15:15:15Z	ERROR:invalid_datetime
+# 2100 is NOT a leap year: divisible by 100, not by 400. A naive %4 check
+# accepts this row, so it is the one that pins the century rule.
+d = 2100-02-29T15:15:15Z	ERROR:invalid_datetime
+d = 2006-01-01T24:00:00-00:00	ERROR:invalid_datetime
+d = 2006-01-01T00:60:00-00:00	ERROR:invalid_datetime
+d = 2006-01-01T00:00:61-00:00	ERROR:invalid_datetime
+d = 1985-06-18 17:04:07+25:00	ERROR:invalid_datetime
+d = 1985-06-18 17:04:07+12:60	ERROR:invalid_datetime
+# NON-ASCII DIGITS are not digits. The date and time shapes are ASCII-only in
+# every runtime: JavaScript compiles them without the `u` flag and Go's RE2 has
+# no Unicode `\d`, so `٢٠٢٤-٠١-٠١` (Arabic-Indic) is not date-shaped and is not
+# a bare key either, since `#ID` is `[a-zA-Z0-9_-]+`. Rust's `regex` crate does
+# read `\d` as the Unicode Nd category, so the port's matchers claimed these and
+# -- in a key context, where the matcher emits `#ID` directly -- ACCEPTED them
+# as bare keys that TOML does not allow.
+٢٠٢٤-٠١-٠١ = 1	ERROR:unexpected
+١٢:٣٤ = 1	ERROR:unexpected
+[٢٠٢٤-٠١-٠١]\nx = 1	ERROR:unexpected

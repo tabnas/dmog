@@ -1,0 +1,8 @@
+input	expected	opts
+# Hello	{"type":"document","children":[{"type":"heading","depth":1,"children":[{"type":"text","value":"Hello"}]}]}
+## Heading 2	{"type":"document","children":[{"type":"heading","depth":2,"children":[{"type":"text","value":"Heading 2"}]}]}
+###### H6	{"type":"document","children":[{"type":"heading","depth":6,"children":[{"type":"text","value":"H6"}]}]}
+   ### Hello ###  	{"type":"document","children":[{"type":"heading","depth":3,"children":[{"type":"text","value":"Hello"}]}]}
+# Hello *world*	{"type":"document","children":[{"type":"heading","depth":1,"children":[{"type":"text","value":"Hello "},{"type":"emphasis","children":[{"type":"text","value":"world"}]}]}]}
+Foo\n===	{"type":"document","children":[{"type":"heading","depth":1,"children":[{"type":"text","value":"Foo"}]}]}
+Bar\n---	{"type":"document","children":[{"type":"heading","depth":2,"children":[{"type":"text","value":"Bar"}]}]}

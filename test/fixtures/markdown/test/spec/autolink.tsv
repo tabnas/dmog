@@ -1,0 +1,27 @@
+input	expected	opts
+www.example.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"link","url":"http://www.example.com","title":null,"children":[{"type":"text","value":"www.example.com"}]}]}]}
+https://example.com/a	{"type":"document","children":[{"type":"paragraph","children":[{"type":"link","url":"https://example.com/a","title":null,"children":[{"type":"text","value":"https://example.com/a"}]}]}]}
+foo@bar.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"link","url":"mailto:foo@bar.com","title":null,"children":[{"type":"text","value":"foo@bar.com"}]}]}]}
+Visit www.example.com.	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"Visit "},{"type":"link","url":"http://www.example.com","title":null,"children":[{"type":"text","value":"www.example.com"}]},{"type":"text","value":"."}]}]}
+xwww.a.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"xwww.a.com"}]}]}
+www.example.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"www.example.com"}]}]}	{"gfm":false}
+# An extended autolink may start only at a line start or after whitespace
+# or one of * _ ~ ( — so the answer depends on the previous inline node.
+`x`www.a.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"inlineCode","value":"x"},{"type":"text","value":"www.a.com"}]}]}
+<b>www.a.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"html","value":"<b>"},{"type":"text","value":"www.a.com"}]}]}
+[l](/u)www.a.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"link","url":"/u","title":null,"children":[{"type":"text","value":"l"}]},{"type":"text","value":"www.a.com"}]}]}
+![i](/u)www.a.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"image","url":"/u","title":null,"alt":"i"},{"type":"text","value":"www.a.com"}]}]}
+*a*www.b.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"emphasis","children":[{"type":"text","value":"a"}]},{"type":"link","url":"http://www.b.com","title":null,"children":[{"type":"text","value":"www.b.com"}]}]}]}
+_a_www.b.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"_a_"},{"type":"link","url":"http://www.b.com","title":null,"children":[{"type":"text","value":"www.b.com"}]}]}]}
+**a**www.b.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"strong","children":[{"type":"text","value":"a"}]},{"type":"link","url":"http://www.b.com","title":null,"children":[{"type":"text","value":"www.b.com"}]}]}]}
+~~a~~www.b.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"delete","children":[{"type":"text","value":"a"}]},{"type":"link","url":"http://www.b.com","title":null,"children":[{"type":"text","value":"www.b.com"}]}]}]}
+a\nwww.a.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"a "},{"type":"link","url":"http://www.a.com","title":null,"children":[{"type":"text","value":"www.a.com"}]}]}]}
+a\\\nwww.a.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"a"},{"type":"break"},{"type":"link","url":"http://www.a.com","title":null,"children":[{"type":"text","value":"www.a.com"}]}]}]}
+x www.a.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"x "},{"type":"link","url":"http://www.a.com","title":null,"children":[{"type":"text","value":"www.a.com"}]}]}]}
+(www.a.com	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"("},{"type":"link","url":"http://www.a.com","title":null,"children":[{"type":"text","value":"www.a.com"}]}]}]}
+`x`b@c.de	{"type":"document","children":[{"type":"paragraph","children":[{"type":"inlineCode","value":"x"},{"type":"text","value":"b@c.de"}]}]}
+# An email local part of 65 characters or more is not recognised at all.
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co	{"type":"document","children":[{"type":"paragraph","children":[{"type":"link","url":"mailto:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co","title":null,"children":[{"type":"text","value":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co"}]}]}]}
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co"}]}]}
+_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co	{"type":"document","children":[{"type":"paragraph","children":[{"type":"link","url":"mailto:_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co","title":null,"children":[{"type":"text","value":"_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co"}]}]}]}
+_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co"}]}]}

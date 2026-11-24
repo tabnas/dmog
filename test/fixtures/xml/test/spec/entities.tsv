@@ -1,0 +1,34 @@
+# name	input	expected	opts	msg
+# Entity references: predefined (amp lt gt quot apos), numeric (decimal and
+# hex), unknown (passed through), and user-supplied custom entities.
+
+pre-amp	<a>&amp;</a>	{"name":"a","localName":"a","attributes":{},"children":["&"]}
+pre-lt	<a>&lt;</a>	{"name":"a","localName":"a","attributes":{},"children":["<"]}
+pre-gt	<a>&gt;</a>	{"name":"a","localName":"a","attributes":{},"children":[">"]}
+pre-quot	<a>&quot;</a>	{"name":"a","localName":"a","attributes":{},"children":["\""]}
+pre-apos	<a>&apos;</a>	{"name":"a","localName":"a","attributes":{},"children":["'"]}
+pre-all-in-one	<a>&amp;&lt;&gt;&quot;&apos;</a>	{"name":"a","localName":"a","attributes":{},"children":["&<>\"'"]}
+pre-in-text	<a>Tom &amp; Jerry</a>	{"name":"a","localName":"a","attributes":{},"children":["Tom & Jerry"]}
+num-dec-single	<a>&#65;</a>	{"name":"a","localName":"a","attributes":{},"children":["A"]}
+num-dec-multi	<a>&#65;&#66;</a>	{"name":"a","localName":"a","attributes":{},"children":["AB"]}
+num-hex-single	<a>&#x41;</a>	{"name":"a","localName":"a","attributes":{},"children":["A"]}
+num-hex-multi	<a>&#x41;&#x42;</a>	{"name":"a","localName":"a","attributes":{},"children":["AB"]}
+num-hex-astral	<a>&#x1F600;</a>	{"name":"a","localName":"a","attributes":{},"children":["\uD83D\uDE00"]}
+num-dec-leading-zeros	<a>&#000000000000000000000065;</a>	{"name":"a","localName":"a","attributes":{},"children":["A"]}
+num-hex-leading-zeros	<a>&#x0000000000000000000041;</a>	{"name":"a","localName":"a","attributes":{},"children":["A"]}
+entity-in-attr	<a title="Tom &amp; Jerry"/>	{"name":"a","localName":"a","attributes":{"title":"Tom & Jerry"},"children":[]}
+num-in-attr	<a v="&#65;&#x42;"/>	{"name":"a","localName":"a","attributes":{"v":"AB"},"children":[]}
+unknown-rejected	<a>&unknown;</a>	ERROR:undeclared_entity
+unknown-passthrough-lenient	<a>&unknown;</a>	{"name":"a","localName":"a","attributes":{},"children":["&unknown;"]}	{"strictEntities":false}
+custom-entity	<a>&copy; 2025&nbsp;all rights</a>	{"name":"a","localName":"a","attributes":{},"children":["© 2025\u00a0all rights"]}	{"customEntities":{"nbsp":"\u00a0","copy":"©"}}
+entities-disabled	<a>&amp;</a>	{"name":"a","localName":"a","attributes":{},"children":["&amp;"]}	{"entities":false}
+
+# XML 1.0 [66]: CharRef ::= '&#' [0-9]+ ';' | '&#x' [0-9a-fA-F]+ ';'
+# The hex marker is lowercase-only. `&#X26;` is neither a character
+# reference nor an entity reference (`X26` follows `#`, so it is not a
+# Name), so it is not well-formed. The hex DIGITS may be either case.
+num-hex-lower-x-ok	<a>&#xAB;</a>	{"name":"a","localName":"a","attributes":{},"children":["\u00ab"]}
+num-hex-lower-x-lower-digits-ok	<a>&#xab;</a>	{"name":"a","localName":"a","attributes":{},"children":["\u00ab"]}
+num-hex-upper-X-rejected	<a>&#X26;</a>	ERROR:bad_entity_ref
+num-hex-upper-X-in-attr-rejected	<a v="&#X41;"/>	ERROR:bad_entity_ref
+num-hex-upper-X-rejected-lenient	<a>&#X26;</a>	ERROR:bad_entity_ref	{"strictEntities":false}

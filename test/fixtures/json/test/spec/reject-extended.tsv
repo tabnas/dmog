@@ -1,0 +1,36 @@
+input	expected	opts
+{a:1}	ERROR:unexpected
+[1,2,]	ERROR:unexpected
+1 // note	ERROR:unexpected
+'x'	ERROR:unexpected
+a:1,b:2	ERROR:unexpected
+x,y,z	ERROR:unexpected
+0x10	ERROR:unexpected
+.5	ERROR:unexpected
++1	ERROR:unexpected
+1.	ERROR:unexpected
+01	ERROR:unexpected
+"\\x41"	ERROR:unexpected
+"\\u{41}"	ERROR:invalid_unicode
+"\\v"	ERROR:unexpected
+"\\'"	ERROR:unexpected
+"\\`"	ERROR:unexpected
+{"a":1}//c	ERROR:unexpected
+"abc	ERROR:unterminated_string
+{1:1}	ERROR:unexpected
+{1.5:1}	ERROR:unexpected
+{true:1}	ERROR:unexpected
+{null:null,null:null}	ERROR:unexpected
+# The bare words. jsonic's extended value map reads NaN, Infinity and
+# undefined as values; standard JSON has no word outside true, false and
+# null, and all three platform parsers reject them. These also hold the
+# reasoning that lets the Rust port leave options.result.fail unset: with
+# text.lex off the words are not tokens, so no parse can reach a NaN or an
+# undefined result to be failed on.
+NaN	ERROR:unexpected
+Infinity	ERROR:unexpected
+-Infinity	ERROR:unexpected
+undefined	ERROR:unexpected
+[NaN]	ERROR:unexpected
+[1,undefined]	ERROR:unexpected
+{"a":NaN}	ERROR:unexpected

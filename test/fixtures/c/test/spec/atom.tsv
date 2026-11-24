@@ -1,0 +1,3 @@
+input	expected	opts
+42	{"kind":"literal_expression","span":{"start":0,"end":2,"line":1,"col":1},"children":[{"kind":"token","tname":"LIT_INT","src":"42","span":{"start":0,"end":2,"line":1,"col":1}}],"trivia":{"leading":[],"trailing":[]},"literalKind":"LIT_INT","value":"42"}	{"start":"val"}
+foo	{"kind":"identifier_expression","span":{"start":0,"end":3,"line":1,"col":1},"children":[{"kind":"token","tname":"ID","src":"foo","span":{"start":0,"end":3,"line":1,"col":1}}],"trivia":{"leading":[],"trailing":[]},"name":"foo"}	{"start":"val"}

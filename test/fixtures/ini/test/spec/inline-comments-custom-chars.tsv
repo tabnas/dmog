@@ -1,0 +1,3 @@
+input	expected
+a = hello ; comment	{"a":"hello"}
+a = hello # not a comment	{"a":"hello # not a comment"}

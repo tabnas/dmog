@@ -1,0 +1,5 @@
+unicode: "日本語 — ünïcödé 🎉"
+empty_obj: {}
+empty_arr: []
+nums: [0, -1.5, 1e21, 12345678901234567890]
+"weird key": {"a-b": 1, "0": 2}

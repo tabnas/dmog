@@ -1,0 +1,78 @@
+input	expected	opts
+# SAN move decomposition, PGN spec 8.2.3. Parsed with the `move` start
+# rule, so each row is one move and carries no number/side.
+#
+# --- 8.2.3.3 basic move construction ---
+e4	{"san":"e4","piece":"P","to":"e4"}	{"start":"move"}
+d4	{"san":"d4","piece":"P","to":"d4"}	{"start":"move"}
+Nf3	{"san":"Nf3","piece":"N","to":"f3"}	{"start":"move"}
+Bb5	{"san":"Bb5","piece":"B","to":"b5"}	{"start":"move"}
+Ra1	{"san":"Ra1","piece":"R","to":"a1"}	{"start":"move"}
+Qd8	{"san":"Qd8","piece":"Q","to":"d8"}	{"start":"move"}
+Ke2	{"san":"Ke2","piece":"K","to":"e2"}	{"start":"move"}
+# --- captures ---
+Nxd4	{"san":"Nxd4","piece":"N","capture":true,"to":"d4"}	{"start":"move"}
+Qxf7	{"san":"Qxf7","piece":"Q","capture":true,"to":"f7"}	{"start":"move"}
+Kxe2	{"san":"Kxe2","piece":"K","capture":true,"to":"e2"}	{"start":"move"}
+# A pawn capture names the file it came from, so that is a disambiguation.
+exd5	{"san":"exd5","piece":"P","disambiguation":{"file":"e"},"capture":true,"to":"d5"}	{"start":"move"}
+axb6	{"san":"axb6","piece":"P","disambiguation":{"file":"a"},"capture":true,"to":"b6"}	{"start":"move"}
+# --- 8.2.3.4 disambiguation ---
+Nbd7	{"san":"Nbd7","piece":"N","disambiguation":{"file":"b"},"to":"d7"}	{"start":"move"}
+R1e2	{"san":"R1e2","piece":"R","disambiguation":{"rank":1},"to":"e2"}	{"start":"move"}
+Qh4e1	{"san":"Qh4e1","piece":"Q","disambiguation":{"file":"h","rank":4},"to":"e1"}	{"start":"move"}
+Nbxd4	{"san":"Nbxd4","piece":"N","disambiguation":{"file":"b"},"capture":true,"to":"d4"}	{"start":"move"}
+R1xe2	{"san":"R1xe2","piece":"R","disambiguation":{"rank":1},"capture":true,"to":"e2"}	{"start":"move"}
+Qa6xb7	{"san":"Qa6xb7","piece":"Q","disambiguation":{"file":"a","rank":6},"capture":true,"to":"b7"}	{"start":"move"}
+# --- castling, 8.2.3.3 ---
+O-O	{"san":"O-O","piece":"K","castle":"king"}	{"start":"move"}
+O-O-O	{"san":"O-O-O","piece":"K","castle":"queen"}	{"start":"move"}
+# --- promotion, 8.2.3.3 ---
+e8=Q	{"san":"e8=Q","piece":"P","to":"e8","promotion":"Q"}	{"start":"move"}
+a1=N	{"san":"a1=N","piece":"P","to":"a1","promotion":"N"}	{"start":"move"}
+fxg1=R	{"san":"fxg1=R","piece":"P","disambiguation":{"file":"f"},"capture":true,"to":"g1","promotion":"R"}	{"start":"move"}
+bxa8=B	{"san":"bxa8=B","piece":"P","disambiguation":{"file":"b"},"capture":true,"to":"a8","promotion":"B"}	{"start":"move"}
+# --- 8.2.3.5 check and checkmate indicators ---
+Qh5+	{"san":"Qh5+","piece":"Q","to":"h5","check":"+"}	{"start":"move"}
+Qxf7#	{"san":"Qxf7#","piece":"Q","capture":true,"to":"f7","check":"#"}	{"start":"move"}
+O-O+	{"san":"O-O+","piece":"K","castle":"king","check":"+"}	{"start":"move"}
+O-O-O#	{"san":"O-O-O#","piece":"K","castle":"queen","check":"#"}	{"start":"move"}
+e8=Q+	{"san":"e8=Q+","piece":"P","to":"e8","promotion":"Q","check":"+"}	{"start":"move"}
+# --- 8.2.3.6 the two length extremes named by the spec ---
+d4	{"san":"d4","piece":"P","to":"d4"}	{"start":"move"}
+Qa6xb7#	{"san":"Qa6xb7#","piece":"Q","disambiguation":{"file":"a","rank":6},"capture":true,"to":"b7","check":"#"}	{"start":"move"}
+fxg1=Q+	{"san":"fxg1=Q+","piece":"P","disambiguation":{"file":"f"},"capture":true,"to":"g1","promotion":"Q","check":"+"}	{"start":"move"}
+# --- 8.2.3.8 suffix annotations, split off the move itself ---
+e4!	{"san":"e4","piece":"P","to":"e4","annotation":"!"}	{"start":"move"}
+e4?	{"san":"e4","piece":"P","to":"e4","annotation":"?"}	{"start":"move"}
+e4!!	{"san":"e4","piece":"P","to":"e4","annotation":"!!"}	{"start":"move"}
+e4??	{"san":"e4","piece":"P","to":"e4","annotation":"??"}	{"start":"move"}
+e4!?	{"san":"e4","piece":"P","to":"e4","annotation":"!?"}	{"start":"move"}
+e4?!	{"san":"e4","piece":"P","to":"e4","annotation":"?!"}	{"start":"move"}
+Qxf7#!!	{"san":"Qxf7#","piece":"Q","capture":true,"to":"f7","check":"#","annotation":"!!"}	{"start":"move"}
+# --- import-format leniencies, 8.2.3.7 ---
+0-0	{"san":"0-0","piece":"K","castle":"king"}	{"start":"move"}
+0-0-0	{"san":"0-0-0","piece":"K","castle":"queen"}	{"start":"move"}
+Pe4	{"san":"Pe4","piece":"P","to":"e4"}	{"start":"move"}
+Pxd5	{"san":"Pxd5","piece":"P","capture":true,"to":"d5"}	{"start":"move"}
+e8Q	{"san":"e8Q","piece":"P","to":"e8","promotion":"Q"}	{"start":"move"}
+e4++	{"san":"e4++","piece":"P","to":"e4","check":"+"}	{"start":"move"}
+# --- every file and rank lexes ---
+a1	{"san":"a1","piece":"P","to":"a1"}	{"start":"move"}
+h8	{"san":"h8","piece":"P","to":"h8"}	{"start":"move"}
+Na1	{"san":"Na1","piece":"N","to":"a1"}	{"start":"move"}
+Nh8	{"san":"Nh8","piece":"N","to":"h8"}	{"start":"move"}
+# --- rejections ---
+e9	ERROR	{"start":"move"}
+i4	ERROR	{"start":"move"}
+e0	ERROR	{"start":"move"}
+Zf3	ERROR	{"start":"move"}
+Nf	ERROR	{"start":"move"}
+xd5	ERROR	{"start":"move"}
+=Q	ERROR	{"start":"move"}
+O-O-O-O	ERROR	{"start":"move"}
+e8=K	ERROR	{"start":"move"}
+e8=P	ERROR	{"start":"move"}
+# A run-together pair must not silently split into two moves.
+e2e4	ERROR	{"start":"move"}
+Nf3Nc6	ERROR	{"start":"move"}

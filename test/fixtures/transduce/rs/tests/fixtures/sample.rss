@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>aless notes</title>
+    <link>https://example.org/</link>
+    <description>Two entries</description>
+    <item>
+      <title>First</title>
+      <link>https://example.org/1</link>
+      <guid>1</guid>
+    </item>
+    <item>
+      <title>Second</title>
+      <link>https://example.org/2</link>
+      <guid>2</guid>
+    </item>
+  </channel>
+</rss>

@@ -22,7 +22,7 @@ import { loadSpec } from '@tabnas/support'
 import { Program } from '@tabnas/alchemy'
 import { Limits } from '@tabnas/alchemy/shared'
 
-import { compileWith, sibling } from './host'
+import { compileWith, vendored } from './host'
 
 // An engine carrying the grammar, as abnf's own tests install one.
 function engine(grammar: string): Tabnas {
@@ -44,7 +44,7 @@ interface Case {
 // part, each grammar the generator declares read whole held to the reason
 // it gives for a start rule with no annotation, never an annotated one.
 function cases(): Case[] {
-  const fixture = loadSpec(sibling('abnf', 'test', 'spec', 'alignment-abnf-ast.tsv'))
+  const fixture = loadSpec(vendored('abnf', 'test', 'spec', 'alignment-abnf-ast.tsv'))
   const out: Case[] = []
   for (const row of fixture.rows) {
     const grammar = row.unescNamed('grammar')

@@ -1,0 +1,5 @@
+input	expected
+title = "TOML"\n[owner]\nname = "Tom"	{"title":"TOML","owner":{"name":"Tom"}}
+x = 1\ny = 2\n[t]\nz = 3	{"x":1,"y":2,"t":{"z":3}}
+[db]\nhost = "localhost"\nport = 5432	{"db":{"host":"localhost","port":5432}}
+items = [1, 2, 3]\n[meta]\ncount = 3	{"items":[1,2,3],"meta":{"count":3}}

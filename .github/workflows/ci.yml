@@ -8,29 +8,15 @@ on:
   pull_request:
 
 jobs:
-  # deps names the tabnas repositories the ts/ and go/ trees build against
-  # from source, dependency first: the grammars `run` reads with, then
-  # alchemy, then transduce and render, which build on alchemy's shared
-  # types. The other grammars, which `translate` reads and writes and the
-  # tests of alchemy's programs read, are released: TypeScript installs
-  # them from the registry and Go resolves them from go.mod, so cloning and
-  # building each from source here, on every OS, would buy nothing.
-  # ci/rust/run.sh lists them for the Rust gate, which takes every crate by
-  # path. jsonc is here for its checkout all the same: translate's cross
-  # product (go/translate's test, as rs/tests/translate_test.rs) reads the
-  # JSONTestSuite documents it vendors; so are abnf, ebnf and gbnf, whose
-  # example grammars it reads too (gbnf after abnf, which its build takes),
-  # and c, whose fixtures the tests that hold C's transducer part to C's
-  # reader read (the maintainer's instruction of 2026-11-16).
-  # debug is here though nothing in this repository imports it: json's
-  # nested test module (go/debugtest) replaces debug with its sibling
-  # checkout, the shared go job's workspace takes in every module it finds,
-  # and jsonic requires debug, so without the clone the workspace cannot
-  # load jsonic's requirements.
+  # deps is empty: the ts/ and go/ trees build against released packages
+  # alone (npm's registry and go/go.mod's requirements), and the tests read
+  # the test files vendored in test/fixtures, so nothing is cloned.
+  # alchemy's downstream workflow runs this repository's gates against
+  # sibling checkouts instead (DMOG_SIBLINGS=1).
   ci:
     uses: tabnas/.github/.github/workflows/polyglot-ci.yml@main
     with:
-      deps: "parser debug json jsonic jsonc csv abnf ebnf gbnf c alchemy transduce render"
+      deps: ""
 
   # The shared workflow runs `go test ./...` with no build tags. transduce
   # builds its rule-event adapter only under the `tabnas_nodecell` tag,
@@ -57,26 +43,6 @@ jobs:
         with:
           go-version: "1.24"
           cache: false
-
-      # The same siblings the shared go job clones (the deps input above).
-      - name: Clone tabnas dependencies
-        shell: bash
-        run: |
-          set -e
-          for dep in parser debug json jsonic jsonc csv abnf ebnf gbnf c alchemy transduce render; do
-            git clone --depth 1 "https://github.com/tabnas/$dep.git" "$dep"
-          done
-
-      # Mirrors the shared workflow's go job: a workspace over every module
-      # in the tree, so the suite runs against sibling source.
-      - name: Set up go workspace
-        shell: bash
-        run: |
-          set -e
-          go work init
-          for gm in $(find . -name go.mod -not -path '*/vendor/*' -not -path '*/node_modules/*'); do
-            go work use "$(dirname "$gm")"
-          done
 
       - name: Build with the tag
         working-directory: dmog/go

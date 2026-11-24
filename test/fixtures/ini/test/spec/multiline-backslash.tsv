@@ -1,0 +1,9 @@
+input	expected
+a = hello \\\nworld	{"a":"hello world"}
+a = hello \\\n    world	{"a":"hello world"}
+a = one \\\ntwo \\\nthree	{"a":"one two three"}
+a = hello\nb = world	{"a":"hello","b":"world"}
+a = path\\\\\nb = next	{"a":"path\\","b":"next"}
+[s]\na = hello \\\n    world	{"s":{"a":"hello world"}}
+a = \\\nworld	{"a":"world"}
+a = hello \\\nworld ;not-a-comment\nb = 2	{"a":"hello world ;not-a-comment","b":"2"}

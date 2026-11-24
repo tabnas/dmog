@@ -1,0 +1,138 @@
+input	expected
+# Atoms: a line with exactly one form is that form.
+x	"x"
+a-b?	"a-b?"
+42	"42"
+-0	"-0"
+-1.5e3	"-1.5e3"
+1E+2	"1E+2"
+6.02e23	"6.02e23"
+"hi"	"\"hi\""
+"a\\nb"	"\"a\\nb\""
+"tab\\tx"	"\"tab\\tx\""
+"say \\"hi\\""	"\"say \\\"hi\\\"\""
+"back\\\\slash"	"\"back\\\\slash\""
+"caf\\u00e9"	"\"café\""
+""	"\"\""
+true	"true"
+false	"false"
+null	"null"
+:label	":label"
+# Words that are not JSON numbers are symbols.
+1a .5 +1 1_000 0x1f	"(1a .5 +1 1_000 0x1f)"
+active? <=> ->x a.b $x %y &z |w ^v ~u @t a/b a*b a+b a! =	"(active? <=> ->x a.b $x %y &z |w ^v ~u @t a/b a*b a+b a! =)"
+-12.5 1e-9 -	"(-12.5 1e-9 -)"
+# Zero-argument calls, empty vectors, nested vectors.
+()	"()"
+(newline)	"(newline)"
+[]	"[]"
+[1 2 [3 [4]]]	"[1 2 [3 [4]]]"
+[a b]	"[a b]"
+[1\n2\n  3]	"[1 2 3]"
+# Several inline forms make a list.
+a b c	"(a b c)"
+(a b) c	"((a b) c)"
+((f x) y)	"((f x) y)"
+a (b c) d	"(a (b c) d)"
+a\tb	"(a b)"
+entry :delimiter ","	"(entry :delimiter \",\")"
+# Children follow the inline forms.
+a\n  b\n  c	"(a b c)"
+a\n  b c\n  d	"(a (b c) d)"
+a b\n  c	"(a b c)"
+a\n  b\n    c\n  d	"(a (b c) d)"
+a\n  b\n    c\nd	"(a (b c))\nd"
+a\n  (b)\n  [c]	"(a (b) [c])"
+a\nb	"a\nb"
+a\r\n  b\r\nc	"(a b)\nc"
+# A line ends at a line feed, alone or after a carriage return; a carriage return anywhere else is whitespace, as the engine counts rows (and it restarts the engine's column).
+a\r  b\r c	"(a b c)"
+a \r b	"(a b)"
+a\r  b\r c)	ERROR:unbalanced@1:3
+a\r\n  b\r\n c	ERROR:bad_dedent@3:2
+# In a line's leading whitespace a lone carriage return restarts the indentation, as it restarts the engine's column; a row holding only whitespace and comments after it is blank.
+f x\n\r	"(f x)"
+a\n\r  b	"(a b)"
+a\n  b\n  \r;c\nd	"(a b)\nd"
+a\n  b\n\r;x\n  c	"(a b c)"
+a\n  b\n  \r  \rc	"(a b)\nc"
+\r  a	ERROR:bad_indent@1:3
+# Explicit delimiters suspend layout.
+f (a\n      b\n  c) d	"(f (a b c) d)"
+def f [x]\n  concat (a x) (b x)\n    (c x)	"(def f [x] (concat (a x) (b x) (c x)))"
+# Blank lines and comments do not count.
+	""
+\n\n	""
+; only a comment\n  ; and another	""
+a  \n\n	"a"
+\n\n  \na	"a"
+def x 1\n\n\ndef y 2	"(def x 1)\n(def y 2)"
+def f [x]\n\n  g x\n\n  h x\n	"(def f [x] (g x) (h x))"
+; leading\ndef x 1 ; trailing\n  ; between\n  y ; after\n; end	"(def x 1 y)"
+a ; (\n  b	"(a b)"
+# The dsl blocks of the design brief and the language reference.
+pipe input (select (path "payload" "records" each-index)) (map normalize) (filter active?)	"(pipe input (select (path \"payload\" \"records\" each-index)) (map normalize) (filter active?))"
+pipe input\n  select (path "payload" "records" each-index)\n  map normalize\n  filter active?	"(pipe input (select (path \"payload\" \"records\" each-index)) (map normalize) (filter active?))"
+join ","\n  map csv-field values	"(join \",\" (map csv-field values))"
+concat\n  prefix\n  (newline)\n  suffix	"(concat prefix (newline) suffix)"
+concat "a" "b"\n  c	"(concat \"a\" \"b\" c)"
+record\n  entry :delimiter ","	"(record (entry :delimiter \",\"))"
+map\n  fn [column]\n    get :label column\n  columns	"(map (fn [column] (get :label column)) columns)"
+def api-binding\n  record\n    entry :columns\n      path "response" "metadata" "fields"\n    entry :rows\n      path "response" "payload" "deep" "records" each-index\n    entry :column column-from-meta	"(def api-binding (record (entry :columns (path \"response\" \"metadata\" \"fields\")) (entry :rows (path \"response\" \"payload\" \"deep\" \"records\" each-index)) (entry :column column-from-meta)))"
+def table-step [state selected]\n  match (get :tag selected)\n    case :columns\n      transition (ready state selected) []\n    case :rows\n      transition state [(row state selected)]	"(def table-step [state selected] (match (get :tag selected) (case :columns (transition (ready state selected) [])) (case :rows (transition state [(row state selected)]))))"
+def table-from-json [binding input]\n  pipe input\n    route (captures binding)\n    scan-emit table-step no-schema	"(def table-from-json [binding input] (pipe input (route (captures binding)) (scan-emit table-step no-schema)))"
+def csv-field [value]\n  scalar-text value	"(def csv-field [value] (scalar-text value))"
+def csv-row [values]\n  concat\n    join ","\n      map csv-field values\n    (newline)	"(def csv-row [values] (concat (join \",\" (map csv-field values)) (newline)))"
+def csv [options rows]\n  concat\n    csv-row (columns options)\n    concat-map csv-row rows	"(def csv [options rows] (concat (csv-row (columns options)) (concat-map csv-row rows)))"
+def export [input]\n  pipe input\n    table-from-json api-binding\n    csv csv-options	"(def export [input] (pipe input (table-from-json api-binding) (csv csv-options)))"
+let [x 1]\n  if (ready? x)\n    "yes"\n    "no"	"(let [x 1] (if (ready? x) \"yes\" \"no\"))"
+# Errors, by the grammar's own codes and the engine's.
+a\n\tb	ERROR:tab_indent
+\tb	ERROR:tab_indent
+a\n  \tb	ERROR:tab_indent
+  a	ERROR:bad_indent
+a\n   b	ERROR:bad_indent
+a\n    b	ERROR:bad_indent
+a\n  b\n c	ERROR:bad_dedent
+a\n  b\n    c\n   d	ERROR:bad_dedent
+(a b	ERROR:unbalanced
+a)	ERROR:unbalanced
+[a	ERROR:unbalanced
+a]	ERROR:unbalanced
+(a]	ERROR:unbalanced
+a\n  (b\nc	ERROR:unbalanced
+"abc	ERROR:unterminated_string
+"a\nb"	ERROR:unprintable
+"\\q"	ERROR:unexpected
+a { b	ERROR:unexpected
+a, b	ERROR:unexpected
+a : b	ERROR:unexpected
+# Nesting is bounded at 256 levels, counting a layout line, each indentation level and each open delimiter as one; this row is one below the bound, so its layout form reads back too.
+a ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((x))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))	"(a ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((x)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))"
+((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((x))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))	ERROR:too_deep@1:256
+# The standard library's examples in docs/language.md: one-line calls, whose canonical form is the parenthesized line.
+select (path "items" each-index) input	"(select (path \"items\" each-index) input)"
+route [(capture :meta (path "meta")) (capture :row (path "rows" each-index))] input	"(route [(capture :meta (path \"meta\")) (capture :row (path \"rows\" each-index))] input)"
+scan-emit no-schema (partial table-step binding) table-finish selected	"(scan-emit no-schema (partial table-step binding) table-finish selected)"
+get-path (as-path ["account" "balance"]) row	"(get-path (as-path [\"account\" \"balance\"]) row)"
+transition (ready columns) [(schema (map public-column columns))]	"(transition (ready columns) [(schema (map public-column columns))])"
+concat "[" (join "," (map csv-field cells)) "]"	"(concat \"[\" (join \",\" (map csv-field cells)) \"]\")"
+replace-text "a" "b" text	"(replace-text \"a\" \"b\" text)"
+scalar-text csv-options cell	"(scalar-text csv-options cell)"
+records (table-from-json api-binding input)	"(records (table-from-json api-binding input))"
+fail "Required metadata was not found"	"(fail \"Required metadata was not found\")"
+# The source's events as items, and the stack a renderer over them keeps.
+scan-emit [] step finish (events input)	"(scan-emit [] step finish (events input))"
+push :object (pop stack)	"(push :object (pop stack))"
+repeat (count stack) "  "	"(repeat (count stack) \"  \")"
+quoted (top stack)	"(quoted (top stack))"
+# A step's outputs that end a record of the text join writes.
+transition s [(quoted name) "\\n" :record-end]	"(transition s [(quoted name) \"\\n\" :record-end])"
+# The string, vector and number operators' examples in docs/language.md.
+trim (get :val token)	"(trim (get :val token))"
+first-split "=" (trim line)	"(first-split \"=\" (trim line))"
+starts-with "#" line	"(starts-with \"#\" line)"
+ends-with "/" path	"(ends-with \"/\" path)"
+contains "@" address	"(contains \"@\" address)"
+transition state (flatten (map cell-events cells))	"(transition state (flatten (map cell-events cells)))"
+get-or :fill "" spec	"(get-or :fill \"\" spec)"

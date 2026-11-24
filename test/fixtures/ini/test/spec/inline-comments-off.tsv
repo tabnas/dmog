@@ -1,0 +1,5 @@
+input	expected
+a = hello ; world	{"a":"hello ; world"}
+a = hello # world	{"a":"hello # world"}
+a = x;y;z	{"a":"x;y;z"}
+;X\n#Y\na=1;2\nb=2	{"a":"1;2","b":"2"}

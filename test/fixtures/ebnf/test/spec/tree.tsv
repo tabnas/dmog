@@ -1,0 +1,54 @@
+grammar	expected
+# Each row is a grammar and its tree, member order included: see test/AGENTS.md.
+# The empty grammar, and one of comments alone, hold no rules.
+	{"type":"grammar","rules":[]}
+/* a comment */\n(* an ISO comment *)\n	{"type":"grammar","rules":[]}
+# Rules in source order, a second definition of a name kept, and names with _, . and -.
+A ::= B	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"reference","name":"B"}]]}]}
+A ::= B\nC ::= D\n	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"reference","name":"B"}]]},{"type":"rule","name":"C","alternatives":[[{"type":"reference","name":"D"}]]}]}
+A ::= B\nA ::= C	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"reference","name":"B"}]]},{"type":"rule","name":"A","alternatives":[[{"type":"reference","name":"C"}]]}]}
+_a.b-c ::= x.y	{"type":"grammar","rules":[{"type":"rule","name":"_a.b-c","alternatives":[[{"type":"reference","name":"x.y"}]]}]}
+# ISO 14977's =, a comma between items and a closing ; leave nothing in the tree.
+A = B , C ;\nD = E ;	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"reference","name":"B"},{"type":"reference","name":"C"}]]},{"type":"rule","name":"D","alternatives":[[{"type":"reference","name":"E"}]]}]}
+# Alternatives, and a rule over lines.
+A ::= B | C | D	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"reference","name":"B"}],[{"type":"reference","name":"C"}],[{"type":"reference","name":"D"}]]}]}
+A ::= B\n  | C\n  | D\n	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"reference","name":"B"}],[{"type":"reference","name":"C"}],[{"type":"reference","name":"D"}]]}]}
+# A string's text is its characters: no escapes, either quote, past ASCII.
+A ::= "ab" 'cd'	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"literal","text":"ab","caseSensitive":true},{"type":"literal","text":"cd","caseSensitive":true}]]}]}
+A ::= "it's" '"q"'	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"literal","text":"it's","caseSensitive":true},{"type":"literal","text":"\"q\"","caseSensitive":true}]]}]}
+A ::= "\\" "a\\n"	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"literal","text":"\\","caseSensitive":true},{"type":"literal","text":"a\\n","caseSensitive":true}]]}]}
+A ::= "é😀"	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"literal","text":"é😀","caseSensitive":true}]]}]}
+# A code point is a char; a class's members are code points, a hyphen that joins none a member of its own.
+A ::= #x41 #x10FFFF #xD800 #x000041	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"char","value":65},{"type":"char","value":1114111},{"type":"char","value":55296},{"type":"char","value":65}]]}]}
+A ::= [a-z_] [^<&] [#x20-#x7E] [#x9#xA#xD]	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"class","negated":false,"members":[{"from":97,"to":122},{"from":95,"to":95}]},{"type":"class","negated":true,"members":[{"from":60,"to":60},{"from":38,"to":38}]},{"type":"class","negated":false,"members":[{"from":32,"to":126}]},{"type":"class","negated":false,"members":[{"from":9,"to":9},{"from":10,"to":10},{"from":13,"to":13}]}]]}]}
+A ::= [-+] [a-] [-a-z-]	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"class","negated":false,"members":[{"from":45,"to":45},{"from":43,"to":43}]},{"type":"class","negated":false,"members":[{"from":97,"to":97},{"from":45,"to":45}]},{"type":"class","negated":false,"members":[{"from":45,"to":45},{"from":97,"to":122},{"from":45,"to":45}]}]]}]}
+A ::= [#xD83D#xDE00] [é-ü😀]	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"class","negated":false,"members":[{"from":55357,"to":55357},{"from":56832,"to":56832}]},{"type":"class","negated":false,"members":[{"from":233,"to":252},{"from":128512,"to":128512}]}]]}]}
+A ::= [\\] [#]	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"class","negated":false,"members":[{"from":92,"to":92}]},{"type":"class","negated":false,"members":[{"from":35,"to":35}]}]]}]}
+# Groups, and postfix operators, the innermost first.
+A ::= (B | C) D	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"group","alternatives":[[{"type":"reference","name":"B"}],[{"type":"reference","name":"C"}]]},{"type":"reference","name":"D"}]]}]}
+A ::= ((B))	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"group","alternatives":[[{"type":"group","alternatives":[[{"type":"reference","name":"B"}]]}]]}]]}]}
+A ::= B? C* D+ (E F)*	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"reference","name":"B","repeat":[{"min":0,"max":1}]},{"type":"reference","name":"C","repeat":[{"min":0}]},{"type":"reference","name":"D","repeat":[{"min":1}]},{"type":"group","alternatives":[[{"type":"reference","name":"E"},{"type":"reference","name":"F"}]],"repeat":[{"min":0}]}]]}]}
+A ::= B*? C+?	{"type":"grammar","rules":[{"type":"rule","name":"A","alternatives":[[{"type":"reference","name":"B","repeat":[{"min":0},{"min":0,"max":1}]},{"type":"reference","name":"C","repeat":[{"min":1},{"min":0,"max":1}]}]]}]}
+# What the tree cannot hold, or this dialect does not read, is refused, each with its code.
+9A ::= B	ERROR:ebnf_name
+A ::= B!	ERROR:ebnf_name
+A ::= ""	ERROR:ebnf_empty_literal
+A ::= #x110000	ERROR:ebnf_code_point
+A ::= [#x]	ERROR:ebnf_code_point
+A ::= [z-a]	ERROR:ebnf_class_range
+A ::= []	ERROR:ebnf_empty_class
+A ::= [^]	ERROR:ebnf_empty_class
+A ::= ]	ERROR:ebnf_char_class
+A ::= [a	ERROR:ebnf_char_class
+A ::=	ERROR:ebnf_empty_alternative
+A ::= | B	ERROR:ebnf_empty_alternative
+A ::= B |	ERROR:ebnf_empty_alternative
+A ::= , B	ERROR:ebnf_leading_comma
+A ::= B - C	ERROR:ebnf_subtraction
+A ::= ? x ?	ERROR:ebnf_special_sequence
+A ::= { B }	ERROR:ebnf_iso_repetition
+A ::= *B	ERROR:ebnf_dangling_postfix
+A ::= ( B	ERROR:ebnf_unclosed
+# What the meta-grammar refuses is the engine's.
+A B	ERROR:unexpected
+::= A	ERROR:unexpected

@@ -1,0 +1,17 @@
+input	expected	opts
+a: 1	{"a":1}
+a: 1\nb: 2\nc: 3	{"a":1,"b":2,"c":3}
+a:\n  b: 1\n  c: 2	{"a":{"b":1,"c":2}}
+a:\n  b:\n    c:\n      d: 1	{"a":{"b":{"c":{"d":1}}}}
+a:\n  x: 1\nb:\n  y: 2	{"a":{"x":1},"b":{"y":2}}
+a:\nb: 1	{"a":null,"b":1}
+a:\n  b: 1	{"a":{"b":1}}
+a: 1\n	{"a":1}
+- a\n- b\n- c	["a","b","c"]
+- a	["a"]
+items:\n  - a\n  - b	{"items":["a","b"]}
+- 1\n- 2\n- 3	[1,2,3]
+- name: alice\n- name: bob	[{"name":"alice"},{"name":"bob"}]
+items:\n  - name: alice\n    age: 30\n  - name: bob\n    age: 25	{"items":[{"name":"alice","age":30},{"name":"bob","age":25}]}
+a:\n  b:\n    - x\n    - y	{"a":{"b":["x","y"]}}
+a: 1\nb:\n  - x\n  - y\nc: 3	{"a":1,"b":["x","y"],"c":3}

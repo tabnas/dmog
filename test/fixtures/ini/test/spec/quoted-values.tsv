@@ -1,0 +1,11 @@
+input	expected
+a = "hello world"	{"a":"hello world"}
+a = 'hello world'	{"a":"hello world"}
+p = "P"	{"p":"P"}
+g = 'G'	{"g":"G"}
+w = '{"y":{"z":6}}'	{"w":{"y":{"z":6}}}
+a = "x"y	{"a":"\"x\"y"}
+a = "x" y	{"a":"\"x\" y"}
+a = "x" 	{"a":"x"}
+a = "something'	{"a":"\"something'"}
+j = "{ o: "p", a: 1 }"	{"j":"\"{ o: \"p\", a: 1 }\""}

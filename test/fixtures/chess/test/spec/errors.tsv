@@ -1,0 +1,54 @@
+input	expected	opts
+# Inputs that are not chess notation. PGN spec 8.2: "illegal moves are not
+# real chess moves, they are not permitted in PGN movetext" — this parser
+# has no board, so it enforces the part it can see: the notation's shape.
+#
+# --- not a square ---
+1. e9 *	ERROR
+1. e0 *	ERROR
+1. i4 *	ERROR
+1. a9 *	ERROR
+# --- not a piece ---
+1. Zf3 *	ERROR
+1. nf3 *	ERROR
+1. Kt f3 *	ERROR
+# --- incomplete moves ---
+1. N *	ERROR
+1. Nf *	ERROR
+1. x *	ERROR
+1. xd5 *	ERROR
+1. =Q *	ERROR
+1. e8= *	ERROR
+# --- promotion to a king or a pawn is not a promotion (8.2.3.3) ---
+1. e8=K *	ERROR
+1. e8=P *	ERROR
+# --- 7: a symbol token ends at the first non-symbol character, so a pair
+# of run-together moves is one bad token, not two good ones ---
+1. e2e4 *	ERROR
+1. Nf3Nc6 *	ERROR
+1. e4e5 *	ERROR
+# --- unbalanced delimiters ---
+1. e4 (1. d4 *	ERROR
+1. e4 1. d4) *	ERROR
+[Event "x" *	ERROR
+[Event "x"] ] *	ERROR
+1. e4 {unterminated *	ERROR:this comment is never closed
+# --- tokens with no place in the movetext ---
+1. e4 "a string" *	ERROR
+1. e4 hello *	ERROR
+1. e4 . *	ERROR
+1. e4 % escape not in column one	ERROR
+# --- a glyph is a dollar and digits (8.2.4) ---
+1. e4 $ *	ERROR
+1. e4 $x *	ERROR
+# --- a termination marker is one of exactly four symbols (8.2.6) ---
+1. e4 2-0 *	ERROR
+1. e4 0-2 *	ERROR
+1. e4 1/2 *	ERROR
+1. e4 1--0 *	ERROR
+# --- the messages themselves, which the grammar customises away from the
+# engine's own wording. Both runtimes set the same templates, so these rows
+# check the two stay in step as well as that the text is right.
+1. e4 zz *	ERROR:not chess notation
+1. Ke9 *	ERROR:not chess notation
+[Event "x\n\n1. e4 *	ERROR:a tag value cannot contain a line break

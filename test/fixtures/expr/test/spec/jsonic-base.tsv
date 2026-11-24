@@ -1,0 +1,4 @@
+input	expected
+# jsonic-base
+1 "a" true	[1,"a",true]
+x:1 y:"a" z:true	{"x":1,"y":"a","z":true}

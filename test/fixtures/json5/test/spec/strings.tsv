@@ -1,0 +1,128 @@
+input	expected	opts
+"hello"	"hello"
+'hello'	"hello"
+"he said \\"hi\\""	"he said \"hi\""
+'he said \\'hi\\''	"he said 'hi'"
+"a\\tb"	"a\tb"
+"a\\nb"	"a\nb"
+"a\\u0041b"	"aAb"
+"a\\x41b"	"aAb"
+"\\0"	"\u0000"
+"line1\\\nline2"	"line1line2"
+`backtick`	ERROR:unexpected
+`backtick`	"backtick"	{"backtickString":true}
+# ES5.1 escapes JSON5 accepts: a NonEscapeCharacter yields itself, and
+# \uXXXX surrogate halves combine into one code point.
+"\\a"	"a"
+"\\$"	"$"
+"\\uD83D\\uDE00"	"\ud83d\ude00"
+# EscapeCharacter includes DecimalDigit, so \1..\9 (legacy octal) are
+# not escapes; `\0` is one only when NOT followed by a digit. `\u{...}`
+# is ES2015-only and not JSON5.
+"\\1"	ERROR
+"\\9"	ERROR
+"\\01"	ERROR
+"\\08"	ERROR
+"\\u{41}"	ERROR
+'\\1'	ERROR
+{a:"\\1"}	ERROR
+["ok","\\1"]	ERROR
+# A digit after a COMPLETED escape is just a character.
+"\\u00410"	"A0"
+"\\n1"	"\n1"
+# A LineContinuation belongs to the STRING grammar only: it adds nothing to
+# a string literal's value, and is not a token separator anywhere else.
+["a\\\nb"]	["ab"]
+["a\\\r\nb"]	["ab"]
+["x\\\ny","p\\\nq"]	["xy","pq"]
+{"a\\\nb":1}	{"ab":1}
+[1,\\\n2]	ERROR
+{a:\\\n1}	ERROR
+\\\n1	ERROR
+# The string spans the lines it is written on, so a continuation keeps the
+# row and column of every later token and every error: the position cells
+# below pin both, `ERROR:<code>@<row>:<col>` (tabnas/json5#80). The engine
+# counts a row at LF, LS and PS, so at CRLF too, and never at a lone CR,
+# inside a string or out. The first three rows are the issue's table, the
+# third its control.
+['a\\\nb',\n  @]	ERROR:unexpected@3:3
+['a\\\r\nb',\r\n  @]	ERROR:unexpected@3:3
+['ab',\n  @]	ERROR:unexpected@2:3
+['a\\\nb', @]	ERROR:unexpected@2:5
+['a\\\r\nb', @]	ERROR:unexpected@2:5
+['a\\\rb', @]	ERROR:unexpected@1:10
+['a\\ b', @]	ERROR:unexpected@2:5
+['a\\ b', @]	ERROR:unexpected@2:5
+"a\\\rb"	"ab"
+"a\\ b"	"ab"
+"a\\ b"	"ab"
+[`a\\\r\nb\nc`, @]	ERROR:unexpected@3:5	{"backtickString":true}
+`a\\\r\nb\nc`	"ab\nc"	{"backtickString":true}
+# Only an odd run of backslashes escapes the line break: two before a CRLF
+# are an escaped backslash and then a real line break, which a string may
+# not hold; three are an escaped backslash and a continuation.
+["a\\\\\r\nb"]	ERROR:unprintable@1:6
+["a\\\\\\\r\nb"]	["a\\b"]
+["a\\\\\\\r\nb", @]	ERROR:unexpected@2:5
+# A continuation is an escape of its own, so it cannot complete a \x or \u
+# escape it interrupts, and it is no code unit, so the two halves of a
+# surrogate pair written around one are still one character. An error
+# after one is sited where it stands, and one does not hide a forbidden
+# escape from the check that refuses it.
+"\\x4\\\nb"	ERROR:invalid_ascii@1:2
+"\\u00\\\r\n41"	ERROR:invalid_unicode@1:2
+"\\uD83D\\\n\\uDE00"	"\ud83d\ude00"
+['a\\\nb\\x4Z']	ERROR:invalid_ascii@2:2
+['a\\\r\nb\tc']	ERROR:unprintable@2:2
+"\\1\\\r\n"	ERROR:unexpected@1:1
+# --- Retired divergences, now agreed by both ports -----------------------
+# These nine inputs stood in test/divergent.tsv until 2026-08-20, when the
+# engine repairs landed and every row went red. They are here so both
+# suites keep EXECUTING them: a retired row whose input survives only in a
+# comment enforces nothing, and if both ports regressed identically the
+# register could not see it.
+#
+# P3 (parser#139) — the TypeScript escape decode used parseInt as a
+# validator, stopped at the first non-hex character and INVENTED a
+# character never in the input. It now requires the full fixed-width hex
+# run. Both ports, and both the sibling and the pinned engine, reject
+# these with the code named.
+{a:"p\\u00st"}	ERROR:invalid_unicode
+{a:"\\x4z"}	ERROR:invalid_ascii
+{a:"\\u12zz"}	ERROR:invalid_unicode
+{a:"\\u 123"}	ERROR:invalid_unicode
+{a:"\\u+123"}	ERROR:invalid_unicode
+{a:"\\u1"}	ERROR:invalid_unicode
+# P1/P2 (parser#128) — a quote used to end a Go text run and did not end a
+# TypeScript one, so Go raised unterminated_string where TypeScript raised
+# unexpected. Go moved.
+#
+# The code is deliberately NOT pinned here. This fixture is shared, and it
+# must hold against the engine this repo DECLARES as well as the sibling
+# checkouts CI links: the repair is Go-only and not yet in a parser
+# release, so against go.mod's parser the Go port still says
+# unterminated_string. A bare ERROR is true of both, and still fails if
+# either port starts ACCEPTING these again. The repaired code itself is
+# pinned in go/text_ender_test.go and ts/test/text-ender.test.ts, which
+# read the linked engine and say which one they saw.
+{a:b"c}	ERROR
+{a:1"}	ERROR
+a"b	ERROR
+# JSON5 5.2 admits an UNESCAPED U+2028 LINE SEPARATOR and U+2029
+# PARAGRAPH SEPARATOR inside a string literal: a JSON5StringCharacter is
+# any SourceCharacter but the quote, the backslash and a LineTerminator,
+# plus a LineContinuation, plus those two. Every other line terminator
+# must be escaped.
+#
+# The input cells below carry the two characters RAW, and are meant to
+# look empty of them: this codec decodes \n \r \t \\ and nothing else, so
+# a cell reading \u2028 would feed the parser a JSON5 ESCAPE and test the
+# other path. The expected cells use JSON's own \u, which is visible.
+"a b"	"a\u2028b"
+'a b'	"a\u2028b"
+"a b"	"a\u2029b"
+" "	"\u2028"
+# The contrast: a raw CR or LF inside a string is still unprintable, and
+# those two the codec can spell.
+"a\nb"	ERROR:unprintable
+"a\rb"	ERROR:unprintable

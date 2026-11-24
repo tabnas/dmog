@@ -1,0 +1,58 @@
+input	expected	opts
+# members.tsv: the members of a node the tree no longer holds, read back
+# through the API (member in TypeScript, Member in Go, member in Rust).
+# opts names the node, the nth of its kind (depth first, the root's
+# children before their children), and the member; a node is projected
+# to its kind, the start of its span and its tokens' text, an array to
+# the array of its projections, and no member to null.
+int x = -y;	{"kind":"identifier_expression","start":9,"text":"y"}	{"find":"unary_expression","member":"operand"}
+int n = sizeof(int);	{"kind":"type_name","start":15,"text":"int"}	{"find":"unary_expression","member":"operand"}
+void f(void) { i++; }	{"kind":"identifier_expression","start":15,"text":"i"}	{"find":"postfix_unary_expression","member":"target"}
+int x = a[1];	{"kind":"identifier_expression","start":8,"text":"a"}	{"find":"subscript_expression","member":"target"}
+int x = s.f;	{"kind":"identifier_expression","start":8,"text":"s"}	{"find":"member_expression","member":"object"}
+int x = (int)y;	{"kind":"type_name","start":9,"text":"int"}	{"find":"cast_expression","member":"typeName"}
+int x = (int)y;	{"kind":"identifier_expression","start":13,"text":"y"}	{"find":"cast_expression","member":"operand"}
+int *p = (int[]){1, 2};	{"kind":"type_name","start":10,"text":"int [ ]"}	{"find":"compound_literal","member":"typeName"}
+void f(void) { x = (a ? b : c); }	{"kind":"identifier_expression","start":20,"text":"a"}	{"find":"conditional_expression","member":"cond"}
+void f(void) { x = (a ? b : c); }	{"kind":"identifier_expression","start":24,"text":"b"}	{"find":"conditional_expression","member":"then"}
+void f(void) { x = (a ? b : c); }	{"kind":"identifier_expression","start":28,"text":"c"}	{"find":"conditional_expression","member":"else"}
+int a[2] = {[0] = 1, 2};	{"kind":"designation","start":12,"text":"[ 0 ]"}	{"find":"initializer_item","member":"designation"}
+int a[2] = {[0] = 1, 2};	{"kind":"literal_expression","start":18,"text":"1"}	{"find":"initializer_item","member":"value"}
+int a[2] = {[0] = 1, 2};	null	{"find":"initializer_item","nth":1,"member":"designation"}
+int a[2] = {[0] = 1, 2};	{"kind":"literal_expression","start":21,"text":"2"}	{"find":"initializer_item","nth":1,"member":"value"}
+void f(void) { for (i = 0; i < n; i++) ; }	{"kind":"for_init","start":20,"text":"i 0 ;"}	{"find":"for_controls","member":"init"}
+void f(void) { for (i = 0; i < n; i++) ; }	{"kind":"for_cond","start":27,"text":"i n ;"}	{"find":"for_controls","member":"cond"}
+void f(void) { for (i = 0; i < n; i++) ; }	{"kind":"for_iter","start":34,"text":"i"}	{"find":"for_controls","member":"iter"}
+void f(void) { for (int i = 0; i < n; i++) ; }	{"kind":"declaration","start":20,"text":"int i = 0 ;"}	{"find":"for_init","member":"value"}
+void f(void) { for (i = 0; i < n; i++) ; }	{"kind":"binary_expression","start":27,"text":"i n"}	{"find":"for_cond","member":"value"}
+void f(void) { for (i = 0; i < n; i++) ; }	{"kind":"postfix_unary_expression","start":34,"text":"i"}	{"find":"for_iter","member":"value"}
+void f(void) { for (;;) ; }	null	{"find":"for_init","member":"value"}
+void f(void) { for (;;) ; }	null	{"find":"for_iter","member":"value"}
+static_assert(1 == 1, "m");	{"kind":"binary_expression","start":14,"text":"1 1"}	{"find":"static_assert_declaration","member":"condition"}
+static_assert(1 == 1, "m");	{"kind":"literal_expression","start":22,"text":"\"m\""}	{"find":"static_assert_declaration","member":"message"}
+_Static_assert(1);	null	{"find":"static_assert_declaration","member":"message"}
+int r = _Generic(x, int: 1, default: 0);	{"kind":"generic_controlling_expression","start":17,"text":"x"}	{"find":"generic_selection","member":"controlling"}
+int r = _Generic(x, int: 1, default: 0);	[{"kind":"generic_association","start":20,"text":"int : 1"},{"kind":"generic_association","start":28,"text":"default : 0"}]	{"find":"generic_selection","member":"associations"}
+int r = _Generic(x, int: 1, default: 0);	{"kind":"identifier_expression","start":17,"text":"x"}	{"find":"generic_controlling_expression","member":"expression"}
+int r = _Generic(x, int: 1, default: 0);	{"kind":"type_name","start":20,"text":"int"}	{"find":"generic_association","member":"typeName"}
+int r = _Generic(x, int: 1, default: 0);	{"kind":"literal_expression","start":25,"text":"1"}	{"find":"generic_association","member":"value"}
+int r = _Generic(x, int: 1, default: 0);	null	{"find":"generic_association","nth":1,"member":"typeName"}
+__attribute__((noreturn, format(printf, 1, 2))) void die(const char *fmt, ...);	[{"kind":"attribute_item","start":15,"text":"noreturn"},{"kind":"attribute_item","start":25,"text":"format ( printf , 1 , 2 )"}]	{"plugin":{"extended":true},"find":"attribute_spec","member":"items"}
+__attribute__((noreturn, format(printf, 1, 2))) void die(const char *fmt, ...);	null	{"plugin":{"extended":true},"find":"attribute_item","member":"argumentList"}
+__attribute__((noreturn, format(printf, 1, 2))) void die(const char *fmt, ...);	{"kind":"attribute_argument_list","start":31,"text":"( printf , 1 , 2 )"}	{"plugin":{"extended":true},"find":"attribute_item","nth":1,"member":"argumentList"}
+void f(int x) { int r; __asm__("movl %1, %0" : [o] "=r" (r) : "r" (x) : "cc"); }	{"kind":"asm_template","start":31,"text":"\"movl %1, %0\""}	{"plugin":{"extended":true},"find":"asm_statement","member":"template"}
+void f(int x) { int r; __asm__("movl %1, %0" : [o] "=r" (r) : "r" (x) : "cc"); }	{"kind":"asm_outputs","start":47,"text":"[ o ] \"=r\" ( r )"}	{"plugin":{"extended":true},"find":"asm_statement","member":"asm_outputs"}
+void f(int x) { int r; __asm__("movl %1, %0" : [o] "=r" (r) : "r" (x) : "cc"); }	{"kind":"asm_inputs","start":62,"text":"\"r\" ( x )"}	{"plugin":{"extended":true},"find":"asm_statement","member":"asm_inputs"}
+void f(int x) { int r; __asm__("movl %1, %0" : [o] "=r" (r) : "r" (x) : "cc"); }	{"kind":"asm_clobbers","start":72,"text":"\"cc\""}	{"plugin":{"extended":true},"find":"asm_statement","member":"asm_clobbers"}
+void f(int x) { int r; __asm__("movl %1, %0" : [o] "=r" (r) : "r" (x) : "cc"); }	null	{"plugin":{"extended":true},"find":"asm_statement","member":"asm_labels"}
+void f(int x) { int r; __asm__("movl %1, %0" : [o] "=r" (r) : "r" (x) : "cc"); }	{"kind":"literal_expression","start":31,"text":"\"movl %1, %0\""}	{"plugin":{"extended":true},"find":"asm_template","member":"expression"}
+void f(int x) { int r; __asm__("movl %1, %0" : [o] "=r" (r) : "r" (x) : "cc"); }	{"kind":"asm_name","start":47,"text":"[ o ]"}	{"plugin":{"extended":true},"find":"asm_operand","member":"asmName"}
+void f(int x) { int r; __asm__("movl %1, %0" : [o] "=r" (r) : "r" (x) : "cc"); }	{"kind":"asm_constraint","start":51,"text":"\"=r\""}	{"plugin":{"extended":true},"find":"asm_operand","member":"constraint"}
+void f(int x) { int r; __asm__("movl %1, %0" : [o] "=r" (r) : "r" (x) : "cc"); }	{"kind":"asm_value","start":56,"text":"( r )"}	{"plugin":{"extended":true},"find":"asm_operand","member":"value"}
+void f(int x) { int r; __asm__("movl %1, %0" : [o] "=r" (r) : "r" (x) : "cc"); }	{"kind":"identifier_expression","start":57,"text":"r"}	{"plugin":{"extended":true},"find":"asm_value","member":"expression"}
+void f(void) { __asm__ goto ("jmp %l0" : : : : done); done: ; }	{"kind":"asm_labels","start":47,"text":"done"}	{"plugin":{"extended":true},"find":"asm_statement","member":"asm_labels"}
+#if A\nint x;\n#else\nint y;\n#endif\n	{"kind":"external_declaration","start":26,"text":"# endif \n"}	{"plugin":{"extended":true},"find":"conditional_group","member":"endif"}
+#if A\nint x;\n#else\nint y;\n#endif\n	{"kind":"external_declaration","start":0,"text":"# if A \n"}	{"plugin":{"extended":true},"find":"conditional_branch","member":"directive"}
+#if A\nint x;\n#else\nint y;\n#endif\n	{"kind":"external_declaration","start":13,"text":"# else \n"}	{"plugin":{"extended":true},"find":"conditional_branch","nth":1,"member":"directive"}
+int x = -y;	null	{"find":"unary_expression","member":"nosuch"}
+int x = y;	null	{"find":"identifier_expression","member":"operand"}

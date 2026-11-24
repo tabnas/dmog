@@ -1,0 +1,42 @@
+input	expected	opts
+# Whole games and databases, PGN spec 8 and 18. The default start rule is
+# `pgn`, so the result is always an array of games.
+#
+# 18: an empty file is a valid, if uninformative, PGN database.
+	[]
+   \n\n  	[]
+# --- 8.2.6 game termination markers ---
+*	[{"tags":{},"moves":[],"result":"*"}]
+1. e4 1-0	[{"tags":{},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}],"result":"1-0"}]
+1. e4 0-1	[{"tags":{},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}],"result":"0-1"}]
+1. e4 1/2-1/2	[{"tags":{},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}],"result":"1/2-1/2"}]
+1. e4 *	[{"tags":{},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}],"result":"*"}]
+# Import format does not always write the marker; its absence is not an error.
+1. e4	[{"tags":{},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]}]
+# --- a game is a tag section then a movetext section (8) ---
+[Event "x"]\n\n1. e4 e5 1-0	[{"tags":{"Event":"x"},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"}],"result":"1-0"}]
+[Event "x"]	[{"tags":{"Event":"x"},"moves":[]}]
+[Event "x"]\n*	[{"tags":{"Event":"x"},"moves":[],"result":"*"}]
+# --- 18: a database is a sequence of games ---
+1. e4 1-0\n\n1. d4 0-1	[{"tags":{},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}],"result":"1-0"},{"tags":{},"moves":[{"san":"d4","piece":"P","to":"d4","number":1,"side":"w"}],"result":"0-1"}]
+[A "1"]\n1. e4 *\n\n[A "2"]\n1. d4 *	[{"tags":{"A":"1"},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}],"result":"*"},{"tags":{"A":"2"},"moves":[{"san":"d4","piece":"P","to":"d4","number":1,"side":"w"}],"result":"*"}]
+# A new tag section starts the next game even where the previous one wrote
+# no termination marker.
+[A "1"]\n1. e4\n\n[A "2"]\n1. d4	[{"tags":{"A":"1"},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]},{"tags":{"A":"2"},"moves":[{"san":"d4","piece":"P","to":"d4","number":1,"side":"w"}]}]
+# Blank lines between games are conventional, not required.
+[A "1"]1. e4 1-0[A "2"]1. d4 0-1	[{"tags":{"A":"1"},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}],"result":"1-0"},{"tags":{"A":"2"},"moves":[{"san":"d4","piece":"P","to":"d4","number":1,"side":"w"}],"result":"0-1"}]
+# 7: the asterisk "is a token by itself... It is self terminating", unlike
+# the three symbol-form markers — so `*` needs no whitespace after it.
+*1. e4 *	[{"tags":{},"moves":[],"result":"*"},{"tags":{},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}],"result":"*"}]
+# 8.2.6: the marker "always occurs as the last element", so movetext after
+# one belongs to the next game.
+1. e4 1-0 1. d4 0-1	[{"tags":{},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}],"result":"1-0"},{"tags":{},"moves":[{"san":"d4","piece":"P","to":"d4","number":1,"side":"w"}],"result":"0-1"}]
+# A comment before the first move annotates the game, not a move.
+{a foreword} 1. e4 *	[{"tags":{},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}],"comments":[{"kind":"brace","text":"a foreword"}],"result":"*"}]
+# A tag pair after the movetext has started belongs to the NEXT game: a tag
+# section only ever precedes its own movetext (8).
+[Event "x"] 1. e4 [Site "y"] 1-0	[{"tags":{"Event":"x"},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]},{"tags":{"Site":"y"},"moves":[],"result":"1-0"}]
+# --- rejections ---
+1. e4 1-0-1	ERROR
+1. e4 2-0	ERROR
+1. e4 1/2	ERROR

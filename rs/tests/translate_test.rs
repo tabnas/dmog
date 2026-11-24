@@ -18,7 +18,7 @@
 //! grammar's rules in source order (`grammar-rules`), so each writes the
 //! others' documents.
 //!
-//! The corpora are the sibling checkouts': transduce's fixtures (aless's: a
+//! The corpora are the vendored test files' (`test/fixtures`): transduce's fixtures (aless's: a
 //! document of every format but C, CSS, expressions, PGN, proto, Semantic
 //! Versioning and the grammar notations, whose own fixtures the release
 //! run reads, and more for YAML and ZON), the documents of JSONTestSuite
@@ -54,9 +54,14 @@ impl Write for Buffer {
     }
 }
 
-/// The directory the sibling checkouts are in.
-fn siblings() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+/// The test files vendored from other tabnas repositories, each at its
+/// path there (`test/fixtures`, which `tools/vendor-fixtures.sh` writes),
+/// or `DMOG_FIXTURES`, as `common::vendored` says.
+fn vendored() -> PathBuf {
+    match std::env::var_os("DMOG_FIXTURES") {
+        Some(dir) if !dir.is_empty() => PathBuf::from(dir),
+        _ => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../test/fixtures"),
+    }
 }
 
 /// The format a fixture's extension names, by its id.
@@ -91,13 +96,13 @@ fn corpus() -> Vec<(String, &'static str, String)> {
         &[
             (
                 "transduce",
-                siblings().join("transduce/rs/tests/fixtures"),
+                vendored().join("transduce/rs/tests/fixtures"),
                 None,
                 None,
             ),
             (
                 "JSONTestSuite",
-                siblings().join("jsonc/test/JSONTestSuite/test_parsing"),
+                vendored().join("jsonc/test/JSONTestSuite/test_parsing"),
                 Some("y_"),
                 None,
             ),
@@ -203,10 +208,10 @@ fn spec_corpus(
 ) {
     let examples: Vec<Corpus> = NOTATION_EXAMPLES
         .iter()
-        .map(|(id, dir)| (*id, siblings().join(dir), None, Some(*id)))
+        .map(|(id, dir)| (*id, vendored().join(dir), None, Some(*id)))
         .collect();
     for (repository, id, column) in SPEC_CORPORA {
-        let dir = siblings().join(repository).join("test/spec");
+        let dir = vendored().join(repository).join("test/spec");
         let files = tabnas_support::load_spec_dir(&dir, &tabnas_support::SpecOptions::default())
             .unwrap_or_else(|e| panic!("{id}: cannot read {}: {e}", dir.display()));
         let mut seen = HashSet::new();
@@ -511,7 +516,7 @@ enum Outcome {
 #[test]
 #[ignore]
 fn every_c_fixture_reads_through_the_part_as_c_reads_it() {
-    let dir = siblings().join("c/test/spec");
+    let dir = vendored().join("c/test/spec");
     let files = tabnas_support::load_spec_dir(&dir, &tabnas_support::SpecOptions::default())
         .unwrap_or_else(|e| panic!("c: cannot read {}: {e}", dir.display()));
     let outcomes = on_stack(|| {
@@ -583,7 +588,7 @@ const CSMITH_TYPEDEFS: [&str; 20] = [
 #[ignore]
 fn every_csmith_program_reads_through_the_part_as_c_reads_it() {
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-    let dir = siblings().join("c/ts/test/csmith-corpus");
+    let dir = vendored().join("c/ts/test/csmith-corpus");
     let mut programs: Vec<(u64, PathBuf)> = std::fs::read_dir(&dir)
         .unwrap_or_else(|e| panic!("c: cannot read {}: {e}", dir.display()))
         .map(|e| e.unwrap().path())

@@ -1,0 +1,223 @@
+[
+ {
+  "input": "Hello world",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     11
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       11
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "Hello world"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "Hello\\n\\nWorld",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     5
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       5
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "Hello"
+      }
+     ]
+    },
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       3,
+       1
+      ],
+      [
+       3,
+       5
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "World"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "\\n",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     0
+    ]
+   ],
+   "gfm": true
+  }
+ },
+ {
+  "input": "Paragraph line1\\nline2",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     5
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       5
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "Paragraph line1"
+      },
+      {
+       "type": "softbreak",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ]
+      },
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "line2"
+      }
+     ]
+    }
+   ]
+  }
+ }
+]

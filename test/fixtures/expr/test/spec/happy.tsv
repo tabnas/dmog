@@ -1,0 +1,4 @@
+input	expected
+# Happy path basic tests - default Expr config
+1+2	["+",1,2]
+-1+2	["+",["-",1],2]

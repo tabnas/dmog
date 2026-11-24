@@ -1,0 +1,59 @@
+input	expected	opts	keys
+# A row with `ordered` in its keys column pins KEY ORDER as well as the
+# value, in every runtime (see test/AGENTS.md), and here the order is
+# the behaviour under test. A mapping's own keys come first, in source
+# order wherever the `<<` stands among them; the merged keys follow,
+# source by source. An explicit key, and an earlier source, win.
+defaults: &d\n  a: 1\n  b: 2\nresult:\n  <<: *d\n  c: 3	{"defaults":{"a":1,"b":2},"result":{"c":3,"a":1,"b":2}}		ordered
+base: &b\n  x: 1\n  y: 2\nchild:\n  <<: *b\n  y: 99	{"base":{"x":1,"y":2},"child":{"y":99,"x":1}}		ordered
+a: &a\n  x: 1\nb: &b\n  y: 2\nc:\n  <<: [*a, *b]\n  z: 3	{"a":{"x":1},"b":{"y":2},"c":{"z":3,"x":1,"y":2}}		ordered
+<<: *n	ERROR:yaml_undefined_alias
+a:\n  <<: *n\n  b: 1\n	ERROR:yaml_undefined_alias
+base: &b\n  x: 1\nd:\n  <<: *b\n  y: 2	{"base":{"x":1},"d":{"y":2,"x":1}}		ordered
+base: &b\n  x: 1\n  z: 3\nd:\n  w: 0\n  <<: *b\n  y: 2	{"base":{"x":1,"z":3},"d":{"w":0,"y":2,"x":1,"z":3}}		ordered
+a: &a\n  p: 1\n  q: 2\nb: &b\n  q: 9\n  r: 3\nd:\n  s: 0\n  <<: [*a, *b]\n  t: 4	{"a":{"p":1,"q":2},"b":{"q":9,"r":3},"d":{"s":0,"t":4,"p":1,"q":2,"r":3}}		ordered
+base: &b {x: 1}\nd: {<<: *b, y: 2}	{"base":{"x":1},"d":{"y":2,"x":1}}		ordered
+# A QUOTED `<<` is an ordinary key, not the merge key: YAML resolves only
+# a plain `<<` to the merge type (YAML 1.1's), and a quoted scalar is
+# always a string. So a mapping that holds the key `<<` and is written
+# with every key quoted, as the translation render writes it, reads back
+# as written. A plain `<<`, explicit (`? <<`) included, still merges.
+"<<": 1	{"<<":1}	
+'<<': 1	{"<<":1}	
+"<<": {a: 1}\nb: 2	{"<<":{"a":1},"b":2}		ordered
+x:\n  "<<": {a: 1}\n  b: 2	{"x":{"<<":{"a":1},"b":2}}		ordered
+base: &b {x: 1}\nd:\n  "<<": *b\n  y: 2	{"base":{"x":1},"d":{"<<":{"x":1},"y":2}}		ordered
+{"<<": {a: 1}, b: 2}	{"<<":{"a":1},"b":2}		ordered
+{? "<<" : {a: 1}, b: 2}	{"<<":{"a":1},"b":2}		ordered
+? "<<"\n: {a: 1}\nb: 2	{"<<":{"a":1},"b":2}		ordered
+? <<\n: {a: 1}\nb: 2	{"b":2,"a":1}		ordered
+# Where the members come from: a key the mapping sets before its `<<` wins
+# too; a flow mapping in a sequence merges; sources mix aliases and
+# mappings; an anchor in a merge's value names that value; an alias to a
+# sequence of mappings merges each; an anchored mapping is recorded
+# merged; a `<<` whose value is no mapping brings nothing; and a merged
+# value is the source's, a number that is not finite included.
+a: &a {x: 1, y: 1}\nb:\n  x: 2\n  <<: *a	{"a":{"x":1,"y":1},"b":{"x":2,"y":1}}		ordered
+a: &a {x: 1}\nb: [{<<: *a, y: 2}]	{"a":{"x":1},"b":[{"y":2,"x":1}]}		ordered
+a: &a {x: 1}\nb:\n  <<: [*a, {y: 2, x: 3}]	{"a":{"x":1},"b":{"x":1,"y":2}}		ordered
+b:\n  <<: &c {z: 3}\n  y: 2\nd: *c	{"b":{"y":2,"z":3},"d":{"z":3}}		ordered
+l: &l [{x: 1}, {y: 2}]\nm:\n  <<: *l\n  z: 3	{"l":[{"x":1},{"y":2}],"m":{"z":3,"x":1,"y":2}}		ordered
+a: &a {x: 1}\nb: &b\n  <<: *a\n  y: 2\nc: *b	{"a":{"x":1},"b":{"y":2,"x":1},"c":{"y":2,"x":1}}		ordered
+a: {<<: 1, b: 2}	{"a":{"b":2}}		ordered
+{<<, b: 1}	{"b":1}		ordered
+a: {<<: [1, [2], {c: 3}], b: 2}	{"a":{"b":2,"c":3}}		ordered
+a: &a {x: .inf}\nb:\n  <<: *a	{"a":{"x":"@@Infinity"},"b":{"x":"@@Infinity"}}		ordered
+# A source that repeats a key: the grammar combines the key's values in
+# the source first, as in any mapping (repeated-keys.tsv), and merges what
+# that leaves, so a later value wins, a mapping's members gather, and a
+# key the mapping sets, or an earlier source holds, still wins. Only a
+# sequence's mappings are sources, counted in order.
+{<<: {a: 1, a: 2}}	{"a":2}		ordered
+x:\n  <<: {a: 1, a: 2}	{"x":{"a":2}}		ordered
+x:\n  <<:\n    a: 1\n    a: 2	{"x":{"a":2}}		ordered
+x:\n  <<: [{a: 1, a: 2}]	{"x":{"a":2}}		ordered
+b: &b {a: 1}\nx:\n  <<: [{a: 3, a: 4}, *b]	{"b":{"a":1},"x":{"a":4}}		ordered
+x:\n  <<: {a: {p: 1}, a: {q: 2}}	{"x":{"a":{"p":1,"q":2}}}		ordered
+x:\n  a: 0\n  <<: {a: 1, a: 2}	{"x":{"a":0}}		ordered
+x:\n  <<: [{a: 1}, {a: 2, a: 3}]	{"x":{"a":1}}		ordered
+a: &a {x: 1}\nb: &b {x: 2, y: 2}\nc:\n  <<: [1, {}, *b, [w], *a]	{"a":{"x":1},"b":{"x":2,"y":2},"c":{"x":2,"y":2}}		ordered

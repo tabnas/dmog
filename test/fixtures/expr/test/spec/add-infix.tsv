@@ -1,0 +1,3 @@
+input	expected
+# add-infix
+1 foo 2	["foo",1,2]

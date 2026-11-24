@@ -1,0 +1,30 @@
+input	expected	opts
+- a\n- b\n- c	["a","b","c"]
+- a	["a"]
+items:\n  - a\n  - b	{"items":["a","b"]}
+- 1\n- 2\n- 3	[1,2,3]
+- name: alice\n- name: bob	[{"name":"alice"},{"name":"bob"}]
+items:\n  - name: alice\n    age: 30\n  - name: bob\n    age: 25	{"items":[{"name":"alice","age":30},{"name":"bob","age":25}]}
+- - a\n  - b\n- - c\n  - d	[["a","b"],["c","d"]]
+a:\n  b:\n    - x\n    - y	{"a":{"b":["x","y"]}}
+a: 1\nb:\n  - x\n  - y\nc: 3	{"a":1,"b":["x","y"],"c":3}
+- - x\n- - y	[["x"],["y"]]	
+a:\n- - x\n- - y	{"a":[["x"],["y"]]}	
+a:\n  - - x\n  - - y	{"a":[["x"],["y"]]}	
+- - - x\n- - - y	[[["x"]],[["y"]]]	
+- - x\n  - y\n- - z	[["x","y"],["z"]]	
+- - x\n    y\n- - z	[["x y"],["z"]]	
+- x\n  - y	["x - y"]	
+- x\n y	["x y"]	
+- x\ny	ERROR	
+- item1\n- item2\ninvalid	ERROR	
+key:\n - bar\n - baz\n invalid	ERROR	
+a:\n- x\n-\n- y	{"a":["x",null,"y"]}	
+a:\n-\n- y	{"a":[null,"y"]}	
+a:\n- x\n-	{"a":["x",null]}	
+a:\n  b:\n  - x\n  -\n  - y\nc: 1	{"a":{"b":["x",null,"y"]},"c":1}	
+- x\n-\n- y	["x",null,"y"]	
+key: - a	ERROR	
+key: - a\n     - b	ERROR	
+- k: - a	ERROR	
+seq:\t\n - a\t\nc: d\t#X	{"seq":["a"],"c":"d"}	

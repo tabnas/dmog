@@ -1,0 +1,1025 @@
+[
+ {
+  "input": "- a\\n- b\\n- c",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     3
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "list",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       3,
+       3
+      ]
+     ],
+     "listData": {
+      "type": "bullet",
+      "tight": true,
+      "start": 1,
+      "delimiter": "",
+      "bulletChar": "-",
+      "padding": 2,
+      "markerOffset": 0
+     },
+     "children": [
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         3
+        ]
+       ],
+       "listData": {
+        "type": "bullet",
+        "tight": true,
+        "start": 1,
+        "delimiter": "",
+        "bulletChar": "-",
+        "padding": 2,
+        "markerOffset": 0
+       },
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           1,
+           3
+          ],
+          [
+           1,
+           3
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "a"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         2,
+         1
+        ],
+        [
+         2,
+         3
+        ]
+       ],
+       "listData": {
+        "type": "bullet",
+        "tight": true,
+        "start": 1,
+        "delimiter": "",
+        "bulletChar": "-",
+        "padding": 2,
+        "markerOffset": 0
+       },
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           2,
+           3
+          ],
+          [
+           2,
+           3
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "b"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         3,
+         1
+        ],
+        [
+         3,
+         3
+        ]
+       ],
+       "listData": {
+        "type": "bullet",
+        "tight": true,
+        "start": 1,
+        "delimiter": "",
+        "bulletChar": "-",
+        "padding": 2,
+        "markerOffset": 0
+       },
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           3,
+           3
+          ],
+          [
+           3,
+           3
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "c"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "1. a\\n2. b\\n3. c",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     4
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "list",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       3,
+       4
+      ]
+     ],
+     "listData": {
+      "type": "ordered",
+      "tight": true,
+      "start": 1,
+      "delimiter": ".",
+      "bulletChar": "",
+      "padding": 3,
+      "markerOffset": 0
+     },
+     "children": [
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         4
+        ]
+       ],
+       "listData": {
+        "type": "ordered",
+        "tight": true,
+        "start": 1,
+        "delimiter": ".",
+        "bulletChar": "",
+        "padding": 3,
+        "markerOffset": 0
+       },
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           1,
+           4
+          ],
+          [
+           1,
+           4
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "a"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         2,
+         1
+        ],
+        [
+         2,
+         4
+        ]
+       ],
+       "listData": {
+        "type": "ordered",
+        "tight": true,
+        "start": 2,
+        "delimiter": ".",
+        "bulletChar": "",
+        "padding": 3,
+        "markerOffset": 0
+       },
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           2,
+           4
+          ],
+          [
+           2,
+           4
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "b"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         3,
+         1
+        ],
+        [
+         3,
+         4
+        ]
+       ],
+       "listData": {
+        "type": "ordered",
+        "tight": true,
+        "start": 3,
+        "delimiter": ".",
+        "bulletChar": "",
+        "padding": 3,
+        "markerOffset": 0
+       },
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           3,
+           4
+          ],
+          [
+           3,
+           4
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "c"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "5. a\\n6. b",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     4
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "list",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       4
+      ]
+     ],
+     "listData": {
+      "type": "ordered",
+      "tight": true,
+      "start": 5,
+      "delimiter": ".",
+      "bulletChar": "",
+      "padding": 3,
+      "markerOffset": 0
+     },
+     "children": [
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         4
+        ]
+       ],
+       "listData": {
+        "type": "ordered",
+        "tight": true,
+        "start": 5,
+        "delimiter": ".",
+        "bulletChar": "",
+        "padding": 3,
+        "markerOffset": 0
+       },
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           1,
+           4
+          ],
+          [
+           1,
+           4
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "a"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         2,
+         1
+        ],
+        [
+         2,
+         4
+        ]
+       ],
+       "listData": {
+        "type": "ordered",
+        "tight": true,
+        "start": 6,
+        "delimiter": ".",
+        "bulletChar": "",
+        "padding": 3,
+        "markerOffset": 0
+       },
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           2,
+           4
+          ],
+          [
+           2,
+           4
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "b"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "- [x] done\\n- [ ] todo",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     10
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "list",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       10
+      ]
+     ],
+     "listData": {
+      "type": "bullet",
+      "tight": true,
+      "start": 1,
+      "delimiter": "",
+      "bulletChar": "-",
+      "padding": 2,
+      "markerOffset": 0
+     },
+     "children": [
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         10
+        ]
+       ],
+       "listData": {
+        "type": "bullet",
+        "tight": true,
+        "start": 1,
+        "delimiter": "",
+        "bulletChar": "-",
+        "padding": 2,
+        "markerOffset": 0
+       },
+       "checked": true,
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           1,
+           3
+          ],
+          [
+           1,
+           10
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "done"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         2,
+         1
+        ],
+        [
+         2,
+         10
+        ]
+       ],
+       "listData": {
+        "type": "bullet",
+        "tight": true,
+        "start": 1,
+        "delimiter": "",
+        "bulletChar": "-",
+        "padding": 2,
+        "markerOffset": 0
+       },
+       "checked": false,
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           2,
+           3
+          ],
+          [
+           2,
+           10
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "todo"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "- [ ] outer\\n  - [x] inner",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     13
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "list",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       13
+      ]
+     ],
+     "listData": {
+      "type": "bullet",
+      "tight": true,
+      "start": 1,
+      "delimiter": "",
+      "bulletChar": "-",
+      "padding": 2,
+      "markerOffset": 0
+     },
+     "children": [
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         2,
+         13
+        ]
+       ],
+       "listData": {
+        "type": "bullet",
+        "tight": true,
+        "start": 1,
+        "delimiter": "",
+        "bulletChar": "-",
+        "padding": 2,
+        "markerOffset": 0
+       },
+       "checked": false,
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           1,
+           3
+          ],
+          [
+           1,
+           11
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "outer"
+          }
+         ]
+        },
+        {
+         "type": "list",
+         "sourcepos": [
+          [
+           2,
+           3
+          ],
+          [
+           2,
+           13
+          ]
+         ],
+         "listData": {
+          "type": "bullet",
+          "tight": true,
+          "start": 1,
+          "delimiter": "",
+          "bulletChar": "-",
+          "padding": 2,
+          "markerOffset": 0
+         },
+         "children": [
+          {
+           "type": "item",
+           "sourcepos": [
+            [
+             2,
+             3
+            ],
+            [
+             2,
+             13
+            ]
+           ],
+           "listData": {
+            "type": "bullet",
+            "tight": true,
+            "start": 1,
+            "delimiter": "",
+            "bulletChar": "-",
+            "padding": 2,
+            "markerOffset": 0
+           },
+           "checked": true,
+           "children": [
+            {
+             "type": "paragraph",
+             "sourcepos": [
+              [
+               2,
+               5
+              ],
+              [
+               2,
+               13
+              ]
+             ],
+             "children": [
+              {
+               "type": "text",
+               "sourcepos": [
+                [
+                 0,
+                 0
+                ],
+                [
+                 0,
+                 0
+                ]
+               ],
+               "literal": "inner"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "- [x] done",
+  "opts": "{\"gfm\":false}",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     10
+    ]
+   ],
+   "gfm": false,
+   "children": [
+    {
+     "type": "list",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       10
+      ]
+     ],
+     "listData": {
+      "type": "bullet",
+      "tight": true,
+      "start": 1,
+      "delimiter": "",
+      "bulletChar": "-",
+      "padding": 2,
+      "markerOffset": 0
+     },
+     "children": [
+      {
+       "type": "item",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         10
+        ]
+       ],
+       "listData": {
+        "type": "bullet",
+        "tight": true,
+        "start": 1,
+        "delimiter": "",
+        "bulletChar": "-",
+        "padding": 2,
+        "markerOffset": 0
+       },
+       "children": [
+        {
+         "type": "paragraph",
+         "sourcepos": [
+          [
+           1,
+           3
+          ],
+          [
+           1,
+           10
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "["
+          },
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "x"
+          },
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "]"
+          },
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": " done"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+]

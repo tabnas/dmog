@@ -1,5 +1,7 @@
 # The gates: ci/polyglot/run.sh (TypeScript and Go) and ci/rust/run.sh
-# (Rust), with the sibling checkouts they need.
+# (Rust), standalone: every dependency from its registry, and the test
+# files vendored in test/fixtures. (alchemy's downstream workflow runs the
+# same gates against sibling checkouts, with DMOG_SIBLINGS=1.)
 #
 # Runs on every branch push and on pull requests. `branches` is set
 # explicitly so a tag push does not run the gate on a ref where the path
@@ -33,32 +35,9 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     steps:
-      # Checked out into a NAMED directory: rs/Cargo.toml takes the engine
-      # and the grammars as `path = "../../<sibling>/rs"`, which resolves
-      # relative to rs/, so the siblings sit beside this checkout.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           path: dmog
-
-      # A sibling is taken from the branch of the same name when it has one,
-      # else from main: cross-repository work lands on same-named branches
-      # in each repo, and a pull request here can then be gated against the
-      # sibling changes it needs before they merge.
-      - name: Check out the sibling crates
-        run: |
-          set -euo pipefail
-          BRANCH="${{ github.head_ref || github.ref_name }}"
-          SIBLINGS=$(sed -n 's/^\(TS_\)\?SIBLINGS="\(.*\)"$/\2/p' dmog/ci/rust/run.sh)
-          n=0; total=$(echo "$SIBLINGS" | wc -w)
-          for s in $SIBLINGS; do
-            n=$((n+1))
-            if git clone -q --depth 1 --branch "$BRANCH" "https://github.com/tabnas/$s" "$s" 2>/dev/null; then
-              echo "siblings: $n of $total ($((n*100/total))%) $s @ $BRANCH"
-            else
-              git clone -q --depth 1 "https://github.com/tabnas/$s" "$s"
-              echo "siblings: $n of $total ($((n*100/total))%) $s @ main"
-            fi
-          done
 
       - name: Install the MSRV toolchain
         run: |

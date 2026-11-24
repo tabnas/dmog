@@ -1,0 +1,41 @@
+input	expected	opts
+# Documents ZON's render (alchemy/render.alc) writes, as alchemy runs it,
+# each under a comment holding the JSON value it was given, and the value
+# every reader reads from them. The render writes each field name by the
+# convention the manifest's loss lines state, and their reverse turns the
+# name read back into the name given: $empty is the empty name, $json: and
+# a text the string the text spells as a JSON string, $$ and a rest $ and
+# the rest, any other name as it is. So two names are never written as one
+# field, which the reader refuses (zon_dup_field).
+# {"": 1, "$empty": 2}
+.{\n  .@"$empty" = 1,\n  .@"$$empty" = 2,\n}\n	{"$empty":1,"$$empty":2}
+# {"$$x": 1}
+.{\n  .@"$$$x" = 1,\n}\n	{"$$$x":1}
+# {"a\u0000b": 1}
+.{\n  .@"$json:\\"a\\\\u0000b\\"" = 1,\n}\n	{"$json:\"a\\u0000b\"":1}
+# {"$json:x": 1}
+.{\n  .@"$$json:x" = 1,\n}\n	{"$$json:x":1}
+# {"a\u0000b": 1, "a\ufffdb": 2}
+.{\n  .@"$json:\\"a\\\\u0000b\\"" = 1,\n  .@"a�b" = 2,\n}\n	{"$json:\"a\\u0000b\"":1,"a\ufffdb":2}
+# {"a\u0000b": 1, "$json:\"a\\u0000b\"": 2}
+.{\n  .@"$json:\\"a\\\\u0000b\\"" = 1,\n  .@"$$json:\\"a\\\\u0000b\\"" = 2,\n}\n	{"$json:\"a\\u0000b\"":1,"$$json:\"a\\u0000b\"":2}
+# {"$": 1, "$$": 2, "$big": 3, "$$big": 4, "x$": 5}
+.{\n  .@"$$" = 1,\n  .@"$$$" = 2,\n  .@"$$big" = 3,\n  .@"$$$big" = 4,\n  .@"x$" = 5,\n}\n	{"$$":1,"$$$":2,"$$big":3,"$$$big":4,"x$":5}
+# {"": {"": 1, "\u0000": [{"$empty": 2}]}}
+.{\n  .@"$empty" = .{\n    .@"$empty" = 1,\n    .@"$json:\\"\\\\u0000\\"" = .{\n      .{\n        .@"$$empty" = 2,\n      },\n    },\n  },\n}\n	{"$empty":{"$empty":1,"$json:\"\\u0000\"":[{"$$empty":2}]}}
+# An object whose only member is $big, holding an integer as the reader
+# spells one, is written as that integer; one whose $big holds any other
+# string is written as a struct, its field $$big, never as an integer
+# ZON refuses. A big integer itself, which the readers hold as a bigint,
+# a *big.Int and {"$big": digits}, no fixture can spell: each runtime's
+# translation test reads the render's.
+# {"$big": "1-2"}
+.{\n  .@"$$big" = "1-2",\n}\n	{"$$big":"1-2"}
+# {"$big": "01"}
+.{\n  .@"$$big" = "01",\n}\n	{"$$big":"01"}
+# {"$big": "-0"}
+.{\n  .@"$$big" = "-0",\n}\n	{"$$big":"-0"}
+# {"$big": "-"}
+.{\n  .@"$$big" = "-",\n}\n	{"$$big":"-"}
+# [{"$big": "-5"}, {"$big": "0"}, {"$big": "1-2", "x": 1}]
+.{\n  -5,\n  0,\n  .{\n    .@"$$big" = "1-2",\n    .@"x" = 1,\n  },\n}\n	[-5,0,{"$$big":"1-2","x":1}]

@@ -1,0 +1,24 @@
+input	expected
+# `juxtapose: false`: values side by side in an expression or a paren
+# group are refused, with `unexpected`, where jsonic would make an
+# implicit list.
+# The table every options-*.tsv file shares, a small C: the defaults;
+# `comma` `,` infix (left 1000000, right 1100000); `deref` `*` prefix
+# (right 4000000); `post_inc` `++` suffix (left 5000000); `dot` `.` infix
+# (left 5000000, right 5100000); `paren` `(` `)`, a group; `call` `(`
+# `)`, preval active; `subscript` `[` `]`, preval required. The runner's
+# evaluator writes each operation as [op.name, ...terms].
+f(a b)	ERROR:unexpected
+(a b)	ERROR:unexpected
+1+2 3	ERROR:unexpected
+-a b	ERROR:unexpected
+(a) b	ERROR:unexpected
+f(a+b c)	ERROR:unexpected
+(-a b)	ERROR:unexpected
+# Not side by side: a document's own list, a list's items, commas, calls.
+a b	["a","b"]
+[a b]	["a","b"]
+f(a, b)	["call-paren","f",["comma-infix","a","b"]]
+(a, b)	["paren-paren",["comma-infix","a","b"]]
+f(a)(b)	["call-paren",["call-paren","f","a"],"b"]
+(a (b))	["paren-paren",["call-paren","a","b"]]

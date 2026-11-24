@@ -3,7 +3,7 @@
 // What alchemy's tests that run programs share, as a host composes them:
 // compile with transduce's routers and render's renderers, drive a program
 // over a JSON text, record and replay a document's events, tell a
-// failure's finer code, and find a sibling checkout's files (alchemy's
+// failure's finer code, and find a vendored test file (alchemy's
 // ts/test/common.ts and rs/tests/common/mod.rs, where these were defined
 // first).
 //
@@ -27,14 +27,20 @@ import { format } from '../dist/translate'
 // This repository's root: two levels above dist-test/.
 export const REPO_ROOT = join(__dirname, '..', '..')
 
-// A path in a checkout beside this one (`parts[0]` names the repository),
-// which a test reads, such as alchemy's fixtures (`sibling('alchemy',
-// 'test', 'spec')`): required, as it is for the Rust tests. A missing
-// checkout fails the tests that read it, naming the path; nothing skips.
-export function sibling(...parts: string[]): string {
-  const path = join(REPO_ROOT, '..', ...parts)
+// Where the test files vendored from other tabnas repositories are, each
+// at its path there: test/fixtures, which tools/vendor-fixtures.sh writes,
+// or DMOG_FIXTURES, which the gates set to the directory of the sibling
+// checkouts when they run against them (DMOG_SIBLINGS=1).
+export const FIXTURES_ROOT = process.env.DMOG_FIXTURES || join(REPO_ROOT, 'test', 'fixtures')
+
+// A path among the vendored test files (`parts[0]` names the repository),
+// such as alchemy's fixtures (`vendored('alchemy', 'test', 'spec')`). A
+// missing path fails the tests that read it, naming the path; nothing
+// skips.
+export function vendored(...parts: string[]): string {
+  const path = join(FIXTURES_ROOT, ...parts)
   if (!existsSync(path)) {
-    throw new Error(`${path} does not exist: clone tabnas/${parts[0]} beside this repository`)
+    throw new Error(`${path} does not exist: run tools/vendor-fixtures.sh`)
   }
   return path
 }

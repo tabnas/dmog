@@ -1,0 +1,2 @@
+; Simple ABNF fixture: alternation of terminal strings.
+greet = "hi" / "hello"

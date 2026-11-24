@@ -1,0 +1,17 @@
+grammar	expected
+val = add\nadd = NR [ PL add ]\nNR = <number>\nPL = "+"	{"#PL":"+"}
+val = add\nadd = NR [ PL add ]\nPL = "+"	{"#PL":"+"}
+NR = <number>\nadd = NR [ PL add ]\nPL = "+"	{"#PL":"+"}
+add = NR [ PL add ]\nPL = "+"	{"#PL":"+"}
+top = "x"\nPL = "+"	{"#PL":"+"}
+top = A B\nA = "+"\nB = "+"	{"#T":"+"}
+greet = "hi"	{}
+greet = "hi" / "hello"	{}
+top = TX\nTX = "literal"	{}
+e = NR sign NR\nsign = "+" / "-"	{"#T":"+","#T1":"-"}
+P = Q\nQ = P PL / NR\nPL = "+"	{"#PL":"+"}
+x = "x" name "=" value\nname = 1*ALPHA\nvalue = 1*DIGIT	{"#T":"="}
+rep = *PL\nPL = "+"	{"#PL":"+"}
+v = p\np = "a" q\nq = "b" "c"	{}
+p = "a" empty\nempty = ""	{"#T":""}
+e = plus NR\nplus = "+"	{"#plus":"+"}

@@ -1,0 +1,16 @@
+input	expected
+a=1\nmykey	{"a":"1","mykey":true}
+a = true\nb = false	{"a":true,"b":false}
+a = null	{"a":null}
+mykey	{"mykey":true}
+mykey\na=1	{"mykey":true,"a":"1"}
+[s]\nmykey	{"s":{"mykey":true}}
+[s]\nmykey\na=1	{"s":{"mykey":true,"a":"1"}}
+[s]\nbare1\nbare2	{"s":{"bare1":true,"bare2":true}}
+bare1\nbare2\n[s]\nbare3	{"bare1":true,"bare2":true,"s":{"bare3":true}}
+"quoted bare"	{"quoted bare":true}
+[s]\n"quoted bare"	{"s":{"quoted bare":true}}
+true	{}
+false	{}
+null	{}
+true\na=1	{"a":"1"}

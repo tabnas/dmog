@@ -1,0 +1,7 @@
+input	expected	opts
+<feed xmlns="http://www.w3.org/2005/Atom"/>	{"format":"atom","version":"1.0","entries":[]}
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Hi</title></feed>\n  \n	{"format":"atom","version":"1.0","entries":[],"title":{"type":"text","value":"Hi"}}
+<rss version="2.0"><channel><title>x</title></channel></rss>	{"format":"rss","version":"2.0","title":"x","link":"","description":"","items":[]}	{"format":"native"}
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Hi</title></feed>	{"name":"feed","localName":"feed","attributes":{"xmlns":"http://www.w3.org/2005/Atom"},"children":[{"name":"title","localName":"title","attributes":{},"children":["Hi"],"namespace":"http://www.w3.org/2005/Atom"}],"namespace":"http://www.w3.org/2005/Atom"}	{"format":"raw"}
+<rss version="2.0"><channel><title>x</title></channel></rss>	{"name":"rss","localName":"rss","attributes":{"version":"2.0"},"children":[{"name":"channel","localName":"channel","attributes":{},"children":[{"name":"title","localName":"title","attributes":{},"children":["x"]}]}]}	{"format":"raw"}
+<atom:feed xmlns:atom="http://www.w3.org/2005/Atom"><atom:title>Hi</atom:title></atom:feed>	{"format":"atom","version":"1.0","entries":[],"title":{"type":"text","value":"Hi"}}

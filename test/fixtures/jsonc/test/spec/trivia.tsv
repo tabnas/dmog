@@ -1,0 +1,9 @@
+input	expected	opts
+ 	UNDEFINED
+  \t  	UNDEFINED
+  \t  \n  \t  	UNDEFINED
+\r\n	UNDEFINED
+\r	UNDEFINED
+\n	UNDEFINED
+\n\r	UNDEFINED
+\n   \n	UNDEFINED

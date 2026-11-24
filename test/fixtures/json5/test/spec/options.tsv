@@ -1,0 +1,95 @@
+input	expected	opts
+0o17	15	{"octal":true,"binary":true,"numberSeparator":true}
+# Octal and binary are folded by the same conversion as hex, so a literal
+# past the exact integer range pins them too.
+0o46754573436475757744	701883937579327500	{"octal":true,"binary":true,"numberSeparator":true}
+0b101	5	{"octal":true,"binary":true,"numberSeparator":true}
+1_000	1000	{"octal":true,"binary":true,"numberSeparator":true}
+# `hex:false` turns off the engine's number lexer for base-prefixed
+# literals, which is what rejects `0x1F`. The uppercase `0X` form is not
+# lexed as a number in any runtime: it is matched by the `uppercaseHex`
+# value definition, which the option does not touch, so it keeps parsing.
+# That asymmetry is canonical TypeScript behaviour, and these two rows are
+# here so it is executed in all three runtimes rather than assumed.
+0x1F	ERROR:unexpected	{"hex":false}
+0X1F	31	{"hex":false}
+# With the number lexer off, the `uppercaseHex` value definition owns the
+# whole literal, so its own conversion has to round once from the exact
+# integer too. Same number as the numbers.tsv rows, through the other path.
+0Xa6f2f78f4f9bf44	751871859346751400	{"hex":false}
+	ERROR:json5_empty
+# A byte-order mark is JSON5 whitespace (U+FEFF), so a source that is
+# ONLY a BOM holds no value, exactly as a source of only spaces does,
+# and resolves to the declared empty result when requireValue is off.
+# An editor writes this file by itself, which is why it is a shared row
+# rather than a unit case in one runtime.
+﻿	ERROR:json5_no_value
+﻿	null	{"requireValue":false}
+// only a comment	ERROR:json5_no_value
+/* only a comment */	ERROR:json5_no_value
+   	ERROR:json5_no_value
+"/* x */"	"/* x */"
+	null	{"requireValue":false}
+# requireValue:false means "a source with no value resolves to the grammar's
+# declared emptyResult", and that has to hold for EVERY no-value source, not
+# only the exactly-empty one. TypeScript short-circuited on `` alone and let
+# whitespace/comment-only sources fall out of the rules as undefined, while Go
+# answered nil for all of them. These rows pin the whole set in both runtimes.
+   	null	{"requireValue":false}
+// only a comment	null	{"requireValue":false}
+/* only a comment */	null	{"requireValue":false}
+// a\n/* b */	null	{"requireValue":false}
+# Not a no-value source: a string whose CONTENTS look like a comment. The
+# scan stops on the leading quote and never looks inside.
+"/* x */"	"/* x */"	{"requireValue":false}
+# An unterminated block comment holds no value either, but the engine's own
+# unterminated_comment is the better diagnosis and must not be swallowed.
+/* x	ERROR:unterminated_comment	{"requireValue":false}
+foo	"foo"	{"strictValue":false}
+# The same astral IdentifierStart seam as keys.tsv, at a VALUE position:
+# with strictValue off an unquoted run is a string, and its first
+# character goes through the same text check. Canonical TypeScript
+# refused both of these until 2026-09-21, when the check began reading a
+# code point; they were the two rows of that divergence the register
+# could not hold, because it has no opts column.
+𝒜	"𝒜"	{"strictValue":false}
+{a:𝒜}	{"a":"𝒜"}	{"strictValue":false}
+# The control at a value position: U+1F600 is So, so it opens nothing,
+# strictValue or not.
+😀	ERROR:unexpected	{"strictValue":false}
+# A hash-comment-only source with requireValue ON. The guard's scan knows
+# the two slash comment forms and NOT `#`, in all three runtimes, so the
+# guard does not fire; the parse then fails on the comment with the
+# engine's own code. Canonical TypeScript does exactly this, so this row
+# pins the agreement rather than a wish. It is also the control for the
+# rows below: they made the requireValue-OFF scan hash-aware and this
+# answer had to stay exactly as it was.
+# comment	ERROR:unexpected	{"hashComment":true}
+# With requireValue OFF, a hash-comment-only source holds no value, so it
+# resolves to the grammar's declared empty result exactly as the empty
+# source, a run of spaces and the two slash forms already do. It did not until 2026-09-21: the scan
+# did not recognise `#`, the source reached the rules, and TypeScript fell
+# out with UNDEFINED where Go and Rust answered null. That was recorded in
+# ../../DIVERGENCE.md as unrepairable, on the ground that teaching the scan
+# the hash form would also change the control row above. It does not: the
+# canonical calls the scan from separate requireValue branches, so only the
+# OFF branch was told about `#`. Measured in all three runtimes before and
+# after. The entry is gone and these rows replace it.
+# Bite-checked by flipping the first cell below to UNDEFINED: TypeScript
+# and Rust go red, Go does not, because Go returns a bare nil for both and
+# its runner says so (go/parity_test.go). The null is pinned as null in the
+# two runtimes that can tell the difference, and as "parsed, no value" in
+# the one that cannot.
+# c	null	{"hashComment":true,"requireValue":false}
+# c\n# d	null	{"hashComment":true,"requireValue":false}
+   # c   	null	{"hashComment":true,"requireValue":false}
+#	null	{"hashComment":true,"requireValue":false}
+# A bare `#` with hashComment OFF is not trivia to the scan, so the source
+# still reaches the rules and is refused there. The hash-awareness is
+# conditional on the option, and this row is what says so.
+# c	ERROR:unexpected	{"requireValue":false}
+# And a hash comment that PRECEDES a value leaves the value findable, with
+# requireValue either way: the scan stops at the line terminator.
+# c\n1	1	{"hashComment":true,"requireValue":false}
+# A hash comment before a real value is a comment, as it should be.
+# c\n1	1	{"hashComment":true}
