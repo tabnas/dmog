@@ -2,7 +2,7 @@
 
 package e2e
 
-// spec_test.go: alchemy's shared fixtures in ../alchemy/test/spec that run
+// spec_test.go: alchemy's shared fixtures, vendored (test/fixtures/alchemy), that run
 // programs, through tabnas/support's runner as every grammar repository
 // runs its own: run.tsv, a program run over a JSON document, the bytes it
 // writes or the failure, on transduce's routers and render's renderers;
@@ -41,18 +41,22 @@ func specDir(t testing.TB) string {
 	return filepath.Join(repoRoot(t), "test", "spec")
 }
 
-// repoRoot is alchemy's checkout, beside this one (../alchemy from
-// dmog's root; the tests run in go/e2e): the fixtures these tests
-// read are alchemy's, and transduce's checkout is beside it too. A missing
-// sibling fails the test, naming the path.
+// repoRoot is alchemy's vendored test files (test/fixtures/alchemy from
+// dmog's root; the tests run in go/e2e), and the other repositories' are
+// beside it, each under its own name, as tools/vendor-fixtures.sh writes
+// them. A missing file fails the test, naming the path.
 func repoRoot(t testing.TB) string {
 	t.Helper()
-	root, err := filepath.Abs(filepath.Join("..", "..", "..", "alchemy"))
+	fixtures := os.Getenv("DMOG_FIXTURES") // the sibling checkouts' directory, when the gates run against them
+	if fixtures == "" {
+		fixtures = filepath.Join("..", "..", "test", "fixtures")
+	}
+	root, err := filepath.Abs(filepath.Join(fixtures, "alchemy"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(root, "test", "spec")); err != nil {
-		t.Fatalf("alchemy's checkout, with its fixtures, is beside this one, at %s: %v", root, err)
+		t.Fatalf("alchemy's fixtures are vendored at %s: run tools/vendor-fixtures.sh: %v", root, err)
 	}
 	return root
 }

@@ -1,0 +1,105 @@
+input	expected
+# Evaluate callback: math expression grammar
+# Tests that the evaluate callback fires correctly for nested
+# and chained expressions, including left-associative chains,
+# parenthesized grouping, and mixed precedence.
+# Simple literals
+x:1	{"x":1}
+x:42	{"x":42}
+# Single operations
+x:1+2	{"x":3}
+x:3*4	{"x":12}
+x:10-3	{"x":7}
+x:10/2	{"x":5}
+# Left-associative chains (the bug case)
+x:1+2+3	{"x":6}
+x:1+2+3+4	{"x":10}
+x:2*3*4	{"x":24}
+x:10-1-2-3	{"x":4}
+# Precedence: * binds tighter than +
+x:1+2*3	{"x":7}
+x:2*3+4	{"x":10}
+x:1+2*3+4	{"x":11}
+x:2*3+4*5	{"x":26}
+# Parentheses override precedence
+x:(1+2)*3	{"x":9}
+x:2*(3+4)	{"x":14}
+x:(1+2)*(3+4)	{"x":21}
+x:((1+2))	{"x":3}
+x:(((1+2))+3)	{"x":6}
+# Nested parens with chains
+x:(1+2)*3+4	{"x":13}
+x:1+(2+3)*4	{"x":21}
+# Prefix negation
+x:-1	{"x":-1}
+x:-1+2	{"x":1}
+x:1+-2	{"x":-1}
+x:-(1+2)	{"x":-3}
+x:-(1+2)*3	{"x":-9}
+# Multiple keys with expressions
+x:1+2,y:3*4	{"x":3,"y":12}
+a:1+2+3,b:(4+5)*6	{"a":6,"b":54}
+# Expression as map value alongside plain values
+x:hello,y:1+2,z:true	{"x":"hello","y":3,"z":true}
+# Suffix factorial
+x:3!	{"x":6}
+x:4!	{"x":24}
+x:5!	{"x":120}
+x:0!	{"x":1}
+x:1!	{"x":1}
+# Factorial with other ops — ! binds tighter than * and +
+x:3!+1	{"x":7}
+x:2*3!	{"x":12}
+x:3!*2	{"x":12}
+x:(2+1)!	{"x":6}
+x:3!+4!	{"x":30}
+# Function calls: min and max (preval parens)
+x:min(3,5)	{"x":3}
+x:max(3,5)	{"x":5}
+x:min(10,2)	{"x":2}
+x:max(10,2)	{"x":10}
+x:min(7,7)	{"x":7}
+x:max(7,7)	{"x":7}
+# Functions combined with operators (result of function in expression)
+x:min(3,5)+1	{"x":4}
+x:max(3,5)*2	{"x":10}
+x:1+min(3,5)	{"x":4}
+x:2*max(3,5)	{"x":10}
+# Nested functions
+x:min(2,3)	{"x":2}
+x:max(1,4)	{"x":4}
+# Expressions as function arguments. A comma group is a plain array, not
+# an op-array, so `evaluate` used to be skipped for every member but the
+# last, and the raw op-array reached the host as an argument.
+x:min(1+1,5)	{"x":2}
+x:max(1+1,5)	{"x":5}
+x:min(2*3,5)	{"x":5}
+x:max(2*3,5)	{"x":6}
+x:min(1+1,2+2)	{"x":2}
+x:max(1+1,2+2)	{"x":4}
+x:min(3!,5)	{"x":5}
+x:max(3!,5)	{"x":6}
+x:min(-1+3,5)	{"x":2}
+x:min(1+1,2+2,3+3)	{"x":2}
+x:max(1+1,2+2,3+3)	{"x":6}
+x:min((1+2)*2,5)	{"x":5}
+x:min(min(1,2),5)	{"x":1}
+x:max(min(1,2),5)	{"x":5}
+x:min(1+1,5)+10	{"x":12}
+# Functions with factorial result
+x:3!+min(1,2)	{"x":7}
+x:max(3,5)+4!	{"x":29}
+# Deeply nested
+x:((1+2)*(3+4))+(5*6)	{"x":51}
+x:1+2+3+4+5+6+7+8+9+10	{"x":55}
+# Root implicit lists under an evaluator. The members after the first
+# used to be dropped when the first was a suffix applied to a prefix,
+# and the close hook takes a different path through the parent node
+# when an evaluator is configured, so cover both here. `-1!` is
+# `["-",["!",1]]`, so it evaluates as -(1!): the evaluator used to reduce
+# the prefix before the suffix arrived, and gave (-1)!, which is 1.
+3!,2	[6,2]
+1+2,3*4	[3,12]
+-1!,2	[-1,2]
+2!,3!,4!	[2,6,24]
+3! 2	[6,2]

@@ -1,0 +1,6 @@
+input	expected
+# Missing operands remain absent and must never point back to the expression.
+1+	["+",1]
+-	["-"]
+a:1+	{"a":["+",1]}
+1+2+	["+",["+",1,2]]

@@ -1,0 +1,7 @@
+input	expected	opts
+a\n# b	[{"a":"# b"}]
+a\n b #c	[{"a":" b #c"}]
+a\n# b	[]	{"comment":true}
+a\n b #c	[{"a":" b "}]	{"comment":true}
+a\n# b	[]	{"strict":false}
+a\n b 	[{"a":"b"}]	{"strict":false}

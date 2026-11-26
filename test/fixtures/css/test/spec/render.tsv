@@ -1,0 +1,25 @@
+input	expected	opts
+# Documents CSS's render (alchemy/render.alc) writes, as alchemy runs it,
+# each under a comment saying what tree it was given, and the tree every
+# reader reads from them. The render takes a node's members in any order:
+# each document below is what it wrote for the tree with its members in
+# the reader's order, type first, as the TypeScript and Rust trees keep
+# them, and again for the same tree with its members in sorted key order,
+# as a Go host walks the plain maps the Go reader builds, and, for a tree
+# read with the default options, for the Go reader's own tree: each time
+# the same text.
+
+# --- an at-rule named position: its member `position` holds a string,
+# the prelude, and is written as one, where a `position` that holds an
+# object is the reader's source position and is passed over ---
+# The reader's tree of `@position x {}`.
+@position x {}\n	{"type":"stylesheet","rules":[{"type":"position","position":"x","rules":[]}]}
+# The reader's tree of `@position x {}` read with `position: true`, whose
+# source position takes the prelude's place in the node: the position is
+# passed over, and the node of a type with rules is written as `@type`.
+@type position {}\n	{"type":"stylesheet","rules":[{"type":"position","rules":[]}]}
+# --- every node type the reader builds, the blocks among them held back
+# until their opening is decided where the members that decide it come
+# after the block ---
+# The reader's tree of a stylesheet holding each.
+@charset "utf-8";\n\n@import url("a.css") screen;\n\n@namespace svg url(http://www.w3.org/2000/svg);\n\n/* a comment */\n\na,\nb > c {\n  color: red;\n  margin:;\n  &:hover {\n    color: blue;\n  }\n}\n\n@media screen and (min-width: 10px) {\n  .x {\n    y: z;\n  }\n}\n\n@supports (display: grid) {\n  @media print {\n    .g {\n      display: grid;\n    }\n  }\n}\n\n@-moz-document url-prefix() {\n  .m {\n    a: b;\n  }\n}\n\n@document url(x) {\n  .d {\n    e: f;\n  }\n}\n\n@keyframes spin {\n  from {\n    a: b;\n  }\n  50%, to {\n    c: d;\n  }\n}\n\n@-webkit-keyframes spin {\n  0% {\n    e: f;\n  }\n}\n\n@page :first {\n  margin: 1in;\n}\n\n@page {\n  size: a4;\n}\n\n@font-face {\n  font-family: X;\n  src: url(x.woff);\n}\n\n@host {\n  :host {\n    display: block;\n  }\n}\n\n@custom-media --small (max-width: 30em);\n\n@layer base {\n  p {\n    q: r;\n  }\n}\n\n@type foo;\n\n@type bar {\n  s {\n    t: u;\n  }\n}\n	{"type":"stylesheet","rules":[{"type":"charset","charset":"\"utf-8\""},{"type":"import","import":"url(\"a.css\") screen"},{"type":"namespace","namespace":"svg url(http://www.w3.org/2000/svg)"},{"type":"comment","comment":" a comment "},{"type":"rule","selectors":["a","b > c"],"declarations":[{"type":"declaration","property":"color","value":"red"},{"type":"declaration","property":"margin","value":""},{"type":"rule","selectors":["&:hover"],"declarations":[{"type":"declaration","property":"color","value":"blue"}]}]},{"type":"media","media":"screen and (min-width: 10px)","rules":[{"type":"rule","selectors":[".x"],"declarations":[{"type":"declaration","property":"y","value":"z"}]}]},{"type":"supports","supports":"(display: grid)","rules":[{"type":"media","media":"print","rules":[{"type":"rule","selectors":[".g"],"declarations":[{"type":"declaration","property":"display","value":"grid"}]}]}]},{"type":"document","document":"url-prefix()","vendor":"-moz-","rules":[{"type":"rule","selectors":[".m"],"declarations":[{"type":"declaration","property":"a","value":"b"}]}]},{"type":"document","document":"url(x)","vendor":"","rules":[{"type":"rule","selectors":[".d"],"declarations":[{"type":"declaration","property":"e","value":"f"}]}]},{"type":"keyframes","name":"spin","keyframes":[{"type":"keyframe","values":["from"],"declarations":[{"type":"declaration","property":"a","value":"b"}]},{"type":"keyframe","values":["50%","to"],"declarations":[{"type":"declaration","property":"c","value":"d"}]}]},{"type":"keyframes","name":"spin","vendor":"-webkit-","keyframes":[{"type":"keyframe","values":["0%"],"declarations":[{"type":"declaration","property":"e","value":"f"}]}]},{"type":"page","selectors":[":first"],"declarations":[{"type":"declaration","property":"margin","value":"1in"}]},{"type":"page","selectors":[],"declarations":[{"type":"declaration","property":"size","value":"a4"}]},{"type":"font-face","declarations":[{"type":"declaration","property":"font-family","value":"X"},{"type":"declaration","property":"src","value":"url(x.woff)"}]},{"type":"host","rules":[{"type":"rule","selectors":[":host"],"declarations":[{"type":"declaration","property":"display","value":"block"}]}]},{"type":"custom-media","name":"--small","media":"(max-width: 30em)"},{"type":"layer","layer":"base","rules":[{"type":"rule","selectors":["p"],"declarations":[{"type":"declaration","property":"q","value":"r"}]}]},{"type":"foo"},{"type":"bar","rules":[{"type":"rule","selectors":["s"],"declarations":[{"type":"declaration","property":"t","value":"u"}]}]}]}

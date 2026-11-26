@@ -1,0 +1,5 @@
+input	expected	opts
+```\ncode here\n```	{"type":"document","children":[{"type":"code","lang":null,"meta":null,"value":"code here"}]}
+```js\nconsole.log("hi")\n```	{"type":"document","children":[{"type":"code","lang":"js","meta":null,"value":"console.log(\"hi\")"}]}
+~~~python\nprint("hi")\n~~~	{"type":"document","children":[{"type":"code","lang":"python","meta":null,"value":"print(\"hi\")"}]}
+    indented\n    second	{"type":"document","children":[{"type":"code","lang":null,"meta":null,"value":"indented\nsecond"}]}

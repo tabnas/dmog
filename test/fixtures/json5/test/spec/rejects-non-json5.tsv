@@ -1,0 +1,7 @@
+input	expected	opts
+foo	ERROR:unexpected
+0o17	ERROR:unexpected
+0b101	ERROR:unexpected
+1_000	ERROR:unexpected
+1,2,3	ERROR:unexpected
+a:1	ERROR:unexpected

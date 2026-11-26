@@ -1,0 +1,37 @@
+# name	input	expected	opts	msg
+# Namespace resolution. The parser annotates elements with `prefix`,
+# `localName` and `namespace` derived from xmlns/xmlns:* declarations in
+# scope. Namespace declarations remain in the `attributes` map.
+
+default-ns	<a xmlns="http://example.com"><b/></a>	{"name":"a","localName":"a","namespace":"http://example.com","attributes":{"xmlns":"http://example.com"},"children":[{"name":"b","localName":"b","namespace":"http://example.com","attributes":{},"children":[]}]}
+prefix-ns	<root xmlns:x="http://x.example"><x:a x:k="v">body</x:a></root>	{"name":"root","localName":"root","attributes":{"xmlns:x":"http://x.example"},"children":[{"name":"x:a","prefix":"x","localName":"a","namespace":"http://x.example","attributes":{"x:k":"v"},"children":["body"]}]}
+prefix-inherited	<a xmlns:p="http://p.example"><p:b><p:c/></p:b></a>	{"name":"a","localName":"a","attributes":{"xmlns:p":"http://p.example"},"children":[{"name":"p:b","prefix":"p","localName":"b","namespace":"http://p.example","attributes":{},"children":[{"name":"p:c","prefix":"p","localName":"c","namespace":"http://p.example","attributes":{},"children":[]}]}]}
+default-override	<a xmlns="A"><b xmlns="B"><c/></b><d/></a>	{"name":"a","localName":"a","namespace":"A","attributes":{"xmlns":"A"},"children":[{"name":"b","localName":"b","namespace":"B","attributes":{"xmlns":"B"},"children":[{"name":"c","localName":"c","namespace":"B","attributes":{},"children":[]}]},{"name":"d","localName":"d","namespace":"A","attributes":{},"children":[]}]}
+# xmlns="" undeclares the default namespace (Namespaces in XML 1.0 §6.2):
+# an unprefixed element in its scope is in no namespace, and carries no
+# `namespace` member.
+default-undeclared	<a xmlns="A"><b xmlns=""><c/></b><d/></a>	{"name":"a","localName":"a","namespace":"A","attributes":{"xmlns":"A"},"children":[{"name":"b","localName":"b","attributes":{"xmlns":""},"children":[{"name":"c","localName":"c","attributes":{},"children":[]}]},{"name":"d","localName":"d","namespace":"A","attributes":{},"children":[]}]}
+namespaces-disabled	<a xmlns="http://example.com"/>	{"name":"a","localName":"a","attributes":{"xmlns":"http://example.com"},"children":[]}	{"namespaces":false}
+xml-prefix-implicit	<a xml:lang="en"/>	{"name":"a","localName":"a","attributes":{"xml:lang":"en"},"lang":"en","children":[]}
+xml-prefix-explicit-correct-uri	<a xmlns:xml="http://www.w3.org/XML/1998/namespace"/>	{"name":"a","localName":"a","attributes":{"xmlns:xml":"http://www.w3.org/XML/1998/namespace"},"children":[]}
+
+# XML 1.0 well-formedness and Namespaces in XML 1.0 are separate specs. A
+# document using an undeclared prefix is well-formed XML (the prefixed
+# name is a legal Name), merely not namespace-well-formed, so it parses by
+# default: `prefix` and `localName` are still split out, and `namespace`
+# is simply absent. Turn on `strictNamespaces` to reject instead (pinned
+# in errors.tsv).
+unbound-element-prefix-lenient	<a><foo:b/></a>	{"name":"a","localName":"a","attributes":{},"children":[{"name":"foo:b","prefix":"foo","localName":"b","attributes":{},"children":[]}]}
+unbound-attribute-prefix-lenient	<a foo:bar="x"/>	{"name":"a","localName":"a","attributes":{"foo:bar":"x"},"children":[]}
+unbound-prefix-does-not-inherit-default-ns	<a xmlns="http://d.example"><foo:b/></a>	{"name":"a","localName":"a","namespace":"http://d.example","attributes":{"xmlns":"http://d.example"},"children":[{"name":"foo:b","prefix":"foo","localName":"b","attributes":{},"children":[]}]}
+bound-prefix-still-resolves-when-lenient	<a xmlns:p="http://p.example"><p:b/><q:c/></a>	{"name":"a","localName":"a","attributes":{"xmlns:p":"http://p.example"},"children":[{"name":"p:b","prefix":"p","localName":"b","namespace":"http://p.example","attributes":{},"children":[]},{"name":"q:c","prefix":"q","localName":"c","attributes":{},"children":[]}]}
+
+# Namespaces in XML 1.0 §5.2: a namespace declaration is in scope over
+# the whole element it appears on, INCLUDING that element's own other
+# attributes. Binding must therefore not depend on attribute order —
+# resolving in a single pass over an unordered attribute map wrongly
+# rejected the first row below.
+attr-prefix-declared-later-on-same-element	<a p:x="1" xmlns:p="http://p.example"/>	{"name":"a","localName":"a","attributes":{"p:x":"1","xmlns:p":"http://p.example"},"children":[]}	{"strictNamespaces":true}
+attr-prefix-declared-earlier-on-same-element	<a xmlns:p="http://p.example" p:x="1"/>	{"name":"a","localName":"a","attributes":{"xmlns:p":"http://p.example","p:x":"1"},"children":[]}	{"strictNamespaces":true}
+element-prefix-declared-later-on-same-element	<p:a p:x="1" xmlns:p="http://p.example"/>	{"name":"p:a","prefix":"p","localName":"a","namespace":"http://p.example","attributes":{"p:x":"1","xmlns:p":"http://p.example"},"children":[]}	{"strictNamespaces":true}
+attr-prefix-declared-later-lenient	<a p:x="1" xmlns:p="http://p.example"/>	{"name":"a","localName":"a","attributes":{"p:x":"1","xmlns:p":"http://p.example"},"children":[]}

@@ -1,0 +1,25 @@
+input	expected
+# JSON Lines allows ANY JSON value per line, not only objects.
+1	[1]
+-1	[-1]
+0	[0]
+1.5	[1.5]
+-2.75e3	[-2750]
+1e2	[100]
+true	[true]
+false	[false]
+null	[null]
+"s"	["s"]
+""	[""]
+[1,2,3]	[[1,2,3]]
+{"k":"v"}	[{"k":"v"}]
+# Mixed scalars across lines.
+true\nfalse\nnull	[true,false,null]
+1\n2\n3	[1,2,3]
+"a"\n"b"	["a","b"]
+# Strings keep standard JSON escape handling.
+"a\\nb"	["a\nb"]
+"a\\tb"	["a\tb"]
+"q\\"q"	["q\"q"]
+"\\u0041"	["A"]
+{"a":"x\\ny"}\n{"b":2}	[{"a":"x\ny"},{"b":2}]

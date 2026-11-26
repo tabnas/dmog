@@ -10,13 +10,13 @@ go 1.24.7
 // v0.2.0.
 require (
 	github.com/tabnas/abnf/go v0.5.1
-	github.com/tabnas/alchemy/go v0.4.0
+	github.com/tabnas/alchemy/go v0.4.1
 	github.com/tabnas/c/go v0.6.2
 	github.com/tabnas/chess/go v0.2.0
 	github.com/tabnas/css/go v0.5.20
 	github.com/tabnas/csv/go v0.6.11
 	github.com/tabnas/ebnf/go v0.2.2
-	github.com/tabnas/expr/go v0.6.3
+	github.com/tabnas/expr/go v0.6.4
 	github.com/tabnas/feed/go v0.6.21
 	github.com/tabnas/gbnf/go v0.2.1
 	github.com/tabnas/ini/go v0.5.24

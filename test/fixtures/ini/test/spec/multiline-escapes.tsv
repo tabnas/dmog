@@ -1,0 +1,3 @@
+input	expected
+a = one\\; two \\\nthree	{"a":"one; two three"}
+a = one\\# two \\\nthree	{"a":"one# two three"}

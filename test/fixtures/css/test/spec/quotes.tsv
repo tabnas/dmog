@@ -1,0 +1,102 @@
+input	expected	opts
+# quotes.tsv - the three quote characters: as CSS text, and stray.
+#
+# The cssToken matcher owns every quote CSS has. Its scans skip a quoted
+# run, "..." or '...', inside a selector, a value or a prelude, and the AST
+# keeps it verbatim, quotes and escapes included. A backtick is not a CSS
+# quote, so the matcher reads it as an ordinary character. The engine's own
+# string matcher is OFF (ts/src/css.ts: `string: { chars: '' }`), so a
+# quote the matcher declines, at a statement or property position or after
+# the last rule, reaches the grammar as an unexpected character:
+# ERROR:unexpected, never unterminated_string or unprintable.
+#
+# Every row in the first two groups used to fail in Go. go/css.go said
+# `StringOptions{Chars: ""}`, and in the Go engine an empty Chars means
+# UNSET, not none, so the default quotes stayed on: unterminated_string, or
+# unprintable where a newline follows the quote, or invalid_unicode /
+# invalid_ascii where a \u or \x escape does. It says `Lex: false` now,
+# the engine's way to turn string matching off.
+#
+# reworkcss/css reads an unmatched quote as an ordinary character, so it
+# accepts some inputs these rows reject (a"b\nc{d:e} is a rule there, and
+# a{b:"c} has the value "c). The rows pin the canonical port, not reworkcss.
+
+# Stray quotes: declined by the cssToken matcher, unexpected in the grammar.
+"	ERROR:unexpected
+'	ERROR:unexpected
+`	ERROR:unexpected
+a"b	ERROR:unexpected
+a'b	ERROR:unexpected
+a`b	ERROR:unexpected
+"a{b:c}	ERROR:unexpected
+'a{b:c}	ERROR:unexpected
+a{b:c}"	ERROR:unexpected
+a{b:c}'	ERROR:unexpected
+a{b:c}`	ERROR:unexpected
+a{b:c} "	ERROR:unexpected
+a{b:c}\n'	ERROR:unexpected
+a{"b:c}	ERROR:unexpected
+a{'b:c}	ERROR:unexpected
+a{`b:c}	ERROR:unexpected
+a{b:c;"}	ERROR:unexpected
+a{b:c;'}	ERROR:unexpected
+a{b:c;`}	ERROR:unexpected
+@media x{"}	ERROR:unexpected
+@media x{'a{b:c}}	ERROR:unexpected
+@media x{a{b:c}`}	ERROR:unexpected
+@keyframes x{"from{a:b}}	ERROR:unexpected
+@keyframes x{from{a:b}`}	ERROR:unexpected
+@font-face{`a:b}	ERROR:unexpected
+"\n"	ERROR:unexpected
+'\n'	ERROR:unexpected
+a"b\nc{d:e}	ERROR:unexpected
+
+# A stray quote followed by an escape. The engine's string matcher reads \u
+# and \x escapes; with it on, the old Go raised invalid_unicode or
+# invalid_ascii here. With it off the quote is unexpected, as in TS.
+a"\\u	ERROR:unexpected
+"\\u12"	ERROR:unexpected
+a{b:c}'\\u	ERROR:unexpected
+a{"\\u00}	ERROR:unexpected
+@media x{"\\u}	ERROR:unexpected
+`\\u	ERROR:unexpected
+"\\x	ERROR:unexpected
+a"\\x1	ERROR:unexpected
+a{b:c}'\\x4	ERROR:unexpected
+a{"\\x}	ERROR:unexpected
+
+# Balanced quotes: skipped by the matcher's scans and kept verbatim.
+a{b:"c"}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"b","value":"\"c\""}]}]}
+a{b:'c'}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"b","value":"'c'"}]}]}
+a{b:"c'd"}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"b","value":"\"c'd\""}]}]}
+a{b:'c"d'}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"b","value":"'c\"d'"}]}]}
+a{b:"c`d"}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"b","value":"\"c`d\""}]}]}
+a{b:"c\\"d"}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"b","value":"\"c\\\"d\""}]}]}
+a[x='y']{b:c}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a[x='y']"],"declarations":[{"type":"declaration","property":"b","value":"c"}]}]}
+a[x="y'"]{b:c}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a[x=\"y'\"]"],"declarations":[{"type":"declaration","property":"b","value":"c"}]}]}
+"a"{b:c}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["\"a\""],"declarations":[{"type":"declaration","property":"b","value":"c"}]}]}
+'a'{b:c}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["'a'"],"declarations":[{"type":"declaration","property":"b","value":"c"}]}]}
+
+# Backticks: text wherever the matcher reads text, unexpected where it
+# declines one. A " or ' after a backtick is not protected by it.
+a{b:`c`}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"b","value":"`c`"}]}]}
+a{b:`c}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"b","value":"`c"}]}]}
+a{b:c`}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a"],"declarations":[{"type":"declaration","property":"b","value":"c`"}]}]}
+`a{b:c}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["`a"],"declarations":[{"type":"declaration","property":"b","value":"c"}]}]}
+a[x=`y]{b:c}	{"type":"stylesheet","rules":[{"type":"rule","selectors":["a[x=`y]"],"declarations":[{"type":"declaration","property":"b","value":"c"}]}]}
+@keyframes x{`from{a:b}}	{"type":"stylesheet","rules":[{"type":"keyframes","name":"x","keyframes":[{"type":"keyframe","values":["`from"],"declarations":[{"type":"declaration","property":"a","value":"b"}]}]}]}
+@font-face{a:`b}	{"type":"stylesheet","rules":[{"type":"font-face","declarations":[{"type":"declaration","property":"a","value":"`b"}]}]}
+`\n`	ERROR:unexpected
+x: `a:{	ERROR:unexpected
+a{b:`c"d`}	ERROR:unexpected
+
+# An unterminated quote inside a selector, value or block: the matcher's
+# scans skip a quoted run to its closing quote or the end of the source, so
+# nothing after the quote is read as structure.
+a{b:"c}	ERROR:unexpected
+a{b:'c}	ERROR:unexpected
+a{b:"c;d:e}	ERROR:unexpected
+a[x="y]{b:c}	ERROR:unexpected
+a[x='y]{b:c}	ERROR:unexpected
+@font-face{a:"b}	ERROR:unexpected
+@keyframes x{from{a:'b}}	ERROR:unexpected

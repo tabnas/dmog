@@ -1,0 +1,60 @@
+name	opts	input	go	ts	rust	justification
+# The LIVE cross-port divergence ledger -- the AUTHORITATIVE list.
+# DIVERGENCE.md at the repository root explains the shape of these
+# disagreements and points here; this file is what actually RUNS, so if
+# the two ever disagree, this one wins.
+#
+# Seven tab-separated columns. `go`, `ts` and `rust` are what each port
+# ACTUALLY produces today, as JSON, or ERROR:<code>@<row>:<col>. `opts` is
+# a JSON object of make() options, or `-` for a stock parser. Columns are
+# read by HEADER NAME in all three runners, so a new runtime column goes
+# in without touching the ones already there.
+#
+# An error cell pins the POSITION as well as the code, and every runner
+# renders one. Two ports can agree on a code and disagree on where they
+# say the error happened; a cell that pinned the code alone would sit
+# green through exactly that split, and one row here is that split.
+#
+# Every row is asserted by EVERY runner: the Go runner must reproduce the
+# `go` column, the TS runner the `ts` column and the Rust runner the
+# `rust` column, on every run. So a
+# divergence that gets FIXED fails this suite as loudly as one that
+# regresses, and the row must then be deleted. That is the whole point —
+# go/doc/differences.md is prose, and prose rots: through this session it
+# claimed 2.e3 and 1e999 still diverged for some time after they were
+# aligned, and claimed base-prefixed overflow was aligned before it was.
+# A ledger nothing executes is documentation, not a gate.
+#
+# Adding a row here is an admission of parity debt, not a way to silence a
+# failure. Fix the divergence if you can; record it here only when you
+# cannot, with a justification a reader can act on.
+string-replace-printable	{"string":{"replace":{"-":"X"}}}	"a-c"	"aXc"	"aXc"	"aXc"	Control row, not a divergence: printable replacement is aligned. The row that sat above it, string-replace-control (a control character mapped through string.replace, which Go refused as unprintable before consulting the map), was deleted ahead of the engine fix, tabnas/parser#287, so that the fix can land without turning this ledger red; until this repository requires an engine carrying it, Go still refuses that input.
+string-replace-control-row	{"string":{"replace":{"\n":"X"}}}	x:\n "ac\n\r"	ERROR:unprintable@2:6	ERROR:unprintable@2:6	ERROR:unprintable@3:1	A control character mapped through string.replace does not advance the reported row in TypeScript or Go, so the raw \r is reported at 2:6 there. The Rust engine counts the replaced newline as a line and reports 3:1. Only the ROW differs: the code is the same in all three, and the code is the contract. Recorded rather than repaired because the row counting is the engine string lexer, not this grammar.
+number-sep-space	{"number":{"sep":" "}}	a:1 0, b : 2 000 	ERROR:unexpected@1:14	{"a":10,"b":2000}	ERROR:unexpected@1:14	With a whitespace number separator, the TypeScript number regexp backtracks off the trailing space, which is also an ender, and reads 1 0 as 10. The Go and Rust scanners consume the trailing separator and then decline the whole run. The default separator _ is not an ender in any port, which is why the shared alignment-number-prefix-separator.tsv rows agree everywhere; only a whitespace separator splits. The scanner is the engine lexer, so the repair belongs there.
+# --- Downstream of engine defects: all six CLOSED, 2026-08-20 -------------
+# Six rows stood here, measured 2026-08-19 with scripts/parity-probe.sh.
+# Each cited the engine PR that would close it, and said the row goes red on
+# adoption and must be deleted. All six landed the same day and all six went
+# red, so all six are gone. Re-measured in BOTH ports before deleting, since
+# a row that changed is not automatically a row that closed:
+#
+#   text-ender-bare-quote          go ERROR:unterminated_string -> "a\"b"
+#   text-ender-quote-in-text       go ERROR:unterminated_string -> {"a":"b\"c"}
+#   text-ender-quote-after-value   go ERROR:unterminated_string -> {"a":"1\""}
+#       parser#128 (P1/P2) — a quote no longer ends a Go text run. This was
+#       ~2/3 of the 1,612 divergences in this repo's own 6,000-case fuzz.
+#
+#   line-separator-bare            go {"a":"x<U+2028>y"} -> ERROR:unexpected
+#   paragraph-separator-bare       go {"a":"x<U+2029>y"} -> ERROR:unexpected
+#       parser#125 (P4) — decided as "move Go": a Go text run now stops at
+#       U+2028/U+2029, so both ports refuse. The other direction was argued
+#       and declined; see parser#140.
+#
+#   malformed-unicode-escape       ts {"a":"p\u0000"} -> ERROR:invalid_unicode
+#       parser#139 (P3) — the TypeScript escape decode now requires the full
+#       hex run, so it stops inventing a character from a truncated escape.
+#
+# Every one now agrees between the ports. MEASURE AGAINST THE SIBLING
+# CHECKOUTS: polyglot-ci links them, so these suites run against parser's
+# main, not the version this repo pins. Against the pinned release the six
+# rows still look live, which is a statement about a build nothing runs.

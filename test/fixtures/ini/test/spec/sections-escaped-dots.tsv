@@ -1,0 +1,4 @@
+input	expected
+[x\.y\.z]\nx.y.z = xyz	{"x.y.z":{"x.y.z":"xyz"}}
+[x\.y\.z.a\.b\.c]\na.b.c = abc	{"x.y.z":{"a.b.c":{"a.b.c":"abc"}}}
+[C:\path]\na = 1	{"C:\\path":{"a":"1"}}

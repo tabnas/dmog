@@ -1,0 +1,2 @@
+; Simple ABNF fixture: two-terminal sequence.
+pair = "a" "b"

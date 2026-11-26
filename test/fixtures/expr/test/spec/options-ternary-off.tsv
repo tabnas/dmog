@@ -1,0 +1,54 @@
+input	expected
+# A ternary with no binding power: it takes the whole expression before
+# it as its first term and the whole one after it as its last, so it is
+# looser than every operator on either side of it.
+# The table of these files, the small C of tabnas/c: `comma` `,` infix
+# (left 1000000, right 1100000), a separator; `assign` `=` infix (left
+# 1500000, right 1400000); `tern` `?` `:`, a ternary; `deref` `*` prefix
+# (right 4000000); `post_inc` `++` suffix (left 5000000); `dot` `.` infix
+# (left 5000000, right 5100000); `paren` `(` `)`, a group whose content is
+# required; `call` `(` `)`, preval active, left 5000000, its content
+# separated; `subscript` `[` `]`, preval required, left 5000000; `cast` on
+# `(` `)`, right 4000000, accepting `int`, `long` and `char`; and the
+# defaults. `juxtapose` is false. `@` is a value of the host grammar, a
+# token of its own (`#AT`). The evaluator writes each operation as
+# [op.name, ...terms].
+z = a ? b : c	["tern-ternary",["assign-infix","z","a"],"b","c"]
+a , b ? c : d	["tern-ternary",["comma-infix","a","b"],"c","d"]
+a ? b : c ? d : e	["tern-ternary","a","b",["tern-ternary","c","d","e"]]
+a ? b ? c : d : e	["tern-ternary","a",["tern-ternary","b","c","d"],"e"]
+a ? b : c = d	["tern-ternary","a","b",["assign-infix","c","d"]]
+a + b ? c : d	["tern-ternary",["addition-infix","a","b"],"c","d"]
+a ? b : c + d	["tern-ternary","a","b",["addition-infix","c","d"]]
+a ? b + c : d	["tern-ternary","a",["addition-infix","b","c"],"d"]
+-a ? b : c	["tern-ternary",["negative-prefix","a"],"b","c"]
+*p ? a : b	["tern-ternary",["deref-prefix","p"],"a","b"]
+(int)a ? b : c	["tern-ternary",["cast-cast","int","a"],"b","c"]
+a ? (int)b : c	["tern-ternary","a",["cast-cast","int","b"],"c"]
+f(a ? b, c : d)	ERROR:unexpected
+f(a ? b : c, d)	["call-paren","f",["tern-ternary","a","b","c"],"d"]
+(a ? b : c)	["paren-paren",["tern-ternary","a","b","c"]]
+(a ? b : c)(1)	["call-paren",["paren-paren",["tern-ternary","a","b","c"]],1]
+a ? b : f(c)	["tern-ternary","a","b",["call-paren","f","c"]]
+a ? b : c[1]	["tern-ternary","a","b",["subscript-paren","c",1]]
+a ? b : c.d	["tern-ternary","a","b",["dot-infix","c","d"]]
+a ? b : c++	["tern-ternary","a","b",["post_inc-suffix","c"]]
+[a ? b : c, d]	[["tern-ternary","a","b","c"],"d"]
+x: a ? b : c	{"x":["tern-ternary","a","b","c"]}
+# The first term is the whole expression before the ternary, where the
+# operator before it binds tighter than the ones before that, and a
+# missing last term is empty.
+a + b * c ? d : e	["tern-ternary",["addition-infix","a",["multiplication-infix","b","c"]],"d","e"]
+x = a + b * c ? d : e	["tern-ternary",["assign-infix","x",["addition-infix","a",["multiplication-infix","b","c"]]],"d","e"]
+(a + b * c ? d : e)	["paren-paren",["tern-ternary",["addition-infix","a",["multiplication-infix","b","c"]],"d","e"]]
+f(a + b * c ? d : e, g)	["call-paren","f",["tern-ternary",["addition-infix","a",["multiplication-infix","b","c"]],"d","e"],"g"]
+[a + b * c ? d : e]	[["tern-ternary",["addition-infix","a",["multiplication-infix","b","c"]],"d","e"]]
+x: a + b * c ? d : e	{"x":["tern-ternary",["addition-infix","a",["multiplication-infix","b","c"]],"d","e"]}
+a + -b * c ? d : e	["tern-ternary",["addition-infix","a",["multiplication-infix",["negative-prefix","b"],"c"]],"d","e"]
+(a) + (int)b.x ? c : d	["tern-ternary",["addition-infix",["paren-paren","a"],["cast-cast","int",["dot-infix","b","x"]]],"c","d"]
+a ? b + c * d ? e : f : g	["tern-ternary","a",["tern-ternary",["addition-infix","b",["multiplication-infix","c","d"]],"e","f"],"g"]
+a ? b : c + d * e ? f : g	["tern-ternary","a","b",["tern-ternary",["addition-infix","c",["multiplication-infix","d","e"]],"f","g"]]
+a ? b :	["tern-ternary","a","b",null]
+a ? b	ERROR:unexpected
+(a ? b)	ERROR:unexpected
+f(a ? b)	ERROR:unexpected

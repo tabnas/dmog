@@ -1,0 +1,37 @@
+input	expected
+# The newline is the record separator. A trailing one is conventional and
+# adds no record.
+{"a":1}\n	[{"a":1}]
+{"a":1}\n{"b":2}\n	[{"a":1},{"b":2}]
+# CRLF counts as one newline (the engine's line matcher scans a run of line
+# characters into a single token).
+{"a":1}\r\n{"b":2}	[{"a":1},{"b":2}]
+{"a":1}\r\n{"b":2}\r\n	[{"a":1},{"b":2}]
+# Blank lines between records are tolerated, for the same reason: a run of
+# line characters arrives as ONE separator token.
+{"a":1}\n\n{"b":2}	[{"a":1},{"b":2}]
+{"a":1}\n\n\n{"b":2}	[{"a":1},{"b":2}]
+# Leading and trailing blank lines.
+\n{"a":1}	[{"a":1}]
+\n\n{"a":1}	[{"a":1}]
+{"a":1}\n\n	[{"a":1}]
+\n{"a":1}\n\n{"b":2}\n	[{"a":1},{"b":2}]
+# A document of only separators holds zero records.
+\n	[]
+\n\n	[]
+# Spaces and tabs around a record are insignificant, as in JSON.
+  {"a":1}  	[{"a":1}]
+{"a":1}  \n  {"b":2}	[{"a":1},{"b":2}]
+\t{"a":1}\t\n\t{"b":2}	[{"a":1},{"b":2}]
+  \n  	[]
+# A blank line containing whitespace is still just a separator. It lexes as
+# #LN #SP #LN rather than one #LN, so the grammar has to skip the extra
+# separator explicitly — these rows pin that it does.
+{"a":1}\n \n{"b":2}	[{"a":1},{"b":2}]
+{"a":1}\n \n \n{"b":2}	[{"a":1},{"b":2}]
+{"a":1}\n\t\n{"b":2}	[{"a":1},{"b":2}]
+{"a":1}\n \n	[{"a":1}]
+ \n \n {"a":1}	[{"a":1}]
+ \n \n 	[]
+{"a":1}\n \n{"b":2}\n \n{"c":3}	[{"a":1},{"b":2},{"c":3}]
+{"a":1}\n \n \n \n{"b":2}	[{"a":1},{"b":2}]

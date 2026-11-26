@@ -1,0 +1,57 @@
+grammar	expected
+# Each row is a grammar and its tree, member order included: see test/AGENTS.md.
+# The empty grammar, and one of comments alone, hold no rules.
+	{"type":"grammar","rules":[]}
+; a comment\n	{"type":"grammar","rules":[]}
+# A rule, its name and its alternatives, each a list of elements.
+a = b	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"reference","name":"b"}]]}]}
+a = b c / d	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"reference","name":"b"},{"type":"reference","name":"c"}],[{"type":"reference","name":"d"}]]}]}
+a = b\nc = d	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"reference","name":"b"}]]},{"type":"rule","name":"c","alternatives":[[{"type":"reference","name":"d"}]]}]}
+# An incremental rule is an entry of its own, after the one it extends.
+a = b\na =/ c	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"reference","name":"b"}]]},{"type":"rule","name":"a","incremental":true,"alternatives":[[{"type":"reference","name":"c"}]]}]}
+# The empty alternative, first, last and alone.
+a = / b	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[],[{"type":"reference","name":"b"}]]}]}
+a = b /	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"reference","name":"b"}],[]]}]}
+a =	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[]]}]}
+# Literals: a quoted string matches without regard to case, %s exactly.
+a = "x" %i"y" %s"Z" %I"w" %S"V" ""	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"literal","text":"x","caseSensitive":false},{"type":"literal","text":"y","caseSensitive":false},{"type":"literal","text":"Z","caseSensitive":true},{"type":"literal","text":"w","caseSensitive":false},{"type":"literal","text":"V","caseSensitive":true},{"type":"literal","text":"","caseSensitive":false}]]}]}
+# A quoted string has no escapes: a backslash is itself.
+a = "\\"	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"literal","text":"\\","caseSensitive":false}]]}]}
+# Numeric values: a character, a range, and a concatenation, an exact literal, in each base.
+a = %x41 %d65 %b1000001 %X4a	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"char","value":65},{"type":"char","value":65},{"type":"char","value":65},{"type":"char","value":74}]]}]}
+a = %x30-39 %d48-57 %b0-1 %x61-61	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"range","from":48,"to":57},{"type":"range","from":48,"to":57},{"type":"range","from":0,"to":1},{"type":"range","from":97,"to":97}]]}]}
+a = %x61.62 %d97.98 %b1100001.1100010	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"literal","text":"ab","caseSensitive":true},{"type":"literal","text":"ab","caseSensitive":true},{"type":"literal","text":"ab","caseSensitive":true}]]}]}
+a = %x10FFFF %x0	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"char","value":1114111},{"type":"char","value":0}]]}]}
+# The platform integer parse reads the longest prefix of digits valid in the base.
+a = %d5A	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"char","value":5}]]}]}
+# A surrogate pair in a concatenation is the one character it encodes; one value alone is its code point, a surrogate's too.
+a = %xD83D.DE00	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"char","value":128512}]]}]}
+a = %x41.D83D.DE00	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"literal","text":"A😀","caseSensitive":true}]]}]}
+a = %xD800	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"char","value":55296}]]}]}
+# Prose, its angle brackets taken off; a removal is named <all>.
+a = <a number> <>	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"prose","text":"a number"},{"type":"prose","text":""}]]}]}
+<all> = <remove>	{"type":"grammar","rules":[{"type":"rule","name":"<all>","alternatives":[[{"type":"prose","text":"remove"}]]}]}
+# A group, an option, and their nesting.
+a = ( b / c d )	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"group","alternatives":[[{"type":"reference","name":"b"}],[{"type":"reference","name":"c"},{"type":"reference","name":"d"}]]}]]}]}
+a = [ b ]	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"group","alternatives":[[{"type":"reference","name":"b"}]],"repeat":[{"min":0,"max":1}]}]]}]}
+a = ( [ b / ( c ) ] )	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"group","alternatives":[[{"type":"group","alternatives":[[{"type":"reference","name":"b"}],[{"type":"group","alternatives":[[{"type":"reference","name":"c"}]]}]],"repeat":[{"min":0,"max":1}]}]]}]]}]}
+# A repetition prefix is the element's last member, as written.
+a = *b 1*c 2*5d *3e 4f 0*0g 1h 1*1i 0*1j	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"reference","name":"b","repeat":[{"min":0}]},{"type":"reference","name":"c","repeat":[{"min":1}]},{"type":"reference","name":"d","repeat":[{"min":2,"max":5}]},{"type":"reference","name":"e","repeat":[{"min":0,"max":3}]},{"type":"reference","name":"f","repeat":[{"min":4,"max":4}]},{"type":"reference","name":"g","repeat":[{"min":0,"max":0}]},{"type":"reference","name":"h","repeat":[{"min":1,"max":1}]},{"type":"reference","name":"i","repeat":[{"min":1,"max":1}]},{"type":"reference","name":"j","repeat":[{"min":0,"max":1}]}]]}]}
+a = 007*b 1*0010c	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"reference","name":"b","repeat":[{"min":7}]},{"type":"reference","name":"c","repeat":[{"min":1,"max":10}]}]]}]}
+# An option is the repetition from 0 to 1, the innermost before a prefix.
+a = *[ b ] 2*3[ c / d ] *( e f )	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"group","alternatives":[[{"type":"reference","name":"b"}]],"repeat":[{"min":0,"max":1},{"min":0}]},{"type":"group","alternatives":[[{"type":"reference","name":"c"}],[{"type":"reference","name":"d"}]],"repeat":[{"min":0,"max":1},{"min":2,"max":3}]},{"type":"group","alternatives":[[{"type":"reference","name":"e"},{"type":"reference","name":"f"}]],"repeat":[{"min":0}]}]]}]}
+# Rules over several lines.
+a = b\n    c\n  / d\n	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"reference","name":"b"},{"type":"reference","name":"c"}],[{"type":"reference","name":"d"}]]}]}
+# A value annotation is a comment, and is not kept.
+a = b c ; @object b c	{"type":"grammar","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"reference","name":"b"},{"type":"reference","name":"c"}]]}]}
+# What the tree cannot hold.
+a = %x110000	ERROR:abnf_code_point
+a = %d555864801982	ERROR:abnf_code_point
+a = %x62-61	ERROR:abnf_reversed_range
+a = 3*2b	ERROR:abnf_reversed_repetition
+a = 9007199254740992*b	ERROR:abnf_count
+a = %x41.D800	ERROR:abnf_surrogate
+a = %xDE00.D83D	ERROR:abnf_surrogate
+a = ( b	ERROR:abnf_unclosed
+a = [ b	ERROR:abnf_unclosed
+a = "x	ERROR:unterminated_string

@@ -1,0 +1,77 @@
+input	expected	opts
+a: !!str 42	{"a":"42"}
+a: !!int "42"	{"a":42}
+a: !!float "3.14"	{"a":3.14}
+a: !!bool "true"	{"a":true}
+a: !!null ""	{"a":null}
+a: !!seq\n  - 1\n  - 2	{"a":[1,2]}
+a: !!map\n  x: 1	{"a":{"x":1}}
+a: !!str &n\tfoo	{"a":""}
+a: !!str &n foo	{"a":"foo"}
+a: !!str x:\ty	{"a":"x:\ty"}
+a: !!str x: y	{"a":{"x":"y"}}
+a: !!binary 1_000	{"a":1000}
+a: !t 1_000	{"a":1000}
+a: !!float xyz	{"a":"@@NaN"}
+a: !!int xyz	{"a":"@@NaN"}
+a: !!float "xyz"	{"a":"@@NaN"}
+[!!float xyz]	["@@NaN"]
+a: !!float ﻿1	{"a":1}
+a: !!int ﻿1	{"a":1}
+a: !!float 1	{"a":"@@NaN"}
+a: !!int 1	{"a":"@@NaN"}
+a: !!float 1﻿	{"a":1}
+a: !!str 1﻿	{"a":"1"}
+a: !!int 12abc	{"a":12}
+a: !!int -7.9	{"a":-7}
+a: !!float 1e	{"a":1}
+a: !!float .5	{"a":0.5}
+a: !!float +2	{"a":2}
+a: !!float 1.5e3x	{"a":1500}
+a: !!float Infinity	{"a":"@@Infinity"}
+a: !!float -Infinity	{"a":"@@-Infinity"}
+a: !!int 1_000	{"a":1}
+a: !!float 1_000	{"a":1}
+a: !!int 0x10	{"a":16}
+a: !!float 0x10	{"a":0}
+a: !!python/ [1]	ERROR:unexpected
+a: !!python/é [1]	ERROR:unexpected
+a: !!seqx [1]	ERROR:unexpected
+a: !!python/object [1]	{"a":[1]}
+a: !!python/-1 [1]	{"a":[1]}
+a: !!seq [1]	{"a":[1]}
+a: !!str "	{"a":"\""}
+a: !!str '	{"a":"'"}
+a: !!str "ab	{"a":"a"}
+a: !!str "中文	{"a":"中"}
+a: !!str "é	{"a":""}
+a: !!float .inf\nb: !!float -.Inf\nc: !!float +.INF	{"a":"@@Infinity","b":"@@-Infinity","c":"@@Infinity"}	
+a: !!float .nan	{"a":"@@NaN"}	
+a: !!int 0x10\nb: !!int -0o7\nc: !!int 0o17	{"a":16,"b":-7,"c":15}	
+a: !!int "0x10"	{"a":16}	
+a: !!int 012	{"a":12}	
+[!!int 0xa, !!float .inf]	[10,"@@Infinity"]	
+a: !!str # a comment\nb: 1	{"a":"","b":1}	
+- !!str #c\n- x	["","x"]	
+a: !!int 0x10000000000000000	{"a":18446744073709552000}	
+a: !!int -0x10000000000000000	{"a":-18446744073709552000}	
+a: !!int 0x20000000000001	{"a":9007199254740992}	
+a: !!int 0x20000000000003	{"a":9007199254740996}	
+a: !!int 0o1777777777777777777777	{"a":18446744073709552000}	
+a: !!int 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff	{"a":"@@Infinity"}	
+a: !!str\nb: 1	{"a":"","b":1}	
+a: !!null\nb: 1	{"a":null,"b":1}	
+- !!str\n- x	["","x"]	
+a:\n  b: !!str\nc: 1	{"a":{"b":""},"c":1}	
+a:\n  b: !!str\n  c: 1	{"a":{"b":"","c":1}}	
+a: !!str\n  text	{"a":"text"}	
+- !!str\n  text	["text"]	
+a: !!str\n  text\n  more\nb: 1	{"a":"text more","b":1}	
+a: !!str\n  123	{"a":"123"}	
+a: !!int\n  "12"	{"a":12}	
+--- !!str\nd\ne	"d e"	
+&a !!str\ntext	"text"	
+a: !!str\n  k: v	{"a":{"k":"v"}}	
+a: !!foo\n  k: v\n  m: n\nb: 1	{"a":{"k":"v","m":"n"},"b":1}	
+a: !!str\n\n  text	{"a":"text"}	
+!!str	""	

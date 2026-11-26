@@ -1,0 +1,25 @@
+input	expected	opts
+# field.exact is HEADER-relative and SHAPE-independent: it needs a known
+# field list (the header row, or field.names), but it must fire whether the
+# result is objects (object:true) or arrays (object:false). It used to be
+# checked only on the object path, so `object:false` silently disabled it.
+# Error CODES are asserted: both runtimes raise csv_extra_field when a row has
+# too many fields and csv_missing_field when it has too few.
+a,b\n1,2,3	ERROR:csv_extra_field	{"field":{"exact":true}}
+a,b,c\n1,2	ERROR:csv_missing_field	{"field":{"exact":true}}
+a,b\n1,2	[{"a":"1","b":"2"}]	{"field":{"exact":true}}
+a,b\n1,2,3	ERROR:csv_extra_field	{"object":false,"field":{"exact":true}}
+a,b,c\n1,2	ERROR:csv_missing_field	{"object":false,"field":{"exact":true}}
+a,b\n1,2	[["1","2"]]	{"object":false,"field":{"exact":true}}
+1,2,3	ERROR:csv_extra_field	{"header":false,"object":false,"field":{"exact":true,"names":["a","b"]}}
+1,2	[["1","2"]]	{"header":false,"object":false,"field":{"exact":true,"names":["a","b"]}}
+1,2,3	ERROR:csv_extra_field	{"header":false,"object":true,"field":{"exact":true,"names":["a","b"]}}
+# No header and no field.names: there is no expected count, so field.exact is
+# correctly inert. This is divergence (5) against go/encoding/csv, whose
+# FieldsPerRecord needs no header — pinned here so it cannot change silently.
+a,b,c\nd,e	[["a","b","c"],["d","e"]]	{"header":false,"object":false,"field":{"exact":true}}
+# An EXPLICITLY EMPTY field.names is still a field list, so the count it
+# declares is zero and one cell is one field too many. An empty document has
+# no record to compare, so it still parses.
+x	ERROR:csv_extra_field	{"header":false,"field":{"names":[],"exact":true}}
+	[]	{"header":false,"field":{"names":[],"exact":true}}

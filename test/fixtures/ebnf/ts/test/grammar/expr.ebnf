@@ -1,0 +1,6 @@
+/* A small arithmetic expression language, in W3C EBNF.
+   Precedence is expressed by layering: Expr over Term over Factor. */
+
+Expr   ::= Term ( ( "+" | "-" ) Term )*
+Term   ::= Factor ( ( "*" | "/" ) Factor )*
+Factor ::= NR | "(" Expr ")"

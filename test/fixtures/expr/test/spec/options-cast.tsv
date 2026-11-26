@@ -1,0 +1,33 @@
+input	expected
+# A cast: `cast` on `(` `)`, right 4000000, whose `accept` takes `int`,
+# `long` and `char`. The group is the cast's token; the operation's terms
+# are the group's content and the operand.
+# The table every options-*.tsv file shares, a small C: the defaults;
+# `comma` `,` infix (left 1000000, right 1100000); `deref` `*` prefix
+# (right 4000000); `post_inc` `++` suffix (left 5000000); `dot` `.` infix
+# (left 5000000, right 5100000); `paren` `(` `)`, a group; `call` `(`
+# `)`, preval active; `subscript` `[` `]`, preval required. The runner's
+# evaluator writes each operation as [op.name, ...terms].
+(int)a + b	["addition-infix",["cast-cast","int","a"],"b"]
+(long)(int)a	["cast-cast","long",["cast-cast","int","a"]]
+(int)a	["cast-cast","int","a"]
+(int)-a	["cast-cast","int",["negative-prefix","a"]]
+(int)*p	["cast-cast","int",["deref-prefix","p"]]
+(int)a++	["cast-cast","int",["post_inc-suffix","a"]]
+(int)a.b	["cast-cast","int",["dot-infix","a","b"]]
+(int)a[1]	["cast-cast","int",["subscript-paren","a",1]]
+(int)(a+b)	["cast-cast","int",["paren-paren",["addition-infix","a","b"]]]
+(int)f(1)	["cast-cast","int",["call-paren","f",1]]
+1+(int)a	["addition-infix",1,["cast-cast","int","a"]]
+-(int)a	["negative-prefix",["cast-cast","int","a"]]
+x*(int)a	["multiplication-infix","x",["cast-cast","int","a"]]
+(int)a*b	["multiplication-infix",["cast-cast","int","a"],"b"]
+f((int)a)	["call-paren","f",["cast-cast","int","a"]]
+x:(int)a	{"x":["cast-cast","int","a"]}
+[(int)a]	[["cast-cast","int","a"]]
+((int)a)	["paren-paren",["cast-cast","int","a"]]
+# A group the predicate refuses stays a group, or a call.
+(a)(b)	["call-paren",["paren-paren","a"],"b"]
+(a) + b	["addition-infix",["paren-paren","a"],"b"]
+(f)(1)	["call-paren",["paren-paren","f"],1]
+(x)	["paren-paren","x"]

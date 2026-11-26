@@ -1,0 +1,4 @@
+input	expected	opts
+@keyframes slide { from { left: 0 } 50%, 100% { left: 10px } }	{"type":"stylesheet","rules":[{"type":"keyframes","name":"slide","keyframes":[{"type":"keyframe","values":["from"],"declarations":[{"type":"declaration","property":"left","value":"0"}]},{"type":"keyframe","values":["50%","100%"],"declarations":[{"type":"declaration","property":"left","value":"10px"}]}]}]}
+@-webkit-keyframes x { to { opacity: 1 } }	{"type":"stylesheet","rules":[{"type":"keyframes","name":"x","vendor":"-webkit-","keyframes":[{"type":"keyframe","values":["to"],"declarations":[{"type":"declaration","property":"opacity","value":"1"}]}]}]}
+@keyframes k { 0%, /*x*/ 50%, to { a: b } }	{"type":"stylesheet","rules":[{"type":"keyframes","name":"k","keyframes":[{"type":"keyframe","values":["0%","50%","to"],"declarations":[{"type":"declaration","property":"a","value":"b"}]}]}]}

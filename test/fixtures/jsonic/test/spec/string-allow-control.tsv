@@ -1,0 +1,12 @@
+input	expected
+# string.allowControl takes a NON-LINE control character as ordinary string
+# body rather than raising unprintable. TypeScript honoured the flag. The Go
+# port puts a pre-scan matcher in front of the engine string matcher, and it
+# never read the flag, so a jsonic-based grammar could not turn the option on
+# at all. The allowControl:false side of the same input is in
+# alignment-errors.tsv, where it stays ERROR:unprintable.
+#
+# A raw TAB, not \u0001: support.Unescape decodes \n \r \t and \\ only, so a
+# \uXXXX cell would reach the parser as a six-character ESCAPE and exercise
+# escape handling instead of the raw-control-char path this is about.
+"x\ty"	"x\ty"

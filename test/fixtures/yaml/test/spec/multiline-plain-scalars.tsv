@@ -1,0 +1,19 @@
+input	expected	opts
+a: this is\n  a long string	{"a":"this is a long string"}
+a: line one\n  line two\n  line three	{"a":"line one line two line three"}
+a: 12\n  more	{"a":"12 more"}	
+{a: 12\n  more}	{"a":"12 more"}	
+[12\n  more, 3]	["12 more",3]	
+a: 1\n b	{"a":"1 b"}	
+- 12\n  more\n- 3	["12 more",3]	
+a: 12\n\n  more	{"a":"12\nmore"}	
+a: -1.5\n  x\nb: .5\n  y	{"a":"-1.5 x","b":".5 y"}	
+a: 12\nb: 13	{"a":12,"b":13}	
+a: 12\n  b: 1	ERROR	
+a:\n  12\n  more	{"a":"12 more"}	
+a: 12:30\n  more	{"a":"12:30 more"}	
+a: 1,2\n  more	{"a":"1,2 more"}	
+- 12:30\n  c\n- 1,2\n  d	["12:30 c","1,2 d"]	
+[12:30\n  more]	["12:30 more"]	
+a: 127.0.0.1:80\n  more\nb: 1	{"a":"127.0.0.1:80 more","b":1}	
+a: 12:30\nb: 1,2	{"a":"12:30","b":"1,2"}	

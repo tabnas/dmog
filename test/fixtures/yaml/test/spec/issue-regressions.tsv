@@ -1,0 +1,124 @@
+input	expected	opts
+# Rows for the reader defects reported as GitHub issues, grouped by issue.
+# Expected values are the YAML 1.2 reading; js-yaml and the yaml package agree on every row.
+
+# tabnas/yaml#90: a digit-first plain scalar with a colon runs to the end of the line
+t: 09:00 AM\n	{"t":"09:00 AM"}	
+t: 1:2 x\n	{"t":"1:2 x"}	
+- 09:00 AM\n	["09:00 AM"]	
+- 10:30 AM\n- 11:00 PM	["10:30 AM","11:00 PM"]	
+t: 12:30\n	{"t":"12:30"}	
+t: 12:30 # c\nb: 1	{"t":"12:30","b":1}	
+a: 1:2:3	{"a":"1:2:3"}	
+a: 1:2, x	{"a":"1:2, x"}	
+[09:00 AM, x]	["09:00 AM","x"]	
+
+# tabnas/yaml#89: a bracket or quote inside a scalar or comment is text, not flow syntax
+a: |\n  f({\nb: 1\n	{"a":"f({\n","b":1}	
+a: |\n  f([\nb: 1\n	{"a":"f([\n","b":1}	
+a: >\n  f({\nb: 1\n	{"a":"f({\n","b":1}	
+a: f({\nb: 1\n	{"a":"f({","b":1}	
+a: 1 # f({\nb: 1\n	{"a":1,"b":1}	
+a: |\n  it's {\nb: 1\n	{"a":"it's {\n","b":1}	
+a: |\n  f({})\nb: 1\n	{"a":"f({})\n","b":1}	
+a: |\n  f)}\nb: 1\n	{"a":"f)}\n","b":1}	
+a: |\n  say "hi\nb: [1, 2]\n	{"a":"say \"hi\n","b":[1,2]}	
+a: say "hi\nb: [1, 2]\n	{"a":"say \"hi","b":[1,2]}	
+a: 1 # say "hi\nb: [1, 2]\n	{"a":1,"b":[1,2]}	
+a: |\n  say "hi\nb: {x: 1}\n	{"a":"say \"hi\n","b":{"x":1}}	
+a: |\n  it's\nb: [1, 2]\n	{"a":"it's\n","b":[1,2]}	
+a: |2\n   f({\nb: [1, 2]	{"a":" f({\n","b":[1,2]}	
+--- |\nf({\n---\n[1, 2]	["f({\n",[1,2]]	
+- |\n  f({\n- [1, 2]	["f({\n",[1,2]]	
+a: >-\n  x [\n\n  y\nb: {c: [1]}	{"a":"x [\ny","b":{"c":[1]}}	
+- a: |\n    {\n  b: [1, 2]	[{"a":"{\n","b":[1,2]}]	
+a: b [c\nd: [1, 2]	{"a":"b [c","d":[1,2]}	
+x: "a" # say "hi\nb: [1, 2]	{"x":"a","b":[1,2]}	
+a:\n  b: f("\n  c: [1, 2]	{"a":{"b":"f(\"","c":[1,2]}}	
+[1, # {\n 2]	[1,2]	
+a: "x [ y"\nb: [1, 2]	{"a":"x [ y","b":[1,2]}	
+a: 'it''s ['\nb: [1, 2]	{"a":"it's [","b":[1,2]}	
+k: &x "q"\nb: [1, 2]	{"k":"q","b":[1,2]}	
+- a: |2\n    text\n  b: [1, 2]	[{"a":"text\n","b":[1,2]}]	
+- a: |1\n   x\n  b: [1, 2]	[{"a":"x\n","b":[1,2]}]	
+- - a: |2\n      t\n    b: [1, 2]	[[{"a":"t\n","b":[1,2]}]]	
+
+# tabnas/yaml#88: a flow sequence first in an indented block sequence is an item
+k:\n  - []\n	{"k":[[]]}	
+-\n  - []\n	[[[]]]	
+-\n  - [1]\n	[[[1]]]	
+matrix:\n  - [1, 2]\n  - [3, 4]\n	{"matrix":[[1,2],[3,4]]}	
+k:\n  - []\n  - 1\n	{"k":[[],1]}	
+matrix:\n- [1, 2]\n- [3, 4]\n	{"matrix":[[1,2],[3,4]]}	
+- - []\n	[[[]]]	
+-\n  - 1\n  - []\n	[[1,[]]]	
+-\n  - {}\n	[[{}]]	
+k:\n  -\n    - []\n	{"k":[[[]]]}	
+
+# tabnas/yaml#86: a quoted key at column 0 after a block sequence is the next key
+"a":\n  - 1\n"b": 3\n	{"a":[1],"b":3}	
+a:\n  - 1\n"b": 3\n	{"a":[1],"b":3}	
+'a':\n  - 1\n'b': 3\n	{"a":[1],"b":3}	
+a:\n  - 1\nb: 3\n	{"a":[1],"b":3}	
+"x":\n  "a":\n    - 1\n  "b": 3\n	{"x":{"a":[1],"b":3}}	
+- "a":\n    - 1\n  "b": 3\n	[{"a":[1],"b":3}]	
+"a":\n  - 1\n\n"b": 3\n	{"a":[1],"b":3}	
+"a":\n  - 1\n# c\n"b": 3\n	{"a":[1],"b":3}	
+"a":\n  - 1\n"b" : 3\n	{"a":[1],"b":3}	
+"a":\n- 1\n"b": 3\n	{"a":[1],"b":3}	
+"k":\n- 1\n- 2\n'j': x\n	{"k":[1,2],"j":"x"}	
+'a': 1\n'b':\n  - x\n'c': 2\n	{"a":1,"b":["x"],"c":2}	
+? "k"\n: 1\n	{"k":1}	
+? 'it''s'\n: 1\n	{"it's":1}	
+? "a\\tb"\n: 1\n	{"a\tb":1}	
+
+# found by the yaml-test-schema corpus: a signed digit-first scalar, and a digit-first scalar with a colon in flow
+a: +190:20:30	{"a":"+190:20:30"}	
+a: -1:2 x	{"a":"-1:2 x"}	
+a: -1,2	{"a":"-1,2"}	
+a: -5	{"a":-5}	
+- -1.5\n- +2	[-1.5,2]	
+-1: x	{"-1":"x"}	
+[3:4]	["3:4"]	
+[1, 12:30, 2]	[1,"12:30",2]	
+[-1, +2, -3:4]	[-1,2,"-3:4"]	
+{a: 12:30}	{"a":"12:30"}	
+{a: 1:2, b: 3}	{"a":"1:2","b":3}	
+
+# tabnas/yaml#95: a `#` straight after a leading number is part of the scalar, since
+# YAML starts a comment only at a `#` after white space
+a: 80#	{"a":"80#"}	
+a: 80#x	{"a":"80#x"}	
+a: 80#x # c\nb: 1	{"a":"80#x","b":1}	
+a: 80 # c	{"a":80}	
+- 80#	["80#"]	
+weight:\n  enum:\n    - 80#\n  type: string	{"weight":{"enum":["80#"],"type":"string"}}	
+a: -1#	{"a":"-1#"}	
+a: 1.5#	{"a":"1.5#"}	
+a: 12:30#	{"a":"12:30#"}	
+80#: v	{"80#":"v"}	
+[80#]	["80#"]	
+[1, 80#, 2]	[1,"80#",2]	
+{a: 80#}	{"a":"80#"}	
+80#:\n	{"80#":null}	
+80#:   \n	{"80#":null}	
+a: 80#\n  continued	{"a":"80# continued"}	
+- 80#\n  more	["80# more"]	
+a: 80#\nb: 2	{"a":"80#","b":2}	
+a: 1,2#	{"a":"1,2#"}	
+
+# tabnas/yaml#99: outside a flow collection `[` `]` `{` `}` indicate nothing, so a
+# bracket or brace straight after a leading number is part of the scalar
+a: 5[	{"a":"5["}	
+a: 5]	{"a":"5]"}	
+a: 5{	{"a":"5{"}	
+a: 5}	{"a":"5}"}	
+a: 12[x]	{"a":"12[x]"}	
+a: -1[	{"a":"-1["}	
+a: 1.5{x}	{"a":"1.5{x}"}	
+a: 5[ # c\nb: 1	{"a":"5[","b":1}	
+- 5[	["5["]	
+5[: v	{"5[":"v"}	
+[5, [6]]	[5,[6]]	
+{a: 5, b: {c: 6}}	{"a":5,"b":{"c":6}}	
+a: [5, 6]	{"a":[5,6]}	

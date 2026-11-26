@@ -1,0 +1,2 @@
+input	expected
+[s]\na = val ; comment\nb = other	{"s":{"a":"val","b":"other"}}

@@ -1,0 +1,73 @@
+grammar	input	expected
+val = add\nadd = NR [ PL add ]\nNR = <number>\nPL = "+"	1+2+3	{"rule":"val","src":"1+2+3","kids":[{"rule":"add","src":"1","kids":[]},{"rule":"add","src":"2","kids":[]},{"rule":"add","src":"3","kids":[]}]}
+val = add\nadd = NR [ PL add ]\nPL = "+"	1+2+3	{"rule":"val","src":"1+2+3","kids":[{"rule":"add","src":"1","kids":[]},{"rule":"add","src":"2","kids":[]},{"rule":"add","src":"3","kids":[]}]}
+NR = <number>\nadd = NR [ PL add ]\nPL = "+"	1+2	{"rule":"add","src":"1+2","kids":[{"rule":"add","src":"2","kids":[]}]}
+add = NR [ PL add ]\nPL = "+"	1+2	{"rule":"add","src":"1+2","kids":[{"rule":"add","src":"2","kids":[]}]}
+top = "x"\nPL = "+"	x	{"rule":"top","src":"x","kids":[]}
+top = A B\nA = "+"\nB = "+"	++	{"rule":"top","src":"++","kids":[{"rule":"B","src":"+","kids":[]}]}
+greet = "hi"	hi	{"rule":"greet","src":"hi","kids":[]}
+greet = "hi" / "hello"	hello	{"rule":"greet","src":"hello","kids":[]}
+top = TX\nTX = "literal"	literal	{"rule":"top","src":"literal","kids":[{"rule":"TX","src":"literal","kids":[]}]}
+e = NR sign NR\nsign = "+" / "-"	1+2	{"rule":"e","src":"1+2","kids":[{"rule":"sign","src":"+","kids":[]}]}
+P = Q\nQ = P PL / NR\nPL = "+"	1++	{"rule":"P","src":"1++","kids":[]}
+x = "x" name "=" value\nname = 1*ALPHA\nvalue = 1*DIGIT	xfoo=42	{"rule":"x","src":"xfoo=42","kids":[{"rule":"name","src":"foo","kids":[]},{"rule":"value","src":"42","kids":[]}]}
+rep = *PL\nPL = "+"	++	{"rule":"rep","src":"++","kids":[]}
+v = p\np = "a" q\nq = "b" "c"	a bc	{"rule":"v","src":"abc","kids":[{"rule":"p","src":"abc","kids":[{"rule":"q","src":"bc","kids":[]}]}]}
+a = b a / "x"\nb = c\nc = "y" /	y x	{"rule":"a","src":"yx","kids":[{"rule":"a","src":"x","kids":[]}]}
+a = b a / "x"\nb = c\nc = "y" /	y y x	{"rule":"a","src":"yyx","kids":[{"rule":"a","src":"yx","kids":[{"rule":"a","src":"x","kids":[]}]}]}
+a = b a / "x"\nb = c\nc = "y" /	x	{"rule":"a","src":"x","kids":[]}
+g = "z" LWSP "y"	z y	{"rule":"g","src":"z y","kids":[]}
+g = "z" LWSP "y"	zy	{"rule":"g","src":"zy","kids":[]}
+g = a 1*b\na = "a"\nb = "b"	ab	{"rule":"g","src":"ab","kids":[]}
+g = a 1*b\na = "a"\nb = "b"	abbb	{"rule":"g","src":"abbb","kids":[]}
+g = a 2b\na = "a"\nb = "b"	abb	{"rule":"g","src":"abb","kids":[]}
+qp = "\" x\nx = "z"	\z	{"rule":"qp","src":"\\z","kids":[]}
+value = false / null / true\nfalse = "f"\nnull = "n"\ntrue = "t"	f	{"rule":"value","src":"f","kids":[]}
+value = false / null / true\nfalse = "f"\nnull = "n"\ntrue = "t"	n	{"rule":"value","src":"n","kids":[]}
+value = false / null / true\nfalse = "f"\nnull = "n"\ntrue = "t"	t	{"rule":"value","src":"t","kids":[]}
+g = "z" *200"a"	z	{"rule":"g","src":"z","kids":[]}
+g = "z" *200"a"	zaaa	{"rule":"g","src":"zaaa","kids":[]}
+g = %xE000-10FFFF	😀	{"rule":"g","src":"😀","kids":[]}
+g = %x1F600	😀	{"rule":"g","src":"😀","kids":[]}
+x = "0" [ *d t ]\nd = %x31-39\nt = %x61-7A	01a	{"rule":"x","src":"01a","kids":[{"rule":"d","src":"1","kids":[]},{"rule":"t","src":"a","kids":[]}]}
+x = "0" [ *d t ]\nd = %x31-39\nt = %x61-7A	0123a	{"rule":"x","src":"0123a","kids":[{"rule":"d","src":"1","kids":[]},{"rule":"d","src":"2","kids":[]},{"rule":"d","src":"3","kids":[]},{"rule":"t","src":"a","kids":[]}]}
+s = p *d [ t ]\np = %x31-39\nd = %x30-39\nt = %x61-7A	12a	{"rule":"s","src":"12a","kids":[{"rule":"d","src":"2","kids":[]},{"rule":"t","src":"a","kids":[]}]}
+s = p *d [ t ]\np = %x31-39\nd = %x30-39\nt = %x61-7A	120	{"rule":"s","src":"120","kids":[{"rule":"d","src":"2","kids":[]},{"rule":"d","src":"0","kids":[]}]}
+s = 1*DIGIT ALPHA	123a	{"rule":"s","src":"123a","kids":[]}
+ver = maj "." min "." pat   ; @object maj min pat\nmaj = 1*DIGIT\nmin = 1*DIGIT\npat = 1*DIGIT	1.2.30	{"maj":"1","min":"2","pat":"30"}
+top = name "=" inner   ; @object name inner\nname = 1*ALPHA\ninner = maj "." min   ; @object maj min\nmaj = 1*DIGIT\nmin = 1*DIGIT	ab=1.2	{"name":"ab","inner":{"maj":"1","min":"2"}}
+pair = a "," b   ; @array\na = 1*DIGIT\nb = 1*ALPHA	1,xy	["1","xy"]
+top = "<" inner ">"   ; @array\ninner = d   ; @object d\nd = 1*DIGIT	<7>	[{"d":"7"}]
+top = child   ; @object child\nchild = d   ; @object d\nd = 1*DIGIT	7	{"child":{"d":"7"}}
+list = item *( "," item )   ; @array\nitem = 1*DIGIT	1,2,3	["1","2","3"]
+list = item *( "," item )   ; @array\nitem = 1*DIGIT	1	["1"]
+list = *( item "," ) item   ; @array\nitem = DIGIT	1,2,3	["1","2","3"]
+list = *item   ; @array\nitem = DIGIT	123	["1","2","3"]
+list = 1*item   ; @array\nitem = DIGIT	123	["1","2","3"]
+list = *( a b )   ; @array\na = ALPHA\nb = DIGIT	x1y2	["x","1","y","2"]
+list = a [ "," b ]   ; @array\na = 1*DIGIT\nb = 1*DIGIT	1	["1"]
+list = a [ "," b ]   ; @array\na = 1*DIGIT\nb = 1*DIGIT	1,2	["1","2"]
+top = "<" ( "[" p "]" ) ">"   ; @array\np = 1*DIGIT	<[7]>	["[7]"]
+top = "<" *inner ">"   ; @array\ninner = d   ; @object d\nd = DIGIT	<12>	[{"d":"1"},{"d":"2"}]
+top = a *( "," a )   ; @object a rest\na = 1*DIGIT	1,2,3	{"a":"1","rest":",2,3"}
+list = ( item ) *( item )   ; @array\nitem = DIGIT	123	["1","2","3"]
+top = *( "," )   ; @array	,,	[",,"]
+top = *item   ; @array\nitem = "x"	xxx	["xxx"]
+top = *DIGIT   ; @array	123	["1","2","3"]
+ident = TX	hello	{"rule":"ident","src":"hello","kids":[]}
+n = NR	42	{"rule":"n","src":"42","kids":[]}
+s = ST	"hi"	{"rule":"s","src":"\"hi\"","kids":[]}
+v = VL	true	{"rule":"v","src":"true","kids":[]}
+top = TX\nTX = "literal"	literal	{"rule":"top","src":"literal","kids":[{"rule":"TX","src":"literal","kids":[]}]}
+pair = a b\na = TX\nb = TX	alpha beta	{"rule":"pair","src":"alphabeta","kids":[{"rule":"b","src":"beta","kids":[]}]}
+top = a / b\na = [ "x" ] c "z"\nc = TX\nb = "w"	foo z	{"rule":"top","src":"fooz","kids":[{"rule":"c","src":"foo","kids":[]}]}
+top = a / b\na = [ "x" ] c "z"\nc = TX\nb = "w"	x foo z	{"rule":"top","src":"xfooz","kids":[{"rule":"c","src":"foo","kids":[]}]}
+top = a / b\na = [ "x" ] c "z"\nc = TX\nb = "w"	w	{"rule":"top","src":"w","kids":[]}
+path = TX *( "." TX )	foo.bar.baz	{"rule":"path","src":"foo.bar.baz","kids":[]}
+top = A B\nA = "+"\nB = "+"	++	{"rule":"top","src":"++","kids":[{"rule":"B","src":"+","kids":[]}]}
+P = Q\nQ = P PL / NR\nPL = "+"	1++	{"rule":"P","src":"1++","kids":[]}
+add = NR [ PL add ]\nNR = <number>\nPL = "+"	1+2	{"rule":"add","src":"1+2","kids":[{"rule":"add","src":"2","kids":[]}]}
+e = plus NR\nplus = "+"	+7	{"rule":"e","src":"+7","kids":[]}
+top = "@" a b   ; @object a b\na = 1*ALPHA\nb = "[" x *( "," x ) "]"   ; @array\nx = 1*DIGIT	@ab[1,2]	{"a":"ab","b":["1","2"]}
+top = "<" b *( ";" b ) ">"   ; @array\nb = "[" x *( "," x ) "]"   ; @array\nx = 1*DIGIT	<[1,2];[3]>	[["1","2"],["3"]]
+top = "@" b   ; @object b\nb = "[" x *( "," x ) "]"   ; @array\nx = 1*DIGIT	@[1,2]	{"b":["1","2"]}

@@ -1,0 +1,18 @@
+input	expected
+a = 1	{"a":1}
+a = -1	{"a":-1}
+a = 0	{"a":0}
+a = 1.5	{"a":1.5}
+a = -1.5	{"a":-1.5}
+a = true	{"a":true}
+a = false	{"a":false}
+a = "x"	{"a":"x"}
+a = 'y'	{"a":"y"}
+a = ""	{"a":""}
+a = ''	{"a":""}
+# The value half of the ASCII-digit rule in errors.tsv: a run of non-ASCII
+# digits is ordinary text, not a date. Rust's Unicode-aware `\d` matched the
+# shape and then could not parse the components, so the range check read the
+# month as -1 and rejected the document outright.
+a = ٢٠٢٤-٠١-٠١	{"a":"٢٠٢٤-٠١-٠١"}
+a = ١٢:٣٤	{"a":"١٢:٣٤"}

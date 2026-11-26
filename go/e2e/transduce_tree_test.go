@@ -270,7 +270,7 @@ func csvDocuments(t testing.TB) [][2]string {
 	corpus := filepath.Join(repoRoot(t), "..", "csv", "test", "spec")
 	files, err := support.LoadSpecDir(corpus, nil)
 	if err != nil {
-		t.Fatalf("tabnas-csv's corpus is beside this checkout, at %s: %v", corpus, err)
+		t.Fatalf("tabnas-csv's corpus is vendored, at %s: %v", corpus, err)
 	}
 	var documents [][2]string
 	for _, file := range files {

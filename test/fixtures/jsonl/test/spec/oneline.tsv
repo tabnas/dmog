@@ -1,0 +1,32 @@
+input	expected
+# THE signature JSON Lines rule: one record per line. A value split across
+# lines is not a record — it is an error.
+#
+# Nothing in the grammar states this. It falls out of the newline token
+# being significant: once `#LN` leaves the IGNORE set, a newline inside a
+# value is no longer invisible to the parser.
+{\n"a":1}	ERROR
+{"a":\n1}	ERROR
+{"a":1\n}	ERROR
+{"a":1,\n"b":2}	ERROR
+[\n1,2]	ERROR
+[1,\n2]	ERROR
+[1,2\n]	ERROR
+{"a":[1,\n2]}	ERROR
+{"a":{\n"b":1}}	ERROR
+# The same value on one line is fine — this is the contrast that shows the
+# rule is about layout, not content.
+{"a":1,"b":2}	[{"a":1,"b":2}]
+[1,2]	[[1,2]]
+{"a":[1,2]}	[{"a":[1,2]}]
+# Records must be SEPARATED by a newline: neither adjacency nor spaces will
+# do, and a comma is not a separator (a JSONL document is not a JSON array).
+{"a":1}{"b":2}	ERROR
+{"a":1} {"b":2}	ERROR
+{"a":1},{"b":2}	ERROR
+{"a":1},\n{"b":2}	ERROR
+1 2	ERROR
+# An escaped newline INSIDE a string is data, not a separator, so it does
+# not split the record.
+{"a":"x\\ny"}	[{"a":"x\ny"}]
+"\\n"	["\n"]

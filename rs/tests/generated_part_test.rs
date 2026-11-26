@@ -43,17 +43,13 @@ impl Shared {
     }
 }
 
-/// abnf's shared fixtures, in the sibling checkout. A missing checkout
-/// fails, naming where it was looked for.
+/// abnf's shared fixtures, vendored. Missing files fail, naming where
+/// they were looked for.
 fn abnf_spec_dir() -> PathBuf {
-    let dir = common::repo_root()
-        .parent()
-        .expect("the repository has a parent")
-        .join("abnf/test/spec");
+    let dir = common::vendored().join("abnf/test/spec");
     assert!(
         dir.is_dir(),
-        "no abnf checkout with test/spec at {}: clone https://github.com/tabnas/abnf \
-         as a sibling of this repository",
+        "no vendored abnf test/spec at {}: run tools/vendor-fixtures.sh",
         dir.display()
     );
     dir

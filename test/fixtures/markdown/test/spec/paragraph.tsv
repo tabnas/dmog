@@ -1,0 +1,5 @@
+input	expected	opts
+Hello world	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"Hello world"}]}]}
+Hello\n\nWorld	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"Hello"}]},{"type":"paragraph","children":[{"type":"text","value":"World"}]}]}
+\n	{"type":"document","children":[]}
+Paragraph line1\nline2	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"Paragraph line1 line2"}]}]}

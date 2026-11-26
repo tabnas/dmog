@@ -1,0 +1,25 @@
+input	expected	opts
+\n	[]
+\na,b\nA,B	[{"a":"A","b":"B"}]
+\n	[]	{"object":false}
+\na,b\nA,B	[["A","B"]]	{"object":false}
+\n	[]	{"header":false}
+\na,b\nA,B	[{"field~0":"a","field~1":"b"},{"field~0":"A","field~1":"B"}]	{"header":false}
+\n	[]	{"header":false,"object":false}
+\na,b\nA,B	[["a","b"],["A","B"]]	{"header":false,"object":false}
+\n	[]	{"header":false,"field":{"names":["a","b"]}}
+\na,b\nA,B	[{"a":"a","b":"b"},{"a":"A","b":"B"}]	{"header":false,"field":{"names":["a","b"]}}
+# field.empty fills a syntactically empty cell, and the header row is a row
+# like any other, so the option value names the column: it goes through the
+# same ToPropertyKey the parsed cells do.
+,a\nx,y	[{"42":"x","a":"y"}]	{"field":{"empty":42}}
+# The DEFAULT field.empty is the empty string, so an empty header cell
+# names a column "" rather than being skipped, and two of them name the
+# SAME column, where the later value wins. Both go through the one
+# conversion site, so this is the same path the row above takes.
+a,\nx,y	[{"a":"x","":"y"}]
+,\nx,y	[{"":"y"}]
+# An empty field.names names no column, so every cell takes a no-name key;
+# a shorter list names the columns it has and no more.
+x,y	[{"field~0":"x","field~1":"y"}]	{"header":false,"field":{"names":[]}}
+x,y	[{"p":"x","field~1":"y"}]	{"header":false,"field":{"names":["p"]}}

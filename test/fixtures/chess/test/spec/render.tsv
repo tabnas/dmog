@@ -1,0 +1,45 @@
+input	expected	opts
+# Documents PGN's render (alchemy/render.alc) writes, as alchemy runs
+# it, each under a comment holding the database it was given, and the
+# database every reader reads from them. The parity runners hold the
+# reading to it, and a test beside each runner holds every line of the
+# documents to 79 characters, as the export format asks (8.2.2.2).
+
+# --- a parenthesis is a token of its own (7, 8.2.5), so where the line
+# it opens or closes would pass 79 characters it goes on a line of its
+# own: a nested variation that opens at the edge of a line, and two that
+# close at the edge of one. The render once wrote these lines at 80 and
+# 81 characters ---
+# A variation inside a variation, opening at the edge of a line; the
+# database given is the one read back.
+[Event "Nested"]\n\n1. e4 e5\n2. Nf3\n(2. f4 {the knight takes a pawn and white is better the knight takes a p}\n2... exf4\n(\n2... d5 {the knight takes a pawn and white is better the knight takes a pawn a}\n) 3. Nf3) 2... Nc6 *\n	[{"tags":{"Event":"Nested"},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"},{"san":"Nf3","piece":"N","to":"f3","number":2,"side":"w","variations":[{"moves":[{"san":"f4","piece":"P","to":"f4","number":2,"side":"w","comments":[{"kind":"brace","text":"the knight takes a pawn and white is better the knight takes a p"}]},{"san":"exf4","piece":"P","disambiguation":{"file":"e"},"capture":true,"to":"f4","number":2,"side":"b","variations":[{"moves":[{"san":"d5","piece":"P","to":"d5","number":2,"side":"b","comments":[{"kind":"brace","text":"the knight takes a pawn and white is better the knight takes a pawn a"}]}]}]},{"san":"Nf3","piece":"N","to":"f3","number":3,"side":"w"}]}]},{"san":"Nc6","piece":"N","to":"c6","number":2,"side":"b"}],"result":"*"}]
+# Two variations closing at the edge of a line; the database given is
+# the one read back.
+[Event "Nested"]\n\n1. e4 e5\n2. Nf3\n(2. f4 {the knight takes a pawn and white is better the knight takes} 2... exf4\n3. Nf3\n(3. Bc4 {the knight takes a pawn and white is better the knight takes a pawn a}\n)) 2... Nc6 *\n	[{"tags":{"Event":"Nested"},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"},{"san":"Nf3","piece":"N","to":"f3","number":2,"side":"w","variations":[{"moves":[{"san":"f4","piece":"P","to":"f4","number":2,"side":"w","comments":[{"kind":"brace","text":"the knight takes a pawn and white is better the knight takes"}]},{"san":"exf4","piece":"P","disambiguation":{"file":"e"},"capture":true,"to":"f4","number":2,"side":"b"},{"san":"Nf3","piece":"N","to":"f3","number":3,"side":"w","variations":[{"moves":[{"san":"Bc4","piece":"B","to":"c4","number":3,"side":"w","comments":[{"kind":"brace","text":"the knight takes a pawn and white is better the knight takes a pawn a"}]}]}]}]}]},{"san":"Nc6","piece":"N","to":"c6","number":2,"side":"b"}],"result":"*"}]
+
+# --- a game with no result that the reader would read the next game into
+# is written with the termination marker * (8.2.6), PGN's for a result
+# that is not known, and reads back with that result: one with no move,
+# which takes the tags after it, and one with moves, which takes the
+# movetext of a game with no tag. The render once wrote the first as one
+# game and refused the others ---
+# A game of a comment alone, then a game of tags.
+# [{"tags":{},"moves":[],"comments":[{"kind":"brace","text":"c"}]},{"tags":{"A":"2"},"moves":[]}]
+{c}\n*\n\n[A "2"]\n	[{"tags":{},"moves":[],"comments":[{"kind":"brace","text":"c"}],"result":"*"},{"tags":{"A":"2"},"moves":[]}]
+# A game of a glyph and a variation, then a game of tags.
+# [{"tags":{},"moves":[],"nags":[1],"variations":[{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]}]},{"tags":{"A":"2"},"moves":[]}]
+$1 (1. e4)\n*\n\n[A "2"]\n	[{"tags":{},"moves":[],"nags":[1],"variations":[{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]}],"result":"*"},{"tags":{"A":"2"},"moves":[]}]
+# A game of tags alone, then a game of tags.
+# [{"tags":{"A":"1"},"moves":[]},{"tags":{"B":"2"},"moves":[]}]
+[A "1"]\n\n*\n\n[B "2"]\n	[{"tags":{"A":"1"},"moves":[],"result":"*"},{"tags":{"B":"2"},"moves":[]}]
+# A game with moves and no result, then a game with no tag.
+# [{"tags":{},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]},{"tags":{},"moves":[{"san":"d4","piece":"P","to":"d4","number":1,"side":"w"}]}]
+1. e4\n*\n\n1. d4\n	[{"tags":{},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}],"result":"*"},{"tags":{},"moves":[{"san":"d4","piece":"P","to":"d4","number":1,"side":"w"}]}]
+# A game with no tag, no movetext and no result, written as the move
+# number 1., then a game of tags.
+# [{"tags":{},"moves":[]},{"tags":{"B":"2"},"moves":[]}]
+1.\n*\n\n[B "2"]\n	[{"tags":{},"moves":[],"result":"*"},{"tags":{"B":"2"},"moves":[]}]
+# A game with moves and no result, then a game of tags, which needs no
+# marker.
+# [{"tags":{},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]},{"tags":{"B":"2"},"moves":[]}]
+1. e4\n\n[B "2"]\n	[{"tags":{},"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]},{"tags":{"B":"2"},"moves":[]}]

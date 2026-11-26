@@ -1,0 +1,30 @@
+input	expected	opts
+a: 42	{"a":42}
+a: -7	{"a":-7}
+a: 3.14	{"a":3.14}
+a: -2.5	{"a":-2.5}
+a: 0	{"a":0}
+a: true	{"a":true}
+a: false	{"a":false}
+a: null	{"a":null}
+a: ~	{"a":null}
+a:	{"a":null}
+a: hello world	{"a":"hello world"}
+a: hello, world!	{"a":"hello, world!"}
+foo: a{{q}}b	{"foo":"a{{q}}b"}
+a: 0o77	{"a":63}
+a: 0xFF	{"a":255}
+a: .inf	{"a":"@@Infinity"}
+a: -.inf	{"a":"@@-Infinity"}
+a: .nan	{"a":"@@NaN"}
+a: yes	{"a":true}
+a: no	{"a":false}
+a: on	{"a":true}
+a: off	{"a":false}
+a: 2024-01-15	{"a":"2024-01-15"}
+a: 2024-01-15T10:30:00Z	{"a":"2024-01-15T10:30:00Z"}
+a: +.inf\nb: [+.Inf, +.INF]	{"a":"@@Infinity","b":["@@Infinity","@@Infinity"]}	
+a: toString\nb: constructor\nc: hasOwnProperty\nd: valueOf\ne: __proto__	{"a":"toString","b":"constructor","c":"hasOwnProperty","d":"valueOf","e":"__proto__"}	
+- toString\n- constructor\n- __proto__	["toString","constructor","__proto__"]	
+[toString, constructor, valueOf]	["toString","constructor","valueOf"]	
+toString: 1\nconstructor: 2	{"toString":1,"constructor":2}	

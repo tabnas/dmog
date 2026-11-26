@@ -1,0 +1,13 @@
+input	expected	opts
+\n	[]
+a\n1\n\n2\n3\n\n\n4\n	[{"a":"1"},{"a":"2"},{"a":"3"},{"a":"4"}]
+\n	[]	{"object":false}
+a\n1\n\n2\n3\n\n\n4\n	[["1"],["2"],["3"],["4"]]	{"object":false}
+\r\na,b\r\nA,B\r\n	[{"a":"A","b":"B"}]
+\r\n\r\na,b\r\nA,B\r\n\r\n	[{"a":"A","b":"B"}]
+\r\na,b\r\nA,B\r\n	[["A","B"]]	{"object":false}
+\r\n\r\na,b\r\nA,B\r\n\r\n	[["A","B"]]	{"object":false}
+\n	[]	{"record":{"empty":true}}
+a\n1\n\n2\n3\n\n\n4\n	[{"a":"1"},{"a":""},{"a":"2"},{"a":"3"},{"a":""},{"a":""},{"a":"4"}]	{"record":{"empty":true}}
+a#X\n1\n#Y\n2\n3\n\n#Z\n4\n#Q	[{"a":"1"},{"a":"2"},{"a":"3"},{"a":"4"}]	{"comment":true}
+a#X\n1\n#Y\n2\n3\n\n#Z\n4\n#Q	[{"a":"1"},{"a":""},{"a":"2"},{"a":"3"},{"a":""},{"a":""},{"a":"4"}]	{"comment":true,"record":{"empty":true}}

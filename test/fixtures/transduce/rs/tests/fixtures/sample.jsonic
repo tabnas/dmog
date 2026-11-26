@@ -1,0 +1,6 @@
+# jsonic: relaxed json
+store: {
+  name: 'corner shop'
+  open: true
+}
+version: 3

@@ -1,0 +1,31 @@
+input	expected	opts
+- name: alice\n  age: 30\n- name: bob\n  age: 25	[{"name":"alice","age":30},{"name":"bob","age":25}]
+- a: 1\n- b: 2\n- c: 3	[{"a":1},{"b":2},{"c":3}]
+people:\n  - name: alice\n  - name: bob	{"people":[{"name":"alice"},{"name":"bob"}]}
+- a:\n- b	[{"a":null},"b"]
+# A sequence entry's mapping (`- a: ...`) has its keys at the column
+# its content starts at: past the dash and the spaces after it, and an
+# anchor or a tag ahead of the first key, as YAML reads it. A key with an
+# empty value is null when the next line holds a sibling key at that
+# column, and its value nests only below it; before 0.5.26 every line
+# past the dash nested, and an entry with more than one space after its
+# dash failed to parse.
+- a:\n  b: 1\n- c:\n	[{"a":null,"b":1},{"c":null}]
+- a:\n    b: 1	[{"a":{"b":1}}]
+- a: 1\n  b:\n  c: 2	[{"a":1,"b":null,"c":2}]
+- name: FOO\n  value:\n  enabled: true	[{"name":"FOO","value":null,"enabled":true}]
+x:\n  - a:\n    b: 1	{"x":[{"a":null,"b":1}]}
+- - a:\n    b: 1	[[{"a":null,"b":1}]]
+- a:\n  - x\n  b: 1	[{"a":["x"],"b":1}]
+- &x a:\n  b: 2	[{"a":null,"b":2}]
+-   a:\n    b: 1	[{"a":null,"b":1}]
+-   a: 1\n    b: 2	[{"a":1,"b":2}]
+x:\n  -   a: 1\n      b: 2	{"x":[{"a":1,"b":2}]}
+# Text ahead of an entry that is not ASCII: each runtime counts the
+# entry's column from its own string offsets.
+k: é😀\nl:\n  - a:\n    b: 2	{"k":"é😀","l":[{"a":null,"b":2}]}
+a:\n- b: 1\n  v:\n- c: 2	{"a":[{"b":1,"v":null},{"c":2}]}	
+a:\n- v:\n- c: 2	{"a":[{"v":null},{"c":2}]}	
+a:\n- b:\n  - x\n- c: 2	{"a":[{"b":["x"]},{"c":2}]}	
+a:\n  - b: 1\n    v:\n  - c: 2\nd: 3	{"a":[{"b":1,"v":null},{"c":2}],"d":3}	
+- b: 1\n  v:\n- c: 2	[{"b":1,"v":null},{"c":2}]	

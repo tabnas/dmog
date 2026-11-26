@@ -1,0 +1,6 @@
+input	expected	opts
+version: 3\nservices:\n  web:\n    image: nginx\n    ports:\n      - 80\n      - 443	{"version":3,"services":{"web":{"image":"nginx","ports":[80,443]}}}
+name: build\non:\n  push:\n    branches:\n      - main\njobs:\n  test:\n    runs-on: ubuntu	{"name":"build","on":{"push":{"branches":["main"]}},"jobs":{"test":{"runs-on":"ubuntu"}}}
+apiVersion: v1\nkind: Pod\nmetadata:\n  name: myapp\n  labels:\n    app: myapp\nspec:\n  containers:\n    - name: web\n      image: nginx	{"apiVersion":"v1","kind":"Pod","metadata":{"name":"myapp","labels":{"app":"myapp"}},"spec":{"containers":[{"name":"web","image":"nginx"}]}}
+- name: install packages\n  become: true\n- name: start service\n  become: false	[{"name":"install packages","become":true},{"name":"start service","become":false}]
+database:\n  host: localhost\n  port: 5432\n  name: mydb\ncache:\n  enabled: true\n  ttl: 3600	{"database":{"host":"localhost","port":5432,"name":"mydb"},"cache":{"enabled":true,"ttl":3600}}

@@ -1,0 +1,381 @@
+[
+ {
+  "input": "# Hello",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     7
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "heading",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       7
+      ]
+     ],
+     "level": 1,
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "Hello"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "## Heading 2",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     12
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "heading",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       12
+      ]
+     ],
+     "level": 2,
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "Heading 2"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "###### H6",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     9
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "heading",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       9
+      ]
+     ],
+     "level": 6,
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "H6"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "   ### Hello ###  ",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     18
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "heading",
+     "sourcepos": [
+      [
+       1,
+       4
+      ],
+      [
+       1,
+       18
+      ]
+     ],
+     "level": 3,
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "Hello"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "# Hello *world*",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     15
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "heading",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       15
+      ]
+     ],
+     "level": 1,
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "Hello "
+      },
+      {
+       "type": "emph",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "world"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "Foo\\n===",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     3
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "heading",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       3
+      ]
+     ],
+     "level": 1,
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "Foo"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "Bar\\n---",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     3
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "heading",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       3
+      ]
+     ],
+     "level": 2,
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "Bar"
+      }
+     ]
+    }
+   ]
+  }
+ }
+]

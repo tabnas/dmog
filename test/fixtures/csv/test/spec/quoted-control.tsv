@@ -1,0 +1,68 @@
+input	expected	opts
+# A quoted field holds every character but an unescaped quote. A TAB, an
+# ASCII 30 (RS), an ASCII 31 (US) or any other control character between
+# the quotes is field text, as Go's encoding/csv, Python's csv module and
+# Papa Parse read it, and as the CSV renderer writes it, because CSV has no
+# other spelling for such a cell (tabnas/csv#82). The fixture codec decodes
+# only the escapes for TAB, LF, CR and backslash, so some input cells below
+# hold raw RS, US and DEL bytes. NUL has a file of its own.
+#
+# TAB, RS and US inside a quoted field.
+a\n"x\ty"	[{"a":"x\ty"}]
+a\n"xy"	[{"a":"x\u001ey"}]
+a\n"xy"	[{"a":"x\u001fy"}]
+# DEL was never refused; it is pinned beside the rest.
+a\n"xy"	[{"a":"x\u007fy"}]
+# At either end of the field, alone, several together, in the header row,
+# and in more than one field of a record.
+a\n"\tx\t"	[{"a":"\tx\t"}]
+a\n"\t"	[{"a":"\t"}]
+a\n"\t"	[{"a":"\u001e\u001f\t"}]
+"a\tb"\n"x"	[{"a\tb":"x"}]
+a,b\n"x\ty","pq"	[{"a":"x\ty","b":"p\u001eq"}]
+# Beside a doubled quote and a line break, which keep their meaning.
+a\n"x\t""y"	[{"a":"x\t\"y"}]
+a\n"x""\ty"	[{"a":"x\"\ty"}]
+a\n"x\t\ny"	[{"a":"x\t\ny"}]
+a\n"x\r\n\ty"	[{"a":"x\r\n\ty"}]
+# A quoted field still has to close.
+a\n"x\ty	ERROR:unterminated_string
+# The same under a custom quote, for a quote character the CSV matcher does
+# not own, under the escape option (string.csv false, so a backslash
+# escapes), and in non-strict mode with either matcher.
+a\n'x\ty'	[{"a":"x\ty"}]	{"string":{"quote":"'"}}
+a\n'x\ty'	[{"a":"x\ty"}]
+a\n"x\t\"y"	[{"a":"x\t\"y"}]	{"string":{"csv":false}}
+a\n"x\ty"	[{"a":"x\ty"}]	{"strict":false}
+a\n"x\ty"	[{"a":"x\ty"}]	{"strict":false,"string":{"csv":true}}
+# A quote that is itself a control character still opens and closes the
+# field, and a doubled one is a literal quote.
+a,b\nx\ty,z	[{"a":"x\ty","b":"z"}]	{"string":{"quote":"\u001e"}}
+a\nxy	[{"a":"x\u001ey"}]	{"string":{"quote":"\u001e"}}
+# A line break is still refused inside a jsonic string, whose single and
+# double quoted forms hold one line.
+a\n"x\ny"	ERROR:unprintable	{"string":{"csv":false}}
+a\n"x\ny"	ERROR:unprintable	{"strict":false}
+# A control character that is also the field separator: a quoted field
+# holds it, as it holds a comma under the default separator.
+a\tb\n"x\ty"\tz	[{"a":"x\ty","b":"z"}]	{"field":{"separation":"\t"}}
+ab\n"xy"z	[{"a":"x\u001ey","b":"z"}]	{"field":{"separation":"\u001e"}}
+ab\n"xy"z	[{"a":"x\u001fy","b":"z"}]	{"field":{"separation":"\u001f"}}
+# Under custom record separators, LF is not a line character, so a quoted
+# field holds it as it holds any other control character.
+a;"x\ny";"p\tq"	[{"a":"x\ny"},{"a":"p\tq"}]	{"record":{"separators":";"}}
+# An unquoted field reads a control character as text, as it always has.
+a\nx\ty	[{"a":"x\ty"}]
+a\nxy	[{"a":"x\u001ey"}]
+#
+# What the CSV renderer writes for four documents of test/fixtures read
+# under the default comma (every field quoted, a doubled quote, records
+# ending in CRLF), each reading back to the value the document reads to.
+# notrim.csv
+"a","b","c"\r\n"1 "," 2 "," 3"\r\n" 11 ","  22   "," 33 "\r\n"4\t","\t5\t","\t6"\r\n"\t44\t","\t\t55\t\t\t","\t66\t"\r\n	[{"a":"1 ","b":" 2 ","c":" 3"},{"a":" 11 ","b":"  22   ","c":" 33 "},{"a":"4\t","b":"\t5\t","c":"\t6"},{"a":"\t44\t","b":"\t\t55\t\t\t","c":"\t66\t"}]
+# papa-tab-delimiter.csv
+"a\tb\tc"\r\n"d\te\tf"\r\n	[{"a\tb\tc":"d\te\tf"}]
+# papa-ascii-30-delimiter.csv
+"abc"\r\n"def"\r\n	[{"a\u001eb\u001ec":"d\u001ee\u001ef"}]
+# papa-ascii-31-delimiter.csv
+"abc"\r\n"def"\r\n	[{"a\u001fb\u001fc":"d\u001fe\u001ff"}]

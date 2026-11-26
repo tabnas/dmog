@@ -12,7 +12,7 @@
 // loads, which runs nothing, stays in alchemy's stdlib_test.rs.
 
 mod common;
-#[path = "../../../transduce/rs/tests/support/mod.rs"]
+#[path = "../../test/fixtures/transduce/rs/tests/support/mod.rs"]
 mod support;
 
 use std::path::{Path, PathBuf};
@@ -196,7 +196,7 @@ fn agrees_with_components(
 type Document = (String, fn() -> Tabnas, String);
 
 fn fixtures_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../transduce/rs/tests/fixtures")
+    common::vendored().join("transduce/rs/tests/fixtures")
 }
 
 /// Every transduce fixture a grammar here reads, plus the generated
@@ -210,7 +210,7 @@ fn the_library_writes_what_the_components_write_for_every_fixture_and_generated_
     let mut entries: Vec<PathBuf> = std::fs::read_dir(&dir)
         .unwrap_or_else(|e| {
             panic!(
-                "transduce's fixtures are beside this checkout, at {}: {e}",
+                "transduce's fixtures are vendored, at {}: {e}",
                 dir.display()
             )
         })
@@ -1278,7 +1278,7 @@ fn the_librarys_transduce_tree_writes_each_documents_tree() {
     let mut entries: Vec<PathBuf> = std::fs::read_dir(&dir)
         .unwrap_or_else(|e| {
             panic!(
-                "transduce's fixtures are beside this checkout, at {}: {e}",
+                "transduce's fixtures are vendored, at {}: {e}",
                 dir.display()
             )
         })
@@ -1419,9 +1419,9 @@ fn a_text_rules_text_is_held_to_max_scalar_bytes() {
 /// read.
 fn csv_documents() -> Vec<(String, String)> {
     let mut documents: Vec<(String, String)> = Vec::new();
-    let corpus = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../csv/test/spec");
+    let corpus = common::vendored().join("csv/test/spec");
     let specs = tabnas_support::load_spec_dir(&corpus, &tabnas_support::SpecOptions::default())
-        .unwrap_or_else(|e| panic!("tabnas-csv's corpus is beside this checkout: {e}"));
+        .unwrap_or_else(|e| panic!("tabnas-csv's corpus is vendored: {e}"));
     for spec in &specs {
         for row in &spec.rows {
             documents.push((
@@ -1431,7 +1431,7 @@ fn csv_documents() -> Vec<(String, String)> {
         }
     }
     let mut entries: Vec<PathBuf> = std::fs::read_dir(fixtures_dir())
-        .expect("transduce's fixtures are beside this checkout")
+        .expect("transduce's fixtures are vendored")
         .map(|e| e.expect("a directory entry").path())
         .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("csv"))
         .collect();

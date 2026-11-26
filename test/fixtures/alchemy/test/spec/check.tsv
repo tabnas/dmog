@@ -1,0 +1,211 @@
+input	expected	protocol
+# The checker's codes, one row each: the first word of the message, as the reader's fixtures pin theirs.
+# The resolver's: an unknown name, a top-level form that is not a def, a name defined twice, a special form defined, a malformed fn, a def below the top level, a pattern that is not a constructor's.
+def export [input] (nope input)	ERROR:unknown_name@1:21
+csv 1	ERROR:not_def
+def x 1\ndef x 2\ndef export [input] input	ERROR:duplicate_def@2:1
+def if 1\ndef export [input] input	ERROR:reserved
+def f (fn x x)\ndef export [input] input	ERROR:bad_fn
+def export [input] (def y input)	ERROR:misplaced_def
+def export [input] (match input (case (map a) a))	ERROR:bad_pattern
+def export [input] (match 1 (case (1 2) 3))	ERROR:bad_pattern@1:35
+# A let, if or match that a pipe builds, whose step the desugarer read before the threaded value lengthened it, is held to the desugarer's shapes by the resolver, and fails as the desugarer's does (the same code, a DSL_PARSE_ERROR): at the step, or at a clause that is not a case.
+def export [input] (pipe input let)	ERROR:bad_let@1:32
+def export [input] (pipe input (let [x 1] x))	ERROR:bad_let@1:32
+def export [input] (pipe input if)	ERROR:bad_if@1:32
+def export [input]\n  pipe input\n    if true "yes" "no"	ERROR:bad_if@3:5
+def export [input] (pipe input (match 1))	ERROR:bad_match@1:26
+# Recursion is refused in strict mode, at the first definition on the cycle.
+def a [x] (b x)\ndef b [x] (a x)\ndef export [input] (a input)	ERROR:recursion@1:1
+# ... and a function applied to itself, which only evaluation can see: `check` builds the plan, and the evaluation depth ends it.
+def w [f] (f f)\ndef export [input]\n  let [x (w w)]\n    json input	ERROR:recursion@1:12
+# The checker's: argument counts, kinds, and protocols.
+def export [input] (json input 1 2)	ERROR:arity@1:20
+def f [a b] a\ndef export [input] (json (f input))	ERROR:arity@2:26
+def export [input] (json (text 1))	ERROR:type_mismatch@1:32
+def export [input] (if 1 (json input) (json input))	ERROR:type_mismatch@1:24
+def export [input] (json [input])	ERROR:type_mismatch@1:27
+def export [input] (1 input)	ERROR:type_mismatch@1:21
+def export [input] (join "," [(json input)])	ERROR:type_mismatch@1:30
+def bad (map public-column [1])\ndef export [input] (json input)	ERROR:type_mismatch@1:28
+def export [input] (join "," (map (fn [a b] a) (select (path each-index) input)))	ERROR:arity@1:35
+def export [input] (let [f (partial (fn [a] a) 1 2)] (json input))	ERROR:arity@1:28
+def export [input] ()	ERROR:type_mismatch@1:20
+def step [s x] (transition s [])\ndef fin [s] []\ndef export [input] (join "," (scan-emit (text "a") step fin (select (path each-index) input)))	ERROR:type_mismatch@3:41
+# The runtime's, where building the plan reaches them: a record with a key twice, a match no case takes.
+def export [input] (concat (get :a (record (entry :a "1") (entry :a "2"))) (json input))	ERROR:duplicate_key@1:36
+def export [input] (concat (match 5 (case 1 "one")) (json input))	ERROR:no_match@1:28
+def export [input] (csv csv-options input)	ERROR:protocol_mismatch@1:37
+def export [input] (table-from-json csv-options (json input))	ERROR:protocol_mismatch@1:49
+def export [input] (json (select (path each-index) input))	ERROR:protocol_mismatch@1:26
+def export [input] (map (fn [x] x) input)	ERROR:protocol_mismatch@1:36
+def export [input] (records input)	ERROR:protocol_mismatch@1:29
+# Values the checker lets through and the runtime refuses, where building the plan reaches them: a call of what is not a function, a condition that is not a boolean, a concat item that is not a text (each read with `get`, which the checker cannot type), options without the key asked for, the kind of a text, a path that names more than one location, a function where data is written (scalar-text of a vector that holds one).
+def export [input] (let [x ((get :f (record (entry :f 1))) 1)] (json input))	ERROR:type_mismatch@1:29
+def export [input] (let [x (if (get :a (record (entry :a 1))) "y" "n")] (json input))	ERROR:type_mismatch@1:32
+def export [input] (concat (get :a (record (entry :a 1))) (json input))	ERROR:type_mismatch@1:20
+def export [input] (let [x (scalar-text (record) null)] (json input))	ERROR:type_mismatch@1:28
+def export [input] (let [x (map kind [(text "x")])] (json input))	ERROR:type_mismatch@1:28
+def export [input] (let [x (get-path (path each-index) (record))] (json input))	ERROR:type_mismatch@1:28
+def r (record (entry :v [(fn [x] x)]))\ndef export [input] (let [t (scalar-text csv-options (get :v r))] (json input))	ERROR:type_mismatch@2:28
+# Streams are affine: used at most once in a scope, and never captured by a fn from the scope around it.
+def export [input] (concat (json input) (json input))	ERROR:reused@1:47
+def export [input]\n  let [s (select (path each-index) input)]\n    concat (join "," s) (join ";" s)	ERROR:reused@3:35
+def export [input]\n  concat-map (fn [x] (json input)) (select (path each-index) input)	ERROR:captured@2:28
+# A stream passed to a definition is affine in its body too, reported where the body uses it.
+def g [s] (concat-map (fn [x] (json s)) [1])\ndef export [input] (g input)	ERROR:captured@1:37
+def twice [s] (concat (json s) (json s))\ndef export [input] (twice input)	ERROR:reused@1:38
+def mk [s] (partial json s)\ndef export [input] (concat ((mk input)) "x")	ERROR:type_mismatch@1:26
+# Past MAX_APPLIED (32) definitions the checker types a body with its parameters unknown, and the runtime's guard holds instead: a chain of 33 hands the input to two jsons, and concat refuses the two live texts.
+def g0 [s] (concat (json s) (json s))\ndef g1 [s] (g0 s)\ndef g2 [s] (g1 s)\ndef g3 [s] (g2 s)\ndef g4 [s] (g3 s)\ndef g5 [s] (g4 s)\ndef g6 [s] (g5 s)\ndef g7 [s] (g6 s)\ndef g8 [s] (g7 s)\ndef g9 [s] (g8 s)\ndef g10 [s] (g9 s)\ndef g11 [s] (g10 s)\ndef g12 [s] (g11 s)\ndef g13 [s] (g12 s)\ndef g14 [s] (g13 s)\ndef g15 [s] (g14 s)\ndef g16 [s] (g15 s)\ndef g17 [s] (g16 s)\ndef g18 [s] (g17 s)\ndef g19 [s] (g18 s)\ndef g20 [s] (g19 s)\ndef g21 [s] (g20 s)\ndef g22 [s] (g21 s)\ndef g23 [s] (g22 s)\ndef g24 [s] (g23 s)\ndef g25 [s] (g24 s)\ndef g26 [s] (g25 s)\ndef g27 [s] (g26 s)\ndef g28 [s] (g27 s)\ndef g29 [s] (g28 s)\ndef g30 [s] (g29 s)\ndef g31 [s] (g30 s)\ndef g32 [s] (g31 s)\ndef export [input] (g32 input)	ERROR:reused@1:12
+# Strict mode: the function of a stream operator must be a fn, a definition, a native or a partial of one.
+def go [f input] (concat-map f (select (path each-index) input))\ndef export [input] (go text input)	ERROR:dynamic@1:30
+def export [input] (scan-emit null (get :f csv-options) (fn [s] []) (select (path each-index) input))	ERROR:dynamic@1:36
+# The entry: `def export [input]`, whose result decides the output protocol.
+def x 1	ERROR:no_export
+def export 1	ERROR:type_mismatch
+def export [a b] a	ERROR:arity
+def export [input] (select (path each-index) input)	ERROR:bad_output
+def export [input] 1	ERROR:bad_output
+def export [input] (get :x csv-options)	ERROR:unknown_output
+# A program that checks prints its plan report: the worked example (spec sections 12.1 and 13.4) and the JSON echo.
+def column-from-meta [source]\n  record\n    entry :label (get "title" source)\n    entry :source\n      as-path\n        get "path" source\n\ndef api-binding\n  record\n    entry :columns\n      path "response" "metadata" "fields"\n    entry :rows\n      path "response" "payload" "deep" "records" each-index\n    entry :column column-from-meta\n\ndef api-table [input]\n  table-from-json api-binding input\n\ndef export [input]\n  pipe input\n    api-table\n    csv csv-options	"export: api-table → csv\n\nSource reads:          1\nProtocol:              JsonEvents/1 → Stream<Selected> → Stream<Value> → TableRows/1 → Text\nSelection:             shared prefix matcher, two capture routes\nDuplicate members:     rejected in captured scopes (DUPLICATE_MEMBER)\nCapture:               .response.metadata.fields, capped at max_metadata_bytes\nRow capture:           one .response.payload.deep.records[*], capped at max_record_bytes\nRetained state:        the table's columns once bound, at most max_columns of them, no deeper than max_depth, capped at max_metadata_bytes\nOutput order:          schema first; cells in schema order\nOrdering contract:     each item before its outputs\nContract verification: runtime\nExternal storage:      disabled\n\nGuarantee:\n  Memory is independent of the number of rows under the configured\n  depth, capture, metadata, scalar/key and output limits: the state the\n  step returns is capped at max_metadata_bytes. What one step computes\n  is the program's, bounded by the host's abort flag.\n\nQualification:\n  A later error can occur after earlier output has been written.\n"
+def export [input]\n  json input	"export: json\n\nSource reads:          1\nProtocol:              JsonEvents/1 → Text\nSelection:             none; every event passes through\nDuplicate members:     preserved; the events are copied as they arrive, not mapped by key\nOutput order:          source order\nOrdering contract:     none\nContract verification: static\nJSON profile:          compact, one document, trailing newline\nExternal storage:      disabled\n\nGuarantee:\n  Memory is independent of the document's size under the configured\n  depth, scalar/key and output limits: nothing is retained beyond the\n  renderer's nesting stack.\n\nQualification:\n  A later error can occur after earlier output has been written.\n"
+def export [input] input	"export: input\n\nSource reads:          1\nProtocol:              JsonEvents/1 → Text\nSelection:             none; every event passes through\nDuplicate members:     preserved; the events are copied as they arrive, not mapped by key\nOutput order:          source order\nOrdering contract:     none\nContract verification: static\nJSON profile:          compact, one document, trailing newline (the host's renderer)\nExternal storage:      disabled\n\nGuarantee:\n  Memory is independent of the document's size under the configured\n  depth, scalar/key and output limits: nothing is retained beyond the\n  renderer's nesting stack.\n\nQualification:\n  A later error can occur after earlier output has been written.\n"
+def export [input] "done"	"export: a text of its own\n\nSource reads:          1\nProtocol:              Text\nSelection:             none; the input is read and validated, and nothing of it is used\nDuplicate members:     not examined; the input is only validated\nOutput order:          the program's own text, written once the input has validated\nOrdering contract:     none\nContract verification: static\nExternal storage:      disabled\n\nGuarantee:\n  Memory is independent of the document's size under the configured\n  depth and scalar/key limits: nothing of the input is kept. The text\n  is the program's own, written under the output limit.\n\nQualification:\n  The text is written only after the whole input has validated; an\n  invalid input writes nothing.\n"
+# The source's events as items: `events` consumes the input and yields a stream of items, which is not table events, and is an output only when every item is typed an event (a rewritten tree, handed on as JSON events) or the program says so with `as-events`; a stream of values reaches a taker of JSON events only as events, each item one; a renderer over them keeps a stack, which cannot hold a stream.
+def export [input] (concat (json input) (join "" (map (fn [e] "") (events input))))	ERROR:reused@1:75
+def export [input] (events (select (path each-index) input))	ERROR:protocol_mismatch@1:28
+def export [input] (json (select (path each-index) input))	ERROR:protocol_mismatch@1:26
+def export [input] (events input)	"export: events\n\nSource reads:          1\nProtocol:              JsonEvents/1 → Stream<Event> → Text\nSelection:             none; every event is delivered as an item\nDuplicate members:     preserved; the events are copied as they arrive, not mapped by key\nOutput order:          source order\nOrdering contract:     none\nContract verification: static\nJSON profile:          compact, one document, trailing newline (the host's renderer)\nExternal storage:      disabled\n\nGuarantee:\n  Memory is independent of the document's size under the configured\n  depth, scalar/key and output limits: nothing is retained beyond the\n  renderer's nesting stack.\n\nQualification:\n  A later error can occur after earlier output has been written.\n"
+def export [input] (let [x (push (events input) [])] "done")	ERROR:type_mismatch@1:34
+def export [input] (join "" (map (fn [e] (match e (case (key a b) a) (case _ ""))) (events input)))	ERROR:arity@1:57
+# The stack operators refuse an empty vector where building the plan reaches them, naming the operator; `repeat` refuses a count that is not a whole number.
+def export [input] (let [x (pop [])] (json input))	ERROR:type_mismatch@1:28
+def export [input] (let [x (top [])] (json input))	ERROR:type_mismatch@1:28
+def export [input] (let [x (repeat -1 "ab")] (json input))	ERROR:type_mismatch@1:28
+# `string-join` takes a string separator and a vector of strings; an item that is not a string is refused where building the plan reaches it.
+def export [input] (let [x (string-join 1 ["a"])] (json input))	ERROR:type_mismatch@1:41
+def export [input] (let [x (string-join "," ["a" 1])] (json input))	ERROR:type_mismatch@1:28
+# A program over the events, the keys of every object one per line, and its report: nothing retained by `events`, the state of the `scan-emit` capped.
+def key-lines [s event]\n  match event\n    case (key name) (transition s [(quoted name) "\\n"])\n    case _ (transition s [])\n\ndef export [input]\n  join ""\n    scan-emit [] key-lines (fn [s] []) (events input)	"export: events → scan-emit → join\n\nSource reads:          1\nProtocol:              JsonEvents/1 → Stream<Event> → Stream<Value> → Text\nSelection:             none; every event is delivered as an item\nDuplicate members:     preserved; the events are copied as they arrive, not mapped by key\nRetained state:        what the step returns, no deeper than max_depth, capped at max_metadata_bytes\nOutput order:          source order\nOrdering contract:     each item before its outputs\nContract verification: static\nExternal storage:      disabled\n\nGuarantee:\n  Memory is independent of the number of rows under the configured\n  depth, capture, metadata, scalar/key and output limits: the state the\n  step returns is capped at max_metadata_bytes. What one step computes\n  is the program's, bounded by the host's abort flag.\n\nQualification:\n  A later error can occur after earlier output has been written.\n"
+# keys takes a record.
+def export [input] (concat (join "," (keys 1)) (json input))	ERROR:type_mismatch@1:44
+# An inferred binding: the columns are the first row's keys, one capture route, nothing ordered before the rows but the schema.
+def rows-binding\n  record\n    entry :columns :infer\n    entry :rows (path each-index)\n\ndef export [input]\n  pipe input\n    table-from-json rows-binding\n    csv csv-options	"export: table-from-json → csv\n\nSource reads:          1\nProtocol:              JsonEvents/1 → Stream<Selected> → Stream<Value> → TableRows/1 → Text\nSelection:             shared prefix matcher, one capture route\nDuplicate members:     rejected in captured scopes (DUPLICATE_MEMBER)\nRow capture:           one [*], capped at max_record_bytes\nRetained state:        the table's columns once bound, at most max_columns of them, no deeper than max_depth, capped at max_metadata_bytes\nOutput order:          schema first; cells in schema order\nOrdering contract:     each item before its outputs\nContract verification: runtime\nExternal storage:      disabled\n\nGuarantee:\n  Memory is independent of the number of rows under the configured\n  depth, capture, metadata, scalar/key and output limits: the state the\n  step returns is capped at max_metadata_bytes. What one step computes\n  is the program's, bounded by the host's abort flag.\n\nQualification:\n  A later error can occur after earlier output has been written.\n"
+# A rewritten tree: a scan-emit whose step hands the matched event back cannot be typed, so it is no output until `as-events` says its items are events; `as-events` takes a stream of items, not the input; fail's code is one of three keywords, a literal one held at the checker.
+def step [s event]\n  match event\n    case (scalar "secret") (transition s [(scalar "***")])\n    case _ (transition s [event])\n\ndef export [input]\n  as-events (scan-emit [] step (fn [s] []) (events input))	"export: events → scan-emit → as-events\n\nSource reads:          1\nProtocol:              JsonEvents/1 → Stream<Event> → Stream<Value> → JsonEvents/1 → Text\nSelection:             none; every event is delivered as an item\nDuplicate members:     preserved; the events are copied as they arrive, not mapped by key\nRetained state:        what the step returns, no deeper than max_depth, capped at max_metadata_bytes\nOutput order:          source order\nOrdering contract:     each item before its outputs\nContract verification: static\nJSON profile:          compact, one document, trailing newline (the host's renderer)\nExternal storage:      disabled\n\nGuarantee:\n  Memory is independent of the number of rows under the configured\n  depth, capture, metadata, scalar/key and output limits: the state the\n  step returns is capped at max_metadata_bytes. What one step computes\n  is the program's, bounded by the host's abort flag.\n\nQualification:\n  A later error can occur after earlier output has been written.\n"
+def step [s event] (transition s [event])\n\ndef export [input]\n  scan-emit [] step (fn [s] []) (events input)	ERROR:unknown_output@3:1
+def export [input] (as-events input)	ERROR:protocol_mismatch@1:31
+def export [input] (join "" (map (fn [x] (fail :nope "x")) (select (path each-index) input)))	ERROR:type_mismatch@1:48
+def export [input] (join "" (map (fn [x] (fail "x" "y")) (select (path each-index) input)))	ERROR:type_mismatch@1:48
+# number takes a string.
+def export [input] (join "," (map (fn [x] (number 1)) (select (path each-index) input)))	ERROR:type_mismatch@1:51
+# is-number takes one string, as number does.
+def export [input] (join "," (map (fn [x] (if (is-number 1) "y" "n")) (select (path each-index) input)))	ERROR:type_mismatch@1:58
+def export [input] (join "," (map (fn [x] (if (is-number x x) "y" "n")) (select (path each-index) input)))	ERROR:arity@1:47
+def export [input] (join "," (map (fn [x] (if (is-number) "y" "n")) (select (path each-index) input)))	ERROR:arity@1:47
+# unquoted takes a string; chars-within a vector of ranges and a string; json an options record before its events.
+def export [input] (join "," (map (fn [x] (unquoted 1)) (select (path each-index) input)))	ERROR:type_mismatch@1:53
+def export [input] (join "," (map (fn [x] (if (chars-within 1 x) "y" "n")) (select (path each-index) input)))	ERROR:type_mismatch@1:61
+def export [input] (json 1 input)	ERROR:type_mismatch@1:26
+# split takes a separator and a string, both strings, and answers a vector of strings.
+def export [input] (join "," (map (fn [x] (string-join "|" (split 1 x))) (select (path each-index) input)))	ERROR:type_mismatch@1:67
+def export [input] (join "," (map (fn [x] (string-join "|" (split "." 1))) (select (path each-index) input)))	ERROR:type_mismatch@1:71
+def export [input] (join "," (map (fn [x] (string-join "|" (split "."))) (select (path each-index) input)))	ERROR:arity@1:60
+def export [input] (join "," (map (fn [x] (string-join "|" (split "." x x))) (select (path each-index) input)))	ERROR:arity@1:60
+def export [input] (join "," (map (fn [x] (number (split "." x))) (select (path each-index) input)))	ERROR:type_mismatch@1:51
+# A transducer part: the host declares a parser-events input (protocol parser), parser-events reads its rule passes as items, (open rule) and (close rule), and a scan-emit makes JSON events of them; its report begins with ParserEvents/1.
+def step [s pass]\n  match pass\n    case (close rule) (transition s [(scalar (get :name rule))])\n    case _ (transition s [])\n\ndef export [input]\n  as-events (scan-emit [] step (fn [s] []) (parser-events input))	"export: parser-events → scan-emit → as-events\n\nSource reads:          1\nProtocol:              ParserEvents/1 → Stream<ParserEvent> → Stream<Value> → JsonEvents/1 → Text\nSelection:             none; every rule pass is delivered as an item\nDuplicate members:     preserved; the events are copied as they arrive, not mapped by key\nRetained state:        what the step returns, no deeper than max_depth, capped at max_metadata_bytes\nOutput order:          source order\nOrdering contract:     each item before its outputs\nContract verification: static\nJSON profile:          compact, one document, trailing newline (the host's renderer)\nExternal storage:      disabled\n\nGuarantee:\n  Memory is independent of the number of rows under the configured\n  depth, capture, metadata, scalar/key and output limits: the state the\n  step returns is capped at max_metadata_bytes. What one step computes\n  is the program's, bounded by the host's abort flag.\n\nQualification:\n  A later error can occur after earlier output has been written.\n"	parser
+# Each input is read by its own operator alone: events, json, select and a map over the items take JSON events, not parser events, and parser-events takes parser events, not JSON events; nor is either source an output, nor the rule passes before a transducer makes events of them.
+def export [input] (events input)	ERROR:protocol_mismatch@1:28	parser
+def export [input] (json input)	ERROR:protocol_mismatch@1:26	parser
+def export [input] (join "," (select (path each-index) input))	ERROR:protocol_mismatch@1:56	parser
+def export [input] (join "," (map (fn [p] "x") input))	ERROR:protocol_mismatch@1:48	parser
+def export [input] (join "," (map (fn [p] "x") (parser-events input)))	ERROR:protocol_mismatch@1:63
+def export [input] input	ERROR:bad_output@1:1	parser
+def export [input] (parser-events input)	ERROR:bad_output@1:1	parser
+def export [input] (json (parser-events input))	ERROR:protocol_mismatch@1:26	parser
+# The rule passes are a stream, read once; a function read from data that would read either input another way is refused as the plan is built.
+def export [input] (concat (join "" (map (fn [p] "") (parser-events input))) (join "" (map (fn [p] "") (parser-events input))))	ERROR:reused@1:119	parser
+def export [input] (join "," ((get :f (record (entry :f select))) (path each-index) input))	ERROR:protocol_mismatch@1:30	parser
+def export [input] (join "," (map (fn [p] "x") ((get :f (record (entry :f parser-events))) input)))	ERROR:protocol_mismatch@1:48
+# A rule pass's constructors take one record, matched as (open rule) and (close rule); a step answers a transition.
+def step [s pass]\n  match pass\n    case (open rule extra) (transition s [])\n    case _ (transition s [])\n\ndef export [input]\n  as-events (scan-emit [] step (fn [s] []) (parser-events input))	ERROR:arity@3:10	parser
+def step [s pass] (transition s [(open 1)])\n\ndef export [input]\n  as-events (scan-emit [] step (fn [s] []) (parser-events input))	ERROR:type_mismatch@1:40	parser
+def step [s pass] 1\n\ndef export [input]\n  as-events (scan-emit [] step (fn [s] []) (parser-events input))	ERROR:type_mismatch@4:27	parser
+# The tokens the parser did not take: parser-events input :tokens yields each as (token t), among the passes, and its report says so; :tokens is the one option, a keyword; (token t) takes one record, as (open rule) does.
+def comment [item]\n  match item\n    case (token t)\n      match (get :name t)\n        case "#CM" (string-join "" [(get :src t) " at " (scalar-text (record) (get :offset t)) "\\n"])\n        case _ ""\n    case _ ""\n\ndef export [input] (join "" (map comment (parser-events input :tokens)))	"export: parser-events → map → join\n\nSource reads:          1\nProtocol:              ParserEvents/1 → Stream<ParserEvent> → Stream<Value> → Text\nSelection:             none; every rule pass, and every token the parser did not take, is delivered as an item\nDuplicate members:     preserved; the events are copied as they arrive, not mapped by key\nOutput order:          source order\nOrdering contract:     none\nContract verification: static\nExternal storage:      disabled\n\nGuarantee:\n  Memory is independent of the document's size under the configured\n  depth, scalar/key and output limits: nothing is retained beyond the\n  renderer's nesting stack.\n\nQualification:\n  A later error can occur after earlier output has been written.\n"	parser
+def export [input] (join "" (map (fn [p] "") (parser-events input :all)))	ERROR:type_mismatch@1:46	parser
+def export [input] (join "" (map (fn [p] "") (parser-events input 1)))	ERROR:type_mismatch@1:67	parser
+def export [input] (join "" (map (fn [p] "") (parser-events input :tokens)))	ERROR:protocol_mismatch@1:61
+def step [s item]\n  match item\n    case (token t extra) (transition s [])\n    case _ (transition s [])\n\ndef export [input]\n  as-events (scan-emit [] step (fn [s] []) (parser-events input :tokens))	ERROR:arity@3:10	parser
+def step [s item] (transition s [(token 1)])\n\ndef export [input]\n  as-events (scan-emit [] step (fn [s] []) (parser-events input :tokens))	ERROR:type_mismatch@1:41	parser
+# The declarative transducer: transduce-tree over the parser's rule passes, as a spec keyed by rule name says, is the json grammar's part; its spec is a record, and it reads parser events.
+def json-spec\n  record\n    entry :map (record (entry :container :object))\n    entry :list (record (entry :container :array))\n    entry :pair (record (entry :key 0))\n    entry :val (record (entry :scalar 0))\n\ndef export [input] (transduce-tree json-spec input)	"export: transduce-tree\n\nSource reads:          1\nProtocol:              ParserEvents/1 → Stream<ParserEvent> → Stream<Value> → JsonEvents/1 → Text\nSelection:             none; every rule pass is delivered as an item\nDuplicate members:     preserved; the events are copied as they arrive, not mapped by key\nRetained state:        what the step returns, no deeper than max_depth, capped at max_metadata_bytes\nOutput order:          source order\nOrdering contract:     each item before its outputs\nContract verification: static\nJSON profile:          compact, one document, trailing newline (the host's renderer)\nExternal storage:      disabled\n\nGuarantee:\n  Memory is independent of the number of rows under the configured\n  depth, capture, metadata, scalar/key and output limits: the state the\n  step returns is capped at max_metadata_bytes. What one step computes\n  is the program's, bounded by the host's abort flag.\n\nQualification:\n  A later error can occur after earlier output has been written.\n"	parser
+def export [input] (transduce-tree 1 input)	ERROR:type_mismatch@1:36	parser
+def export [input] (transduce-tree (record) input)	ERROR:protocol_mismatch@1:45	
+# The declarative records transducer: transduce-records over the parser's rule passes, as a spec of rule names and a header says, is the csv grammar's part; its spec is a record, and it reads parser events.
+def csv-spec\n  record\n    entry :document "csv"\n    entry :record "record"\n    entry :cell "val"\n    entry :empty "empty"\n    entry :header true\n    entry :unnamed "field~"\n\ndef export [input] (transduce-records csv-spec input)	"export: transduce-records\n\nSource reads:          1\nProtocol:              ParserEvents/1 → Stream<ParserEvent> → Stream<Value> → JsonEvents/1 → Text\nSelection:             none; every rule pass is delivered as an item\nDuplicate members:     preserved; the events are copied as they arrive, not mapped by key\nRetained state:        what the step returns, no deeper than max_depth, capped at max_metadata_bytes\nRetained state:        what the step returns, no deeper than max_depth, capped at max_metadata_bytes\nOutput order:          source order\nOrdering contract:     each item before its outputs\nContract verification: static\nJSON profile:          compact, one document, trailing newline (the host's renderer)\nExternal storage:      disabled\n\nGuarantee:\n  Memory is independent of the number of rows under the configured\n  depth, capture, metadata, scalar/key and output limits: the state the\n  step returns is capped at max_metadata_bytes. What one step computes\n  is the program's, bounded by the host's abort flag.\n\nQualification:\n  A later error can occur after earlier output has been written.\n"	parser
+def export [input] (transduce-records 1 input)	ERROR:type_mismatch@1:39	parser
+def export [input] (transduce-records (record) input)	ERROR:protocol_mismatch@1:48	
+# tree-contract holds a stream's events to a tree's: its report keeps each open object's keys, and a repeated member is rejected.
+def export [input] (json (tree-contract input))	"export: tree-contract → json\n\nSource reads:          1\nProtocol:              JsonEvents/1 → Text\nSelection:             none; every event passes through\nDuplicate members:     rejected where a tree's contract holds the events (DUPLICATE_MEMBER)\nTree contract:         the keys of each open object, each dropped as its object closes\nOutput order:          source order\nOrdering contract:     none\nContract verification: static\nJSON profile:          compact, one document, trailing newline\nExternal storage:      disabled\n\nGuarantee:\n  Memory is independent of the number of rows under the configured\n  depth, metadata, record, scalar/key and output limits.\n\nQualification:\n  A later error can occur after earlier output has been written.\n"
+def export [input] (tree-contract (select (path each-index) input))	ERROR:protocol_mismatch@1:35
+# push-all takes the items and the vector they join, both vectors, and answers a vector; inc takes a count, a number, and answers one; equal takes two values that are not a stream or a text, and answers a boolean, a text met at run time refused where the plan's evaluation reaches it.
+def export [input] (join "," (map (fn [x] (string-join "|" (push-all 1 []))) (select (path each-index) input)))	ERROR:type_mismatch@1:70	
+def export [input] (join "," (map (fn [x] (string-join "|" (push-all [] 1))) (select (path each-index) input)))	ERROR:type_mismatch@1:73	
+def export [input] (join "," (map (fn [x] (string-join "|" (push-all []))) (select (path each-index) input)))	ERROR:arity@1:60	
+def export [input] (join "," (map (fn [x] (number (push-all [] []))) (select (path each-index) input)))	ERROR:type_mismatch@1:51	
+def export [input] (join "," (map (fn [x] (scalar-text csv-options (inc "1"))) (select (path each-index) input)))	ERROR:type_mismatch@1:73	
+def export [input] (join "," (map (fn [x] (scalar-text csv-options (inc 1 2))) (select (path each-index) input)))	ERROR:arity@1:68	
+def export [input] (join "," (map (fn [x] (string-join "|" (inc 1))) (select (path each-index) input)))	ERROR:type_mismatch@1:60	
+def export [input] (join "," (map (fn [x] (if (equal (text "a") x) "y" "n")) (select (path each-index) input)))	ERROR:type_mismatch@1:54	
+def export [input] (join "," (map (fn [x] (if (equal x (text "a")) "y" "n")) (select (path each-index) input)))	ERROR:type_mismatch@1:56	
+def export [input] (join "," (map (fn [x] (if (equal x) "y" "n")) (select (path each-index) input)))	ERROR:arity@1:47	
+def export [input] (join "," (map (fn [x] (number (equal x "a"))) (select (path each-index) input)))	ERROR:type_mismatch@1:51	
+def export [input] (let [x (map (partial equal "x") [(text "x")])] (json input))	ERROR:type_mismatch@1:28	
+# trim takes a string and answers one; first-split a separator and a string, both strings, and answers a vector of strings; starts-with, ends-with and contains a part and a string, both strings, and answer a boolean.
+def export [input] (join "," (map (fn [x] (trim 1)) (select (path each-index) input)))	ERROR:type_mismatch@1:49	
+def export [input] (join "," (map (fn [x] (trim)) (select (path each-index) input)))	ERROR:arity@1:43	
+def export [input] (join "," (map (fn [x] (trim x x)) (select (path each-index) input)))	ERROR:arity@1:43	
+def export [input] (join "," (map (fn [x] (string-join "|" (trim x))) (select (path each-index) input)))	ERROR:type_mismatch@1:60	
+def export [input] (join "," (map (fn [x] (string-join "|" (first-split 1 x))) (select (path each-index) input)))	ERROR:type_mismatch@1:73	
+def export [input] (join "," (map (fn [x] (string-join "|" (first-split "." 1))) (select (path each-index) input)))	ERROR:type_mismatch@1:77	
+def export [input] (join "," (map (fn [x] (string-join "|" (first-split "."))) (select (path each-index) input)))	ERROR:arity@1:60	
+def export [input] (join "," (map (fn [x] (number (first-split "." x))) (select (path each-index) input)))	ERROR:type_mismatch@1:51	
+def export [input] (join "," (map (fn [x] (if (starts-with 1 x) "y" "n")) (select (path each-index) input)))	ERROR:type_mismatch@1:60	
+def export [input] (join "," (map (fn [x] (if (ends-with "a" 1) "y" "n")) (select (path each-index) input)))	ERROR:type_mismatch@1:62	
+def export [input] (join "," (map (fn [x] (if (contains "a") "y" "n")) (select (path each-index) input)))	ERROR:arity@1:47	
+def export [input] (join "," (map (fn [x] (if (contains "a" x x) "y" "n")) (select (path each-index) input)))	ERROR:arity@1:47	
+def export [input] (join "," (map (fn [x] (string-join "|" (starts-with "a" x))) (select (path each-index) input)))	ERROR:type_mismatch@1:60	
+# flatten and sort take a finite vector, a stream refused as count refuses one, and answer one; sort holds its items to one kind, numbers or strings, and refuses NaN, which has no order, where the plan's evaluation reaches them.
+def export [input] (join "," (map (fn [x] (string-join "|" (flatten 1))) (select (path each-index) input)))	ERROR:type_mismatch@1:69	
+def export [input] (join "," (map (fn [x] (string-join "|" (flatten [] []))) (select (path each-index) input)))	ERROR:arity@1:60	
+def export [input] (join "," (map (fn [x] (number (flatten [[x]]))) (select (path each-index) input)))	ERROR:type_mismatch@1:51	
+def export [input] (join "," (map (fn [x] (string-join "|" (sort 1))) (select (path each-index) input)))	ERROR:type_mismatch@1:66	
+def export [input] (join "," (map (fn [x] (string-join "|" (sort))) (select (path each-index) input)))	ERROR:arity@1:60	
+def export [input] (join "," (flatten (select (path each-index) input)))	ERROR:type_mismatch@1:39	
+def export [input] (join "," (sort (select (path each-index) input)))	ERROR:type_mismatch@1:36	
+def export [input] (let [x (sort [1 "a"])] (json input))	ERROR:type_mismatch@1:28	
+def export [input] (let [x (sort ["a" 1])] (json input))	ERROR:type_mismatch@1:28	
+def export [input] (let [x (sort [1 (number "NaN")])] (json input))	ERROR:type_mismatch@1:28	
+def export [input] (let [x (sort [true])] (json input))	ERROR:type_mismatch@1:28	
+# get-or takes a key, a keyword or a string, a default that is not a stream or a text, and the data, as get reads it, and answers what get answers.
+def export [input] (join "," (map (fn [x] (scalar-text csv-options (get-or 1 "" x))) (select (path each-index) input)))	ERROR:type_mismatch@1:76	
+def export [input] (join "," (map (fn [x] (scalar-text csv-options (get-or :a "" 1))) (select (path each-index) input)))	ERROR:type_mismatch@1:82	
+def export [input] (join "," (map (fn [x] (scalar-text csv-options (get-or :a x))) (select (path each-index) input)))	ERROR:arity@1:68	
+def export [input] (json (get-or :a input (record)))	ERROR:type_mismatch@1:37	
+def export [input] (concat (get-or :a (text "x") (record)) (json input))	ERROR:type_mismatch@1:39	
+# add and sub take two numbers and answer one, exact over whole numbers up to 2^53 - 1 either way: an operand past that, or fractional, and a result past it, are type errors where the plan's evaluation reaches them.
+def export [input] (join "," (map (fn [x] (scalar-text csv-options (add "1" 2))) (select (path each-index) input)))	ERROR:type_mismatch@1:73	
+def export [input] (join "," (map (fn [x] (scalar-text csv-options (sub 1 "2"))) (select (path each-index) input)))	ERROR:type_mismatch@1:75	
+def export [input] (join "," (map (fn [x] (scalar-text csv-options (add 1))) (select (path each-index) input)))	ERROR:arity@1:68	
+def export [input] (join "," (map (fn [x] (scalar-text csv-options (sub 1 2 3))) (select (path each-index) input)))	ERROR:arity@1:68	
+def export [input] (join "," (map (fn [x] (string-join "|" (add 1 2))) (select (path each-index) input)))	ERROR:type_mismatch@1:60	
+def export [input] (let [x (add 9007199254740991 1)] (json input))	ERROR:type_mismatch@1:28	
+def export [input] (let [x (sub -9007199254740991 1)] (json input))	ERROR:type_mismatch@1:28	
+def export [input] (let [x (add 1.5 1)] (json input))	ERROR:type_mismatch@1:28	
+def export [input] (let [x (sub 0 9007199254740992)] (json input))	ERROR:type_mismatch@1:28	
+# A let of several names is nested lets, so a stream bound among them is affine in the bindings after it and in the body.
+def export [input]\n  let [s (select (path each-index) input) t s]\n    concat (join "," s) (join "," t)	ERROR:reused@3:22	

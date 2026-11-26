@@ -1,0 +1,11 @@
+input	expected	opts
+[]	[]
+[ [],  [ [] ]]	[[],[[]]]
+[ 1, 2, 3 ]	[1,2,3]
+[ { "a": null } ]	[{"a":null}]
+["foo", null ]	["foo",null]
+[ 1 ]	[1]
+[ 1, "x"]	[1,"x"]
+[[]]	[[]]
+[ true, null, [] ]	[true,null,[]]
+[\r\n0,\r\n1,\r\n2\r\n]	[0,1,2]

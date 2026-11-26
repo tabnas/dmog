@@ -1,0 +1,9 @@
+input	expected	opts
+%YAML 1.2\n---\na: 1	{"a":1}
+%TAG ! tag:example.com,2000:\n---\na: 1	{"a":1}
+!!int%TAG !! x:\t\n... ... %YAML 1.20o17	["!! x:","... %YAML 1.20o17"]
+%TAG﻿!! tag:x,2000:\n--- !!int 007	"007"
+%TAG !!﻿ tag:x,2000:\n--- !!int 007	"007"
+%TAG!! tag:x,2000:\n--- !!int 007	7
+%TAG !! tag:x,2000:\n--- !!int 007	"007"
+--- !!int 007	7

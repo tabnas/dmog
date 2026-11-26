@@ -1,0 +1,1788 @@
+[
+ {
+  "input": "| a | b | c | d |\\n| :- | -: | :-: | - |\\n| 1 | 2 | 3 | 4 |",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     17
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "table",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       3,
+       17
+      ]
+     ],
+     "tableAlign": [
+      "left",
+      "right",
+      "center",
+      null
+     ],
+     "children": [
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         17
+        ]
+       ],
+       "isHeaderRow": true,
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           17
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "a"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           17
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "b"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           17
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "c"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           17
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "d"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         3,
+         1
+        ],
+        [
+         3,
+         17
+        ]
+       ],
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           17
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "1"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           17
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "2"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           17
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "3"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           17
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "4"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "a | b\\n--- | ---\\n1 | 2",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     5
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "table",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       3,
+       5
+      ]
+     ],
+     "tableAlign": [
+      null,
+      null
+     ],
+     "children": [
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         5
+        ]
+       ],
+       "isHeaderRow": true,
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           5
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "a"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           5
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "b"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         3,
+         1
+        ],
+        [
+         3,
+         5
+        ]
+       ],
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           5
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "1"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           5
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "2"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "| a | b | c |\\n| - | - | - |\\n| 1 |",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     5
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "table",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       3,
+       5
+      ]
+     ],
+     "tableAlign": [
+      null,
+      null,
+      null
+     ],
+     "children": [
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         13
+        ]
+       ],
+       "isHeaderRow": true,
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           13
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "a"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           13
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "b"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           13
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "c"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         3,
+         1
+        ],
+        [
+         3,
+         5
+        ]
+       ],
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           5
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "1"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           5
+          ]
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           5
+          ]
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "| a | b |\\n| - | - |\\n| 1 | 2 | 3 |",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     13
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "table",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       3,
+       13
+      ]
+     ],
+     "tableAlign": [
+      null,
+      null
+     ],
+     "children": [
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         9
+        ]
+       ],
+       "isHeaderRow": true,
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           9
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "a"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           9
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "b"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         3,
+         1
+        ],
+        [
+         3,
+         13
+        ]
+       ],
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           13
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "1"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           13
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "2"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "| a | b |\\n| - | - |",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     9
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "table",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       9
+      ]
+     ],
+     "tableAlign": [
+      null,
+      null
+     ],
+     "children": [
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         9
+        ]
+       ],
+       "isHeaderRow": true,
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           9
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "a"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           9
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "b"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "| a | b |\\n| - | - |\\n| x \\\\| y | z |",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     14
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "table",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       3,
+       14
+      ]
+     ],
+     "tableAlign": [
+      null,
+      null
+     ],
+     "children": [
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         9
+        ]
+       ],
+       "isHeaderRow": true,
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           9
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "a"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           9
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "b"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         3,
+         1
+        ],
+        [
+         3,
+         14
+        ]
+       ],
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           14
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "x | y"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           14
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "z"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "| a |\\n| - |\\n| *x* |",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     7
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "table",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       3,
+       7
+      ]
+     ],
+     "tableAlign": [
+      null
+     ],
+     "children": [
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         5
+        ]
+       ],
+       "isHeaderRow": true,
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           5
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "a"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         3,
+         1
+        ],
+        [
+         3,
+         7
+        ]
+       ],
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           7
+          ]
+         ],
+         "children": [
+          {
+           "type": "emph",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "children": [
+            {
+             "type": "text",
+             "sourcepos": [
+              [
+               0,
+               0
+              ],
+              [
+               0,
+               0
+              ]
+             ],
+             "literal": "x"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "  a | b\\n| - | -",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     7
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "table",
+     "sourcepos": [
+      [
+       1,
+       3
+      ],
+      [
+       2,
+       7
+      ]
+     ],
+     "tableAlign": [
+      null,
+      null
+     ],
+     "children": [
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         5
+        ]
+       ],
+       "isHeaderRow": true,
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           5
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "a"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           5
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "b"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "a | b\\n  | - | -",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     9
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "table",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       9
+      ]
+     ],
+     "tableAlign": [
+      null,
+      null
+     ],
+     "children": [
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         5
+        ]
+       ],
+       "isHeaderRow": true,
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           5
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "a"
+          }
+         ]
+        },
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           5
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "b"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "| a | b |\\n| - | - |\\n| 1 | 2 |",
+  "opts": "{\"gfm\":false}",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     9
+    ]
+   ],
+   "gfm": false,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       3,
+       9
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "| a | b |"
+      },
+      {
+       "type": "softbreak",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ]
+      },
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "| - | - |"
+      },
+      {
+       "type": "softbreak",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ]
+      },
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "| 1 | 2 |"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "col\\n:-:\\nval",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     3
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "table",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       3,
+       3
+      ]
+     ],
+     "tableAlign": [
+      "center"
+     ],
+     "children": [
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         1,
+         1
+        ],
+        [
+         1,
+         3
+        ]
+       ],
+       "isHeaderRow": true,
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           1,
+           1
+          ],
+          [
+           1,
+           3
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "col"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "table_row",
+       "sourcepos": [
+        [
+         3,
+         1
+        ],
+        [
+         3,
+         3
+        ]
+       ],
+       "children": [
+        {
+         "type": "table_cell",
+         "sourcepos": [
+          [
+           3,
+           1
+          ],
+          [
+           3,
+           3
+          ]
+         ],
+         "children": [
+          {
+           "type": "text",
+           "sourcepos": [
+            [
+             0,
+             0
+            ],
+            [
+             0,
+             0
+            ]
+           ],
+           "literal": "val"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+]

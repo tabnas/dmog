@@ -1,0 +1,51 @@
+input	expected	opts
+# Element sequences, PGN spec 8.2. Parsed with the `movetext` start rule,
+# so each row is one line of play with no tag section around it.
+#
+# --- 8.2.2 move number indications ---
+1. e4	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]}	{"start":"movetext"}
+1.e4	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]}	{"start":"movetext"}
+1 . e4	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]}	{"start":"movetext"}
+1... e5	{"moves":[{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"}]}	{"start":"movetext"}
+1 e4	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]}	{"start":"movetext"}
+# A move number indication with no move after it is legal and empty.
+1.	{"moves":[]}	{"start":"movetext"}
+# 7: a symbol token ends at the first non-symbol character, so a number
+# written WITHOUT periods must still end its token. `12e4` is one bad token,
+# not the move number 12 followed by the move e4.
+12e4	ERROR	{"start":"movetext"}
+12 e4	{"moves":[{"san":"e4","piece":"P","to":"e4","number":12,"side":"w"}]}	{"start":"movetext"}
+12.e4	{"moves":[{"san":"e4","piece":"P","to":"e4","number":12,"side":"w"}]}	{"start":"movetext"}
+# 8.2.2: the indication gives the number of the move that follows, and
+# there is no move zero. Nor a number longer than any real game.
+0. e4	ERROR	{"start":"movetext"}
+0 e4	ERROR	{"start":"movetext"}
+01. e4	ERROR	{"start":"movetext"}
+1234567890123. e4	ERROR	{"start":"movetext"}
+# --- an element sequence needs no numbers at all ---
+e4 e5 Nf3	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"},{"san":"Nf3","piece":"N","to":"f3","number":2,"side":"w"}]}	{"start":"movetext"}
+# --- 8.2.4 numeric annotation glyphs attach to the move they follow ---
+e4 $1	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","nags":[1]}]}	{"start":"movetext"}
+e4 $1 $14	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","nags":[1,14]}]}	{"start":"movetext"}
+e4 $0	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","nags":[0]}]}	{"start":"movetext"}
+e4 $255	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","nags":[255]}]}	{"start":"movetext"}
+# A glyph value longer than any glyph is a bad token, not a number so large
+# the two runtimes disagree about what it is.
+e4 $1234567890	ERROR	{"start":"movetext"}
+e4 $999999999999999999999	ERROR	{"start":"movetext"}
+# A glyph before any move annotates the starting position, not a move.
+$14 e4	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}],"nags":[14]}	{"start":"movetext"}
+# --- whitespace is not significant between elements ---
+1.e4\ne5	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"}]}	{"start":"movetext"}
+1.\te4\t\te5	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"}]}	{"start":"movetext"}
+1. e4\r\ne5	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"}]}	{"start":"movetext"}
+# --- 6 the escape mechanism: a % in the first column only ---
+%private\ne4	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}]}	{"start":"movetext"}
+e4\n%private\ne5	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b"}]}	{"start":"movetext"}
+e4 %private	ERROR	{"start":"movetext"}
+# --- rejections ---
+1. e4 e5 )	ERROR	{"start":"movetext"}
+1. e4 e5 ]	ERROR	{"start":"movetext"}
+1. e4 "quoted"	ERROR	{"start":"movetext"}
+1. e4 --	ERROR	{"start":"movetext"}
+1. e4 Z0	ERROR	{"start":"movetext"}

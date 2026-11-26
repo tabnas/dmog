@@ -1,0 +1,19 @@
+input	expected
+[[a]]\nx = 1	{"a":[{"x":1}]}
+[[a]]\nx = 1\n[[a]]\nx = 2	{"a":[{"x":1},{"x":2}]}
+[[products]]\nname = "Hammer"	{"products":[{"name":"Hammer"}]}
+[[products]]\nname = "Hammer"\n[[products]]\nname = "Nail"	{"products":[{"name":"Hammer"},{"name":"Nail"}]}
+[[t]]\na=1\n[[t]]\nb=2	{"t":[{"a":1},{"b":2}]}
+[[x]]\n[x.y]\na=1	{"x":[{"y":{"a":1}}]}
+# Descending into an existing array-of-tables is LEGITIMATE and must not be
+# read as a key conflict: four valid corpus documents do exactly this, and a
+# first cut of the conflict check rejected all four.
+[[x]]\ny = 1\n[x.z]\nw = 2	{"x":[{"y":1,"z":{"w":2}}]}
+# A `[[...]]` nests under a `[[...]]`: a header whose dotted prefix passes
+# through an array of tables belongs to that array's last table, and its own
+# last segment is an array of tables there, appended to by the next header
+# of the same name and started afresh in each new element.
+[[a.b]]\nx = 1\n[[a.b.c]]\ny = 2\n[[a.b.c.d]]\nz = 3	{"a":{"b":[{"x":1,"c":[{"y":2,"d":[{"z":3}]}]}]}}
+[[a.b]]\n[[a.b.c]]\n[[a.b.c]]	{"a":{"b":[{"c":[{},{}]}]}}
+[[a.b]]\n[[a.b.c]]\n[[a.b]]\n[[a.b.c]]	{"a":{"b":[{"c":[{}]},{"c":[{}]}]}}
+[[a.b]]\n[[a.b.c]]\n[a.b.c.d]\ne = 1	{"a":{"b":[{"c":[{"d":{"e":1}}]}]}}

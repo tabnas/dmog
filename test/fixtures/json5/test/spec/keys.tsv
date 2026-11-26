@@ -1,0 +1,55 @@
+input	expected	opts
+{foo:1}	{"foo":1}
+{"foo":1}	{"foo":1}
+{'foo':1}	{"foo":1}
+{$id:1, _n:2, a1:3}	{"$id":1,"_n":2,"a1":3}
+# JSON5 IdentifierName keys may spell a character as a \uXXXX
+# UnicodeEscapeSequence; the key's VALUE is the decoded text.
+{sig\\u03A3ma:1}	{"sigΣma":1}
+{\\u0041:1}	{"A":1}
+{a\\u0042c:1}	{"aBc":1}
+{a\\u0030:1}	{"a0":1}
+{\\u0024:1}	{"$":1}
+{\\u005F:1}	{"_":1}
+{a\\u200C:1}	{"a\u200c":1}
+# An escape cannot smuggle an otherwise-illegal character into an
+# identifier (ES5.1 7.6): a digit or ZWNJ at the start, a hyphen or
+# space anywhere, a non-\u escape, a truncated escape, and escaped
+# UTF-16 surrogate halves are all rejected.
+{\\u0030:1}	ERROR
+{\\u200C:1}	ERROR
+{a\\u002Db:1}	ERROR
+{a\\u0020b:1}	ERROR
+{a\\q:1}	ERROR
+{a\\x41:1}	ERROR
+{\\:1}	ERROR
+{a\\u00:1}	ERROR
+{\\u{41}:1}	ERROR
+{\\uD835\\uDC00:1}	ERROR
+{\\uD835:1}	ERROR
+# A raw astral character is a letter to a reader that walks code POINTS,
+# and an unpaired high surrogate to one that walks UTF-16 code units.
+# ES5.1 7.6 makes an IdentifierStart a UnicodeLetter, so a character
+# outside the Basic Multilingual Plane opens a key when its category is
+# a letter one. U+1D49C MATHEMATICAL SCRIPT CAPITAL A is Lu, U+10400
+# DESERET CAPITAL LETTER LONG I is Lu and U+20000 CJK UNIFIED IDEOGRAPH
+# is Lo, and a JavaScript engine accepts each of the three as a variable
+# name. These rows were a divergence until 2026-09-21: canonical
+# TypeScript asked isIdentifierStart(src[i]) and got back one UTF-16
+# CODE UNIT, so the high surrogate, in no letter category, refused the
+# key. The canonical text check now reads a code POINT and all three
+# runtimes agree, which is what these rows hold it to.
+{𝒜:1}	{"𝒜":1}
+{𝒜b:1}	{"𝒜b":1}
+{a𝒜:1}	{"a𝒜":1}
+{𐐀:1}	{"𐐀":1}
+{𠀀:1}	{"𠀀":1}
+# The controls, so that reading a code point does not become "accept any
+# astral character". U+1F600 GRINNING FACE is So: not an IdentifierStart
+# and not an IdentifierPart either. U+1D7CE MATHEMATICAL BOLD DIGIT ZERO
+# is Nd: an IdentifierPart, so legal in a LATER position and not as the
+# first character, exactly as `0` itself is.
+{😀:1}	ERROR:unexpected
+{a😀:1}	ERROR:unexpected
+{𝟎:1}	ERROR:unexpected
+{a𝟎:1}	{"a𝟎":1}

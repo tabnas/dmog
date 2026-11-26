@@ -1,0 +1,12 @@
+{
+  "store": {
+    "name": "corner shop",
+    "open": true,
+    "books": [
+      {"title": "SICP", "price": 42.5, "tags": ["cs", "classic"]},
+      {"title": "TAPL", "price": 55.0, "tags": ["types"]}
+    ],
+    "counts": {"fiction": 12, "science": 7}
+  },
+  "version": 3
+}

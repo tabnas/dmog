@@ -1,0 +1,24 @@
+input	expected	opts
+? a\n: 1	{"a":1}
+? a b\n: 1	{"a b":1}
+1: one\n2: two	{"1":"one","2":"two"}
+? !!é value\n: 1	{"!!é value":1}
+? !!int﻿3\n: v	{"3":"v"}
+# A quoted explicit key is the scalar inside its quotes, every escape a
+# double-quoted scalar takes decoded: the single characters, and \x, \u
+# and \U with two, four and eight hexadecimal digits, a surrogate pair
+# of \u escapes as the one character it names. The translation render
+# writes a key past 1024 characters this way, with JSON's escapes. A
+# lone surrogate, too few digits or an unknown escape leave the text as
+# it is, quotes and all.
+? "a\\u0001b"\n: 1	{"a\u0001b":1}	
+? "\\x41\\b\\f\\e\\a\\v\\0\\t\\n\\r\\/\\\\\\""\n: 1	{"A\b\f\u001b\u0007\u000b\u0000\t\n\r/\\\"":1}	
+? "\\N\\_\\L\\P"\n: 1	{"\u0085\u00a0\u2028\u2029":1}	
+? "\\U0001F600\\ud83d\\ude00"\n: 1	{"\ud83d\ude00\ud83d\ude00":1}	
+? "\\ufffe\\uffff\\u0080\\u009f"\n: 1	{"\ufffe\uffff\u0080\u009f":1}	
+? "k\\u0001"\n: 1\n"x": 2	{"k\u0001":1,"x":2}	
+? "\\x4"\n: 1	{"\"\\x4\"":1}	
+? "\\q"\n: 1	{"\"\\q\"":1}	
+? a\n: -	{"a":[null]}	
+? a\n: - b\n  - c	{"a":["b","c"]}	
+  ? a\n  : 1\n  ? b\n  : 2	{"a":1,"b":2}	

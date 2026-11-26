@@ -1,0 +1,6 @@
+input	expected
+a = hello\n    world	{"a":"hello world"}
+a = line1\n  line2\n  line3	{"a":"line1 line2 line3"}
+a = hello\nb = world	{"a":"hello","b":"world"}
+a = hello\n\tworld	{"a":"hello world"}
+[s]\na = hello\n    world	{"s":{"a":"hello world"}}

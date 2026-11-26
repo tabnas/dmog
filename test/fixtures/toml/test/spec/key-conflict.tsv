@@ -1,0 +1,147 @@
+input	expected
+# KEY CONFLICTS. TOML does not allow a key to be redefined, and every
+# runtime refuses one with toml_key_conflict. The values a runtime WOULD
+# have built are the reason the code exists: before the check, a value
+# redefined as a table was overwritten by an empty table, and an array of
+# tables redefined as a table lost either the array or the table,
+# depending on the port -- silent data loss on an invalid document, and
+# nothing reported it. Go accepted every row below until 2026-10; its
+# engine now passes a coded error raised inside a grammar action through
+# with the code intact, so the check reaches the reader there too.
+#
+# A KEY GIVEN A SECOND VALUE. Every port used to take the base grammar's
+# answer to a repeated key, last wins and tables merged (`a = 1` then
+# `a = 2` gave {"a":2}, `tbl = {k = 1}` then `tbl = {kk = 2}` gave both
+# keys), which is relaxed JSON's rule and not TOML's. A plain key, a quoted
+# spelling of the same key, the last segment of a dotted key, and a key in
+# an inline table.
+a = 1\na = 2	ERROR:toml_key_conflict
+a = 1\n"a" = 2	ERROR:toml_key_conflict
+a = true\na = 1	ERROR:toml_key_conflict
+arr = [1]\narr = [2]	ERROR:toml_key_conflict
+tbl = {k = 1}\ntbl = {kk = 2}	ERROR:toml_key_conflict
+a.b = 1\na.b = 2	ERROR:toml_key_conflict
+a.b.c = 1\na.b = 2	ERROR:toml_key_conflict
+[t]\na = 1\na = 2	ERROR:toml_key_conflict
+[t]\na.b = 1\na.b = 2	ERROR:toml_key_conflict
+a = {b = 1, b = 2}	ERROR:toml_key_conflict
+a = {b.c = 1, b.c = 2}	ERROR:toml_key_conflict
+a = {b.c = 1, b = 2}	ERROR:toml_key_conflict
+# A HEADER WRITTEN TWICE, with and without a body, and once a sub-table
+# has been defined between the two.
+[a]\n[a]	ERROR:toml_key_conflict
+[a]\nb = 1\n[a]\nc = 2	ERROR:toml_key_conflict
+[a]\n[a.b]\n[a]	ERROR:toml_key_conflict
+[a]\n[a.b]\n[a.b]	ERROR:toml_key_conflict
+[a.b]\n[a]\n[a.b]	ERROR:toml_key_conflict
+[a.b]\n[a]\n[a]	ERROR:toml_key_conflict
+[[a]]\n[a.b]\n[a.b]	ERROR:toml_key_conflict
+# A HEADER FOR A TABLE A DOTTED KEY OR AN INLINE TABLE HAD DEFINED. A
+# header may define the table its own prefix created (`[a.b]` then `[a]`,
+# among the controls), and nothing else that already exists: a dotted key
+# defines every table it creates, and an inline table is complete at its
+# closing brace (spec: `[fruit.apple]` after `apple.color = "red"` is
+# INVALID; corpus: table/duplicate-key-04, -05, -08, table/redefine-02,
+# -03, inline-table/overwrite-05).
+a.b = 1\n[a]	ERROR:toml_key_conflict
+a.b = 1\n[a]\nc = 2	ERROR:toml_key_conflict
+a.b.c = 1\n[a.b]	ERROR:toml_key_conflict
+[a]\nb.c = 1\n[a.b]\nd = 2	ERROR:toml_key_conflict
+[t1]\nt2.t3.v = 0\n[t1.t2]	ERROR:toml_key_conflict
+[t1]\nt2.t3.v = 0\n[t1.t2.t3]	ERROR:toml_key_conflict
+a = {}\n[a]	ERROR:toml_key_conflict
+[a]\nb = {c = 1}\n[a.b]	ERROR:toml_key_conflict
+# A KEY THE TABLE ALREADY HOLDS FROM AN EARLIER HEADER. A table's body is
+# parsed into a map of its own and merged into the table when the body
+# ends, and every port used to let the merge replace the key: `[a.b]`
+# `c = 1` then `[a]` `b = 2` gave {"a":{"b":2}}, losing `c`, and
+# `[[a.b]]` then `[a]` `b = 2` replaced the array. A plain key, the first
+# segment of a dotted key, a quoted spelling and an inline table, over a
+# table, an array of tables, and a table a header's prefix created
+# (corpus: table/append-with-dotted-keys-01, -02, -03, -08,
+# table/overwrite-array-in-parent, array/extend-defined-aot,
+# inline-table/overwrite-09). `[a.b.c]` then `[a]` `b.d = 1` is the strict
+# reading: TOML says a dotted key creates and defines the tables before
+# its last segment "provided that such tables were not previously
+# created", and a parser that reads a body into its table could let
+# `b.d` extend the `b` that `[a.b.c]` created; this grammar merges, and
+# the merge would replace `b`, losing `c`. The last row is a dotted key
+# walking a header's implicit table and a header then defining it.
+[a.b]\nc = 1\n[a]\nb = 2	ERROR:toml_key_conflict
+[a.b]\nc = 1\n[a]\nb.d = 2	ERROR:toml_key_conflict
+[a.b.c]\nz = 9\n[a]\nb.c.t = 1	ERROR:toml_key_conflict
+[a.b.c.d]\nz = 9\n[a]\nb.c.d.k.t = 1	ERROR:toml_key_conflict
+[a.b.c]\n[a]\nb.d = 1	ERROR:toml_key_conflict
+[a.b.c]\n[a]\n"b" = 1	ERROR:toml_key_conflict
+[a.b]\n[a]\nb = {}	ERROR:toml_key_conflict
+[[a.b]]\n[a]\nb = 2	ERROR:toml_key_conflict
+[[a.b]]\n[a]\nb.y = 2	ERROR:toml_key_conflict
+[[p.arr]]\n[p]\nnot-arr = 1\narr = 2	ERROR:toml_key_conflict
+[t.n]\ni = {n = {}}\n[t]\nn.i.n = 2	ERROR:toml_key_conflict
+[x.a.b]\n[x]\na.c = 1\n[x.a]	ERROR:toml_key_conflict
+# Only a key's FIRST segment is checked against the table: a later one
+# writes below the top level. A dotted key is a replace loop
+# (tabnas/toml#78), so its later segments have the first one's parent
+# rule, and the check asks only of a key's first segment. These valid
+# documents pin that: a later segment names a key the table holds.
+[t.y]\n[t]\nx.y.z = 1	{"t":{"y":{},"x":{"y":{"z":1}}}}
+[[t.y]]\n[t]\nx.y.z = 1	{"t":{"y":[{}],"x":{"y":{"z":1}}}}
+#
+# A value used again as a table: through a header, a dotted header, and a
+# dotted key in an inline table.
+a = 1\n[a]\nb = 2	ERROR:toml_key_conflict
+a = 1\n[a.b]\nc = 2	ERROR:toml_key_conflict
+[a]\nb = 1\n[a.b]\nc = 2	ERROR:toml_key_conflict
+[t]\na = 1\n[t]\n[t.a]\nb = 2	ERROR:toml_key_conflict
+a = {b = 1, b.c = 2}	ERROR:toml_key_conflict
+a = {b = "s", b.c = 2}	ERROR:toml_key_conflict
+# A value used again as a table-array header.
+a = 1\n[[a]]\nb = 2	ERROR:toml_key_conflict
+[a]\nb = 1\n[[a.b]]\nc = 2	ERROR:toml_key_conflict
+[[a]]\nb = 1\n[[a.b]]\nc = 2	ERROR:toml_key_conflict
+# A table redefined as an array of tables, and an array of tables redefined
+# as a table (corpus: array/tables-02, table/duplicate-key-07).
+[a]\n[[a]]	ERROR:toml_key_conflict
+[[x]]\na = 1\n[x]\nb = 2	ERROR:toml_key_conflict
+[x]\n[[x.y]]\n[[x.y]]\n[x.y]	ERROR:toml_key_conflict
+# CONTROLS. Descending into an existing table, into the implicit table a
+# dotted key or a deeper header created, or into the last element of an
+# existing array of tables is legitimate; four valid corpus documents do
+# exactly this, and a first cut of the check rejected all four. A header
+# may define the table its own prefix created, once (`[a]` after `[a.b]`
+# or `[[a.b]]`), and a header may define a NEW sub-table under a table a
+# dotted key made (spec: `[fruit.apple.texture]` after
+# `apple.taste.sweet = true`). A later header's body may add a key its
+# table does not hold yet (`[a.b.c]` then `[a]` `d = 1`), a body's own
+# table may share its name with a header's implicit table elsewhere (`c`'s
+# `a` below is not the top-level `a`), and every element of an array of
+# tables has a body of its own. Two rows that used to sit here as
+# controls, `a.b = 1` then `[a]` and `[a]` `b.c = 1` then `[a.b]`, are
+# conflicts above: a dotted key defines the table it creates.
+a = {b = 1, c = 2}	{"a":{"b":1,"c":2}}
+a = {b.c = 1, b.d = 2}	{"a":{"b":{"c":1,"d":2}}}
+a.b = 1\na.c = 2	{"a":{"b":1,"c":2}}
+[a.b]\nc = 1\n[a]\nd = 2	{"a":{"b":{"c":1},"d":2}}
+[a.b.c]\n[a.b]\n[a]	{"a":{"b":{"c":{}}}}
+[[a.b]]\n[a]	{"a":{"b":[{}]}}
+[a]\nb.c = 1\n[a.b.d]\ne = 2	{"a":{"b":{"c":1,"d":{"e":2}}}}
+[[x]]\ny = 1\n[x.z]\nw = 2	{"x":[{"y":1,"z":{"w":2}}]}
+[[a]]\n[[a]]\n[a.b]\nc = 1	{"a":[{},{"b":{"c":1}}]}
+[a.b.c]\n[a]\nd = 1	{"a":{"b":{"c":{}},"d":1}}
+[a.b]\n[c]\na.x = 1\na.y = 2\n[a]	{"a":{"b":{}},"c":{"a":{"x":1,"y":2}}}
+[[a]]\nb.c = 1\n[[a]]\nb.c = 2	{"a":[{"b":{"c":1}},{"b":{"c":2}}]}
+# NESTED ARRAYS OF TABLES. A `[[...]]` header whose dotted prefix passes
+# through an array of tables belongs to that array's LAST table, and the
+# segment after the prefix is an array of tables of its own: `[[a.b]]` then
+# `[[a.b.c]]` is valid TOML, and `[[a.b.c]]` appends to the `c` of the last
+# `a.b`. Every port used to define a TABLE there instead, and then refuse it
+# as a key conflict when the new element was pushed, so a valid document was
+# rejected, while a `[...]` header through the same prefix was fine. The
+# conflicts a nested header CAN raise are the ones above: a table or a value
+# already under its last segment.
+[[a.b]]\n[[a.b.c]]	{"a":{"b":[{"c":[{}]}]}}
+[[a]]\n[[a.b]]\n[[a.b.c]]	{"a":[{"b":[{"c":[{}]}]}]}
+[[a]]\n[a.b]\n[[a]]\n[a.b]	{"a":[{"b":{}},{"b":{}}]}
+[[a.b]]\n[a.b.c]\n[[a.b.c]]	ERROR:toml_key_conflict
+[[a.b]]\n[[a.b.c]]\n[a.b.c]	ERROR:toml_key_conflict
+[[a.b]]\nc = 1\n[[a.b.c]]	ERROR:toml_key_conflict

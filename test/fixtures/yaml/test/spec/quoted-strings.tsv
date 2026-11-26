@@ -1,0 +1,52 @@
+input	expected	opts
+a: "hello"	{"a":"hello"}
+a: 'hello'	{"a":"hello"}
+a: "key: value"	{"a":"key: value"}
+a: 'key: value'	{"a":"key: value"}
+a: "line1\\nline2"	{"a":"line1\nline2"}
+a: "col1\\tcol2"	{"a":"col1\tcol2"}
+a: 'line1\\nline2'	{"a":"line1\\nline2"}
+foo: 'a{{q}}b'	{"foo":"a{{q}}b"}
+foo: "a{{q}}b"	{"foo":"a{{q}}b"}
+a: ""	{"a":""}
+a: ''	{"a":""}
+"a b": 1	{"a b":1}
+a: "42"	{"a":"42"}
+a: "true"	{"a":"true"}
+"a" "b"	["a","b"]
+"a"\n"b"	["a","b"]
+"a" "b" "c"	["a","b","c"]
+- "a" "b"	[["a","b"]]
+- x\n- "a" "b"	["x",["a","b"]]
+k:\n  - "a" "b"	ERROR
+- - "a" "b"	[[["a","b"]]]
+[ "a" "b" ]	["a","b"]
+---\n"a" "b"\n---\n"c" "d"	[["a","b"],["c","d"]]
+"a" "b"\n...	["a","b"]
+a: "\\uD83D\\uDE00"	{"a":"😀"}
+a: "\\U0000D83D\\uDE00"	{"a":"😀"}
+a: "\\uD83D\\U0000DE00"	{"a":"😀"}
+a: "x\\uD83D\\uDE00y"	{"a":"x😀y"}
+a: "\\uD83D\\\n\\uDE00"	{"a":"😀"}
+a: "\\uD83D\\uDE00\\uD83D\\uDE00"	{"a":"😀😀"}
+a: "\\U0001F600"	{"a":"😀"}
+a: "\\x4"	{"a":"\u0004"}
+a: "\\xZZ"	{"a":"\u0000"}
+a: "\\u00"	{"a":"\u0000"}
+a: "\\x"	{"a":"\u0000"}
+a: "\\uZZZZ"	{"a":"\u0000"}
+a: "\\U 0000041"	{"a":"A"}
+a: "\\U0000004"	{"a":"\u0004"}
+a: "\\U0010FFFF"	{"a":"􏿿"}
+a: "\\U00110000"	ERROR:unexpected
+a: "\\UFFFFFFFF"	ERROR:unexpected
+a: "\\U"	ERROR:unexpected
+a: "\\x😀A"	{"a":"\u0000A"}
+a: "\\u😀AB"	{"a":"\u0000"}
+a: "\\U0041😀00X"	{"a":"AX"}
+{a: "\\x😀", b: 2}	{"a":"\u0000","b":2}
+a: "\\u0041😀X"	{"a":"A😀X"}
+a: "\\U000D83D😀Z"	{"a":"😀Z"}
+a: "\\xA中Z"	{"a":"\nZ"}
+a: "\\	{"a":""}
+a: "x\\	{"a":"x"}

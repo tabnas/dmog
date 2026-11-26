@@ -7,7 +7,7 @@
 // every one runs on transduce's routers and render's renderers.
 
 mod common;
-#[path = "../../../transduce/rs/tests/support/mod.rs"]
+#[path = "../../test/fixtures/transduce/rs/tests/support/mod.rs"]
 mod support;
 
 use std::path::{Path, PathBuf};
@@ -318,11 +318,11 @@ fn missing_and_null_cells_follow_the_options() {
 }
 
 fn fixtures() -> Vec<PathBuf> {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../transduce/rs/tests/fixtures");
+    let dir = common::vendored().join("transduce/rs/tests/fixtures");
     let mut paths: Vec<PathBuf> = std::fs::read_dir(&dir)
         .unwrap_or_else(|e| {
             panic!(
-                "transduce's fixtures are beside this checkout, at {}: {e}",
+                "transduce's fixtures are vendored, at {}: {e}",
                 dir.display()
             )
         })

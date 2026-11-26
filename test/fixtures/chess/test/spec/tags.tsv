@@ -1,0 +1,39 @@
+input	expected	opts
+# Tag pairs, PGN spec 8.1. Parsed with the `game` start rule.
+[Event "F/S Return Match"]	{"tags":{"Event":"F/S Return Match"},"moves":[]}	{"start":"game"}
+[Event "x"]\n[Site "y"]	{"tags":{"Event":"x","Site":"y"},"moves":[]}	{"start":"game"}
+# A tag name is letters, digits and underscore only.
+[Round_2 "x"]	{"tags":{"Round_2":"x"},"moves":[]}	{"start":"game"}
+[X1 "x"]	{"tags":{"X1":"x"},"moves":[]}	{"start":"game"}
+# --- 7 string tokens ---
+[Event ""]	{"tags":{"Event":""},"moves":[]}	{"start":"game"}
+[Note "a \\"quoted\\" word"]	{"tags":{"Note":"a \"quoted\" word"},"moves":[]}	{"start":"game"}
+[Note "back\\\\slash"]	{"tags":{"Note":"back\\slash"},"moves":[]}	{"start":"game"}
+# Non-ASCII is permitted in string data (4.1).
+[White "Björn Åberg"]	{"tags":{"White":"Björn Åberg"},"moves":[]}	{"start":"game"}
+# Layout is free: the four tokens need not share a line.
+[ Event "x" ]	{"tags":{"Event":"x"},"moves":[]}	{"start":"game"}
+[Event\n"x"]	{"tags":{"Event":"x"},"moves":[]}	{"start":"game"}
+# 8.1 allows any name of letters, digits and underscore — including names
+# a host language reserves. They are tags like any other.
+[__proto__ "x"]	{"tags":{"__proto__":"x"},"moves":[]}	{"start":"game"}
+[constructor "x"]	{"tags":{"constructor":"x"},"moves":[]}	{"start":"game"}
+[toString "x"]	{"tags":{"toString":"x"},"moves":[]}	{"start":"game"}
+# 8.1: a tag name should not repeat. The first value wins.
+[Event "one"]\n[Event "two"]	{"tags":{"Event":"one"},"moves":[]}	{"start":"game"}
+# --- the seven tag roster, 8.1.1 ---
+[Event "F/S"]\n[Site "Belgrade, JUG"]\n[Date "1992.11.04"]\n[Round "29"]\n[White "Fischer, Robert J."]\n[Black "Spassky, Boris V."]\n[Result "1/2-1/2"]	{"tags":{"Event":"F/S","Site":"Belgrade, JUG","Date":"1992.11.04","Round":"29","White":"Fischer, Robert J.","Black":"Spassky, Boris V.","Result":"1/2-1/2"},"moves":[]}	{"start":"game"}
+# Tag values stay raw strings: reading a date or a time control out of one
+# is a layer above the notation.
+[Date "1992.??.??"]	{"tags":{"Date":"1992.??.??"},"moves":[]}	{"start":"game"}
+[TimeControl "40/7200:3600"]	{"tags":{"TimeControl":"40/7200:3600"},"moves":[]}	{"start":"game"}
+# --- rejections ---
+[Event]	ERROR	{"start":"game"}
+[Event "x"	ERROR	{"start":"game"}
+[Event "x"]]	ERROR	{"start":"game"}
+["x" Event]	ERROR	{"start":"game"}
+[Event x]	ERROR	{"start":"game"}
+[Event-Name "x"]	ERROR	{"start":"game"}
+[Event 'x']	ERROR	{"start":"game"}
+# 7: a string is one line, and the newline is not an escape.
+[Event "a\nb"]	ERROR	{"start":"game"}

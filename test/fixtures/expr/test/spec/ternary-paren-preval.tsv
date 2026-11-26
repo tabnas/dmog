@@ -1,0 +1,27 @@
+input	expected
+# Ternary with paren-preval - config: ternary + plain paren with preval active
+# Operators: ternary {src: ['?', ':']}, plain {paren: true, osrc: '(', csrc: ')', preval: {active: true}}
+a:1	{"a":1}
+1?2:3	["?",1,2,3]
+# Top-level implicit list with ternary
+a 1?2:3	["a",["?",1,2,3]]
+a 1?2:3 b	["a",["?",1,2,3],"b"]
+1?2:3 b	[["?",1,2,3],"b"]
+1?2:3,b	[["?",1,2,3],"b"]
+a,1?2:3	["a",["?",1,2,3]]
+a,1?2:3,b	["a",["?",1,2,3],"b"]
+# Inside plain parens
+(1?2:3)	["(",["?",1,2,3]]
+(1?2:3 b)	["(",[["?",1,2,3],"b"]]
+(1?2:3,b)	["(",[["?",1,2,3],"b"]]
+(a 1?2:3)	["(",["a",["?",1,2,3]]]
+(a 1?2:3 b)	["(",["a",["?",1,2,3],"b"]]
+(a,1?2:3)	["(",["a",["?",1,2,3]]]
+(a,1?2:3,b)	["(",["a",["?",1,2,3],"b"]]
+# Preval-paren with ternary inside (foo(...))
+foo(a 1?2:3)	["(","foo",["a",["?",1,2,3]]]
+foo(1?2:3 b)	["(","foo",[["?",1,2,3],"b"]]
+foo(a 1?2:3 b)	["(","foo",["a",["?",1,2,3],"b"]]
+foo(a,1?2:3)	["(","foo",["a",["?",1,2,3]]]
+foo(1?2:3,b)	["(","foo",[["?",1,2,3],"b"]]
+foo(a,1?2:3,b)	["(","foo",["a",["?",1,2,3],"b"]]

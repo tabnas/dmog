@@ -1,0 +1,18 @@
+input	expected
+# A required content: `paren` has `content: { required: true }`, so an
+# empty group is refused, while a call may be empty.
+# The table every options-*.tsv file shares, a small C: the defaults;
+# `comma` `,` infix (left 1000000, right 1100000); `deref` `*` prefix
+# (right 4000000); `post_inc` `++` suffix (left 5000000); `dot` `.` infix
+# (left 5000000, right 5100000); `paren` `(` `)`, a group; `call` `(`
+# `)`, preval active; `subscript` `[` `]`, preval required. The runner's
+# evaluator writes each operation as [op.name, ...terms].
+()	ERROR:unexpected
+(())	ERROR:unexpected
+f(())	ERROR:unexpected
+[()]	ERROR:unexpected
+x:()	ERROR:unexpected
+f()	["call-paren","f"]
+a.b()	["dot-infix","a",["call-paren","b"]]
+(a)	["paren-paren","a"]
+f(x)	["call-paren","f","x"]

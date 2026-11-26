@@ -1,0 +1,26 @@
+input	expected	opts
+"test"	"test"
+"\\""	"\""
+"\\/"	"/"
+"\\b"	"\b"
+"\\f"	"\f"
+"\\n"	"\n"
+"\\r"	"\r"
+"\\t"	"\t"
+"裿"	"裿"
+"​ "	"​ "
+"foo"	"foo"
+"\\"-\\\\-\\/-\\b-\\f-\\n-\\r-\\t"	"\"-\\-/-\b-\f-\n-\r-\t"
+"\\u00DC"	"Ü"
+"hello"	"hello"
+"\\v"	ERROR:unexpected
+# Only the standard JSON escapes: no \xHH, no \u{...} (string.escapeStrict).
+"\\x42"	ERROR:unexpected
+["\\x00"]	ERROR:unexpected
+"\\u{41}"	ERROR:invalid_unicode
+"\\u0041"	"A"
+"test	ERROR:unterminated_string
+"test\n"	ERROR:unprintable
+"\t"	ERROR:unprintable
+"\t "	ERROR:unprintable
+"\0 "	ERROR:unprintable

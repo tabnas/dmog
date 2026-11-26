@@ -32,7 +32,7 @@ import { AbortFlag, Code, DatumBuilder, Ev, Limits, Metrics, Schema, Selector, f
 import { loadSpecDir } from '@tabnas/support'
 
 import { EXPECTED_CSV, PROGRAM, RECORDS } from './common'
-import { Collect, REPO_ROOT, compile, compileWith, events, jsonInto, plainEvents, replayed } from './host'
+import { Collect, compile, compileWith, events, jsonInto, plainEvents, replayed, vendored } from './host'
 import { FIXTURES, METADATA, record, recordsCsv, recordsJson, recordsJsonl, recordsYaml } from './support'
 
 type Make = () => any
@@ -728,13 +728,13 @@ describe("the library's transduce-tree", () => {
 // tabnas-csv's own test/spec corpus, transduce's CSV fixtures, the
 // generated records and the documents below: what the records tests read.
 function csvDocuments(): Array<[string, string]> {
-  const corpus = join(REPO_ROOT, '..', 'csv', 'test', 'spec')
+  const corpus = vendored('csv', 'test', 'spec')
   const documents: Array<[string, string]> = []
   let files
   try {
     files = loadSpecDir(corpus)
   } catch (err) {
-    throw new Error(`tabnas-csv's corpus is beside this checkout, at ${corpus}: ${String(err)}`)
+    throw new Error(`tabnas-csv's corpus is vendored, at ${corpus}: ${String(err)}`)
   }
   for (const file of files) {
     for (const row of file.rows) documents.push([`${row.file}:${row.line}`, row.unescNamed('input')])

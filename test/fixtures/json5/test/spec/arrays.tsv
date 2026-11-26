@@ -1,0 +1,14 @@
+input	expected	opts
+[]	[]
+[1]	[1]
+[1,2,3]	[1,2,3]
+["a","b","c"]	["a","b","c"]
+[[1,2],[3,4]]	[[1,2],[3,4]]
+# Every bracket must be closed: JSON5 has no end-of-source auto-close.
+# `[` is the exception: a source ending immediately after `[` or `:`
+# reports `unexpected`, not `end_of_source`. Not "ends where a value could
+# follow" — `[1,` below is `end_of_source`. Left bare rather than pinning.
+[	ERROR
+[1	ERROR:end_of_source
+[1,	ERROR:end_of_source
+[[1]	ERROR:end_of_source

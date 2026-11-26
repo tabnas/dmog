@@ -1,0 +1,24 @@
+; Integer addition — the grammar shared with the @tabnas/parser README,
+; where it is also built by hand directly against the engine.
+;
+; Exercises two dialect features whose whole point is that this grammar
+; renders back out of a live engine exactly as written (see
+; test/roundtrip.test.js):
+;
+;   - `NR = <number>` is RFC 5234 prose-val. Prose describes a terminal
+;     rather than defining one, which for a built-in lexer token is
+;     exactly right: the lexer already supplies `NR`, so the line
+;     documents the terminal and compiles to nothing.
+;
+;   - `PL = "+"` is a production whose whole body is one literal, i.e. a
+;     lexical definition. It compiles to the named fixed token `#PL`
+;     rather than to a rule, matching the hand-written grammar's
+;     `fixed: { token: { '#PL': '+' } }`.
+;
+; `val` is a pure alias for `add`; it survives compilation rather than
+; being inlined away, so it is still a rule (and an AST node) here.
+val = add
+add = NR [ PL add ]
+
+NR = <number>
+PL = "+"

@@ -1,0 +1,42 @@
+input	expected
+# Version strings the specification itself uses as examples, grouped by
+# where they appear. https://semver.org/spec/v2.0.0.html — the group
+# heading names the section, and a row belongs to the group above it.
+# This is a selection, not an inventory: the specification also uses
+# 42.0.0, 3.1.1, 3.2.0, 4.0.0 and 1.2.3 in passing.
+# §2 normal versions
+1.9.0	{"major":1,"minor":9,"patch":0,"prerelease":[],"build":[]}
+1.10.0	{"major":1,"minor":10,"patch":0,"prerelease":[],"build":[]}
+1.11.0	{"major":1,"minor":11,"patch":0,"prerelease":[],"build":[]}
+# §4 initial development
+0.1.0	{"major":0,"minor":1,"patch":0,"prerelease":[],"build":[]}
+# §5 public API
+1.0.0	{"major":1,"minor":0,"patch":0,"prerelease":[],"build":[]}
+# §9 pre-release versions
+1.0.0-alpha	{"major":1,"minor":0,"patch":0,"prerelease":["alpha"],"build":[]}
+1.0.0-alpha.1	{"major":1,"minor":0,"patch":0,"prerelease":["alpha",1],"build":[]}
+1.0.0-0.3.7	{"major":1,"minor":0,"patch":0,"prerelease":[0,3,7],"build":[]}
+1.0.0-x.7.z.92	{"major":1,"minor":0,"patch":0,"prerelease":["x",7,"z",92],"build":[]}
+1.0.0-x-y-z.--	{"major":1,"minor":0,"patch":0,"prerelease":["x-y-z","--"],"build":[]}
+# §10 build metadata
+1.0.0-alpha+001	{"major":1,"minor":0,"patch":0,"prerelease":["alpha"],"build":["001"]}
+1.0.0+20130313144700	{"major":1,"minor":0,"patch":0,"prerelease":[],"build":["20130313144700"]}
+1.0.0-beta+exp.sha.5114f85	{"major":1,"minor":0,"patch":0,"prerelease":["beta"],"build":["exp","sha","5114f85"]}
+1.0.0+21AF26D3----117B344092BD	{"major":1,"minor":0,"patch":0,"prerelease":[],"build":["21AF26D3----117B344092BD"]}
+# §11 precedence examples
+2.0.0	{"major":2,"minor":0,"patch":0,"prerelease":[],"build":[]}
+2.1.0	{"major":2,"minor":1,"patch":0,"prerelease":[],"build":[]}
+2.1.1	{"major":2,"minor":1,"patch":1,"prerelease":[],"build":[]}
+1.0.0-alpha.beta	{"major":1,"minor":0,"patch":0,"prerelease":["alpha","beta"],"build":[]}
+1.0.0-beta	{"major":1,"minor":0,"patch":0,"prerelease":["beta"],"build":[]}
+1.0.0-beta.2	{"major":1,"minor":0,"patch":0,"prerelease":["beta",2],"build":[]}
+1.0.0-beta.11	{"major":1,"minor":0,"patch":0,"prerelease":["beta",11],"build":[]}
+1.0.0-rc.1	{"major":1,"minor":0,"patch":0,"prerelease":["rc",1],"build":[]}
+# Versions the specification names elsewhere: 42.0.0 heads an FAQ
+# question, 3.1.1 / 3.2.0 / 4.0.0 are the "Why Use Semantic Versioning?"
+# firetruck example, 1.2.3 is the FAQ's "Is v1.2.3 a semantic version?".
+42.0.0	{"major":42,"minor":0,"patch":0,"prerelease":[],"build":[]}
+3.1.1	{"major":3,"minor":1,"patch":1,"prerelease":[],"build":[]}
+3.2.0	{"major":3,"minor":2,"patch":0,"prerelease":[],"build":[]}
+4.0.0	{"major":4,"minor":0,"patch":0,"prerelease":[],"build":[]}
+1.2.3	{"major":1,"minor":2,"patch":3,"prerelease":[],"build":[]}

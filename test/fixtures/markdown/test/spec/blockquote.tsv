@@ -1,0 +1,3 @@
+input	expected	opts
+> hello\n> world	{"type":"document","children":[{"type":"blockquote","children":[{"type":"paragraph","children":[{"type":"text","value":"hello world"}]}]}]}
+> hello\n> - item 1\n> - item 2	{"type":"document","children":[{"type":"blockquote","children":[{"type":"paragraph","children":[{"type":"text","value":"hello"}]},{"type":"list","ordered":false,"start":null,"spread":false,"children":[{"type":"listItem","checked":null,"spread":false,"children":[{"type":"paragraph","children":[{"type":"text","value":"item 1"}]}]},{"type":"listItem","checked":null,"spread":false,"children":[{"type":"paragraph","children":[{"type":"text","value":"item 2"}]}]}]}]}]}

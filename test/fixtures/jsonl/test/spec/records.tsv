@@ -1,0 +1,17 @@
+input	expected
+# A document is an ARRAY of the per-line values, even when there is one line.
+{"a":1}	[{"a":1}]
+{"a":1}\n{"b":2}	[{"a":1},{"b":2}]
+{"a":1}\n{"b":2}\n{"c":3}	[{"a":1},{"b":2},{"c":3}]
+# Records are independent: repeated keys across lines do NOT merge.
+{"a":1}\n{"a":2}	[{"a":1},{"a":2}]
+{"a":1}\n{"a":2}\n{"a":3}	[{"a":1},{"a":2},{"a":3}]
+# Records need not share a shape.
+{"a":1}\n[1,2]\n"text"\n42	[{"a":1},[1,2],"text",42]
+# Nesting is ordinary strict JSON, as long as it stays on one line.
+{"a":{"b":{"c":[1,2,3]}}}	[{"a":{"b":{"c":[1,2,3]}}}]
+{"a":[{"b":1},{"c":2}]}\n{"d":[[1],[2]]}	[{"a":[{"b":1},{"c":2}]},{"d":[[1],[2]]}]
+# Empty containers are values like any other.
+{}	[{}]
+[]	[[]]
+{}\n[]\n{}	[{},[],{}]

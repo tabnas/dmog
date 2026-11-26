@@ -1,0 +1,1666 @@
+[
+ {
+  "input": "www.example.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     15
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       15
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "http://www.example.com",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "www.example.com"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "https://example.com/a",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     21
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       21
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "https://example.com/a",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "https://example.com/a"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "foo@bar.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     11
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       11
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "mailto:foo@bar.com",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "foo@bar.com"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "Visit www.example.com.",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     22
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       22
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "Visit "
+      },
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "http://www.example.com",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "www.example.com"
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "."
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "xwww.a.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     10
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       10
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "xwww.a.com"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "www.example.com",
+  "opts": "{\"gfm\":false}",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     15
+    ]
+   ],
+   "gfm": false,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       15
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "www.example.com"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "`x`www.a.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     12
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       12
+      ]
+     ],
+     "children": [
+      {
+       "type": "code",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "x"
+      },
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "www.a.com"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "<b>www.a.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     12
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       12
+      ]
+     ],
+     "children": [
+      {
+       "type": "html_inline",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "<b>"
+      },
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "www.a.com"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "[l](/u)www.a.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     16
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       16
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "/u",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "l"
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "www.a.com"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "![i](/u)www.a.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     17
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       17
+      ]
+     ],
+     "children": [
+      {
+       "type": "image",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "/u",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "i"
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "www.a.com"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "*a*www.b.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     12
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       12
+      ]
+     ],
+     "children": [
+      {
+       "type": "emph",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "a"
+        }
+       ]
+      },
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "http://www.b.com",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "www.b.com"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "_a_www.b.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     12
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       12
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "_a_"
+      },
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "http://www.b.com",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "www.b.com"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "**a**www.b.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     14
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       14
+      ]
+     ],
+     "children": [
+      {
+       "type": "strong",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "a"
+        }
+       ]
+      },
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "http://www.b.com",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "www.b.com"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "~~a~~www.b.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     14
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       14
+      ]
+     ],
+     "children": [
+      {
+       "type": "del",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "a"
+        }
+       ]
+      },
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "http://www.b.com",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "www.b.com"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "a\\nwww.a.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     9
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       9
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "a"
+      },
+      {
+       "type": "softbreak",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ]
+      },
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "http://www.a.com",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "www.a.com"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "a\\\\\\nwww.a.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     9
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       9
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "a"
+      },
+      {
+       "type": "linebreak",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ]
+      },
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "http://www.a.com",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "www.a.com"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "x www.a.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     11
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       11
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "x "
+      },
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "http://www.a.com",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "www.a.com"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "(www.a.com",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     10
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       10
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "("
+      },
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "http://www.a.com",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "www.a.com"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "`x`b@c.de",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     9
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       9
+      ]
+     ],
+     "children": [
+      {
+       "type": "code",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "x"
+      },
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "b@c.de"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     69
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       69
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "mailto:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     70
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       70
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     69
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       69
+      ]
+     ],
+     "children": [
+      {
+       "type": "link",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "destination": "mailto:_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co",
+       "children": [
+        {
+         "type": "text",
+         "sourcepos": [
+          [
+           0,
+           0
+          ],
+          [
+           0,
+           0
+          ]
+         ],
+         "literal": "_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "input": "_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co",
+  "opts": "",
+  "tree": {
+   "type": "document",
+   "sourcepos": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     70
+    ]
+   ],
+   "gfm": true,
+   "children": [
+    {
+     "type": "paragraph",
+     "sourcepos": [
+      [
+       1,
+       1
+      ],
+      [
+       1,
+       70
+      ]
+     ],
+     "children": [
+      {
+       "type": "text",
+       "sourcepos": [
+        [
+         0,
+         0
+        ],
+        [
+         0,
+         0
+        ]
+       ],
+       "literal": "_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co"
+      }
+     ]
+    }
+   ]
+  }
+ }
+]

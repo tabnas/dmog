@@ -1,0 +1,6 @@
+name: yaml sample
+items:
+  - one
+  - two
+nested:
+  ok: true

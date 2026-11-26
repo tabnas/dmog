@@ -1,0 +1,5 @@
+input	expected
+\n\na = 1	{"a":1}
+a = 1\n\nb = 2	{"a":1,"b":2}
+[p]\nx=1\n\n[q]\ny=2	{"p":{"x":1},"q":{"y":2}}
+a = "ok"\n	{"a":"ok"}

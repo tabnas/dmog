@@ -1,0 +1,11 @@
+input	expected	opts
+a: 1	{"meta":{"directives":[],"explicit":false,"ended":false},"content":{"a":1}}	{"meta":true}
+- 1\n- 2	{"meta":{"directives":[],"explicit":false,"ended":false},"content":[1,2]}	{"meta":true}
+# c\na: 1	{"meta":{"directives":[],"explicit":false,"ended":false},"content":{"a":1}}	{"meta":true}
+---\na: 1	{"meta":{"directives":[],"explicit":true,"ended":false},"content":{"a":1}}	{"meta":true}
+---\na: 1\n...	{"meta":{"directives":[],"explicit":true,"ended":true},"content":{"a":1}}	{"meta":true}
+%YAML 1.2\n---\na: 1\n...	{"meta":{"directives":["%YAML 1.2"],"explicit":true,"ended":true},"content":{"a":1}}	{"meta":true}
+%TAG !! tag:example.com,2000:\n---\na: 1	{"meta":{"directives":["%TAG !! tag:example.com,2000:"],"explicit":true,"ended":false},"content":{"a":1}}	{"meta":true}
+---\na: 1\n---\nb: 2	{"meta":[{"directives":[],"explicit":true,"ended":false},{"directives":[],"explicit":true,"ended":false}],"content":[{"a":1},{"b":2}]}	{"meta":true}
+a: 1	{"a":1}	{"meta":false}
+a: 1	{"a":1}	

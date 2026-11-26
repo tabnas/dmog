@@ -1,0 +1,9 @@
+input	expected	opts
+<not-a-feed/>	ERROR:unrecognized root
+<html><body/></html>	ERROR:unrecognized root element "html"
+<kml xmlns="http://www.opengis.net/kml/2.2"/>	ERROR:unrecognized root element "kml"
+<Channel xmlns="http://purl.org/net/rss1.1#"/>	ERROR:unrecognized root element "Channel"
+<opml version="2.0"><body/></opml>	ERROR:unrecognized root element "opml"
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/"/>	ERROR:unrecognized root element "OpenSearchDescription"
+<FEED/>	ERROR:unrecognized root element "FEED"
+<entry xmlns="http://www.w3.org/2005/Atom"><title>x</title></entry>	ERROR:unrecognized root element "entry"

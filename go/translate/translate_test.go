@@ -22,7 +22,7 @@ package translate_test
 // failure. The grammar notations share a schema, a grammar's rules in
 // source order (grammar-rules), so each writes the others' documents.
 //
-// The corpora are the sibling checkouts': transduce's fixtures (aless's: a
+// The corpora are the vendored test files' (test/fixtures): transduce's fixtures (aless's: a
 // document of every format but C, CSS, expressions, PGN, proto, Semantic
 // Versioning and the grammar notations, and more for YAML and ZON), the
 // documents of JSONTestSuite every JSON parser must accept (jsonc's
@@ -61,11 +61,17 @@ import (
 	tt "github.com/tabnas/transduce/go"
 )
 
-// siblings is the directory the sibling checkouts are in: the repository
-// root's parent.
-func siblings(t testing.TB) string {
+// vendored is the directory the test files vendored from other tabnas
+// repositories are in, each at its path there: test/fixtures, which
+// tools/vendor-fixtures.sh writes, or DMOG_FIXTURES, which the gates set
+// to the directory of the sibling checkouts when they run against them
+// (DMOG_SIBLINGS=1).
+func vendored(t testing.TB) string {
 	t.Helper()
-	dir, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if dir := os.Getenv("DMOG_FIXTURES"); dir != "" {
+		return dir
+	}
+	dir, err := filepath.Abs(filepath.Join("..", "..", "test", "fixtures"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,11 +165,11 @@ func corpus(t testing.TB) []document {
 	t.Helper()
 	var docs []document
 	corpora := []struct{ corpus, dir, prefix, only string }{
-		{"transduce", filepath.Join(siblings(t), "transduce", "rs", "tests", "fixtures"), "", ""},
-		{"JSONTestSuite", filepath.Join(siblings(t), "jsonc", "test", "JSONTestSuite", "test_parsing"), "y_", ""},
+		{"transduce", filepath.Join(vendored(t), "transduce", "rs", "tests", "fixtures"), "", ""},
+		{"JSONTestSuite", filepath.Join(vendored(t), "jsonc", "test", "JSONTestSuite", "test_parsing"), "y_", ""},
 	}
 	for _, n := range notationExamples {
-		corpora = append(corpora, struct{ corpus, dir, prefix, only string }{n.id, filepath.Join(siblings(t), n.dir), "", n.id})
+		corpora = append(corpora, struct{ corpus, dir, prefix, only string }{n.id, filepath.Join(vendored(t), n.dir), "", n.id})
 	}
 	for _, c := range corpora {
 		entries, err := os.ReadDir(c.dir)

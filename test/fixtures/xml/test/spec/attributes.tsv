@@ -1,0 +1,18 @@
+# name	input	expected	opts
+# Attribute handling: double quotes, single quotes, entities, spacing,
+# mixed names. See basic.tsv for the spec header / escape rules.
+
+attr-one	<a x="1"/>	{"name":"a","localName":"a","attributes":{"x":"1"},"children":[]}
+attr-two	<a x="1" y="2"/>	{"name":"a","localName":"a","attributes":{"x":"1","y":"2"},"children":[]}
+attr-with-text	<a x="hello world">text</a>	{"name":"a","localName":"a","attributes":{"x":"hello world"},"children":["text"]}
+attr-single-quote	<a x='value'/>	{"name":"a","localName":"a","attributes":{"x":"value"},"children":[]}
+attr-single-quote-with-dq	<a x='says "hi"'/>	{"name":"a","localName":"a","attributes":{"x":"says \"hi\""},"children":[]}
+attr-extra-spaces	<a  x = "1"   y="2" />	{"name":"a","localName":"a","attributes":{"x":"1","y":"2"},"children":[]}
+attr-newlines	<a\n  x="1"\n  y="2"\n/>	{"name":"a","localName":"a","attributes":{"x":"1","y":"2"},"children":[]}
+attr-name-dash	<a data-x="1"/>	{"name":"a","localName":"a","attributes":{"data-x":"1"},"children":[]}
+attr-name-dot	<a v.2="ok"/>	{"name":"a","localName":"a","attributes":{"v.2":"ok"},"children":[]}
+attr-empty-value	<a x=""/>	{"name":"a","localName":"a","attributes":{"x":""},"children":[]}
+attr-mixed-quotes	<a x="1" y='2'/>	{"name":"a","localName":"a","attributes":{"x":"1","y":"2"},"children":[]}
+attr-tab-normalised	<a x="line1\tline2"/>	{"name":"a","localName":"a","attributes":{"x":"line1 line2"},"children":[]}
+attr-newline-normalised	<a x="line1\nline2"/>	{"name":"a","localName":"a","attributes":{"x":"line1 line2"},"children":[]}
+attr-crlf-normalised	<a x="line1\r\nline2"/>	{"name":"a","localName":"a","attributes":{"x":"line1 line2"},"children":[]}

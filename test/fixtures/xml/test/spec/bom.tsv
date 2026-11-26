@@ -1,0 +1,22 @@
+# name	input	expected	opts	msg
+# -----------------------------------------------------------------------------
+# Byte-order marks. A BOM is an encoding signature, not document content:
+# XML 1.0 Appendix F / §4.3.3 requires it to be stripped before parsing.
+# The plugin drops a leading U+FEFF (written here as \uFEFF; in a UTF-8
+# file that IS the EF BB BF byte sequence, which is what the Go runtime
+# sees) and then parses the document that follows.
+#
+# Regression: the matcher used to advance past the BOM and then return
+# "no match", which in pure-XML mode left no other matcher to take over,
+# so the very next character was reported as
+#   [jsonic/unexpected]: unexpected character(s): <
+# -----------------------------------------------------------------------------
+
+bom-then-xml-declaration	\uFEFF<?xml version="1.0"?><a/>	{"name":"a","localName":"a","attributes":{},"children":[]}
+bom-then-element	\uFEFF<a>hello</a>	{"name":"a","localName":"a","attributes":{},"children":["hello"]}
+bom-then-comment-then-element	\uFEFF<!-- c --><a/>	{"name":"a","localName":"a","attributes":{},"children":[]}
+bom-then-doctype	\uFEFF<!DOCTYPE a [<!ENTITY x "y">]><a>&x;</a>	{"name":"a","localName":"a","attributes":{},"children":["y"]}
+bom-only-is-empty-document	\uFEFF	ERROR
+no-bom-unaffected	<a/>	{"name":"a","localName":"a","attributes":{},"children":[]}
+bom-char-inside-content-is-text	<a>\uFEFFx</a>	{"name":"a","localName":"a","attributes":{},"children":["\uFEFFx"]}
+bom-char-after-root-open-is-text	<a>x\uFEFF</a>	{"name":"a","localName":"a","attributes":{},"children":["x\uFEFF"]}

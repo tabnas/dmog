@@ -1,0 +1,69 @@
+input	expected	opts
+{	ERROR:unexpected
+[	ERROR:unexpected
+{"a":1	ERROR:unexpected
+[1	ERROR:unexpected
+"abc	ERROR:unterminated_string
+{"a"}	ERROR:unexpected
+{"a":1,}	ERROR:unexpected
+{,}	ERROR:unexpected
+{"a":1 "b":2}	ERROR:unexpected
+[1,]	ERROR:unexpected
+[1 2]	ERROR:unexpected
+'single'	ERROR:unexpected
+{a:1}	ERROR:unexpected
+[1,2,]	ERROR:unexpected
+1 // note	ERROR:unexpected
+a:1,b:2	ERROR:unexpected
+x,y,z	ERROR:unexpected
+1,2	ERROR:unexpected
+0x10	ERROR:unexpected
+.5	ERROR:unexpected
++1	ERROR:unexpected
+True	ERROR:unexpected
+tru	ERROR:unexpected
+nul	ERROR:unexpected
+1.	ERROR:unexpected
+1e	ERROR:unexpected
+-	ERROR:unexpected
+"\\q"	ERROR:unexpected
+"a\\zb"	ERROR:unexpected
+"\\v"	ERROR:unexpected
+"\\x41"	ERROR:unexpected
+"\\`"	ERROR:unexpected
+"\\u{41}"	ERROR:invalid_unicode
+"\\uZ"	ERROR:invalid_unicode
+"\\uZZZZ"	ERROR:invalid_unicode
+01	ERROR:unexpected
+00	ERROR:unexpected
+123abc	ERROR:unexpected
+[1,2]x	ERROR:unexpected
+nullnull	ERROR:unexpected
+# Trailing content after a complete top-level value. RFC 8259 permits
+# exactly one value per text, and accepting these means silently DISCARDING
+# the remainder — data loss, not mere laxness ("a" "b" would parse as "a").
+# Six are distilled from nst/JSONTestSuite n_ cases (array_with_extra_array_
+# close, object_followed_by_closing_object, array_extra_close, array_comma_
+# after_close, close_unopened_array, object_with_trailing_garbage); the rest
+# are the same defect reduced. Both runtimes reject all of them today, and
+# these rows keep it that way without needing the fetched corpus.
+[1]]	ERROR:unexpected
+{}}	ERROR:unexpected
+["x"]]	ERROR:unexpected
+[""],	ERROR:unexpected
+1]	ERROR:unexpected
+{"a": true} "x"	ERROR:unexpected
+[]]	ERROR:unexpected
+1,	ERROR:unexpected
+"a" "b"	ERROR:unexpected
+null null	ERROR:unexpected
+[1] 2	ERROR:unexpected
+# A raw control character inside a string, which RFC 8259 forbids: the
+# escaped forms are the JSON way to write one. This is the fourth shared
+# code, and the only one no row pinned until now, so each runtime's
+# agreement on it rested on a separate in-language assertion.
+"a\tb"	ERROR:unprintable
+"a\nb"	ERROR:unprintable
+"a\rb"	ERROR:unprintable
+["x\ty"]	ERROR:unprintable
+{"k":"v\nw"}	ERROR:unprintable

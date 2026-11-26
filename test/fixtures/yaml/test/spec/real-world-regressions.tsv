@@ -1,0 +1,18 @@
+input	expected	opts
+value:\n  id: 12,\n  public_repo: false,\n  title: Intro\n	{"value":{"id":"12,","public_repo":"false,","title":"Intro"}}
+paths:\n  ? "/api/foo"\n  : get:\n      summary: get foo\n    put:\n      summary: put foo\n	{"paths":{"/api/foo":{"get":{"summary":"get foo"},"put":{"summary":"put foo"}}}}
+paths:\n  /a:\n    get:\n      description: "See [Codat's docs](https://example.com/x) for more info."\n      tags:\n        - api\n	{"paths":{"/a":{"get":{"description":"See [Codat's docs](https://example.com/x) for more info.","tags":["api"]}}}}
+a: 1,2,3	{"a":"1,2,3"}
+a: 1, 2	{"a":"1, 2"}
+a: 12, hexadecimal.	{"a":"12, hexadecimal."}
+parameters:\n- name: tag_ids\n  in: query\n  example: 1,2,3\n  schema:\n    type: array\n	{"parameters":[{"name":"tag_ids","in":"query","example":"1,2,3","schema":{"type":"array"}}]}
+---\n  swagger: "2.0"\n  info: \n    version: "1.0.0"\n    title: "Swagger Petstore"\n  paths: {}\n	{"swagger":"2.0","info":{"version":"1.0.0","title":"Swagger Petstore"},"paths":{}}	
+paths:\n            127.0.0.1:5000:\n              Name: "[2001:db8:a0b:12f0::1]:80"\n	{"paths":{"127.0.0.1:5000":{"Name":"[2001:db8:a0b:12f0::1]:80"}}}	
+info:\n                      22:33:44:55:66:77:\n                        ip: 1.2.3.4\n	{"info":{"22:33:44:55:66:77":{"ip":"1.2.3.4"}}}	
+properties:\n  limit:\n    type: string\n    example: .042 mg/L\n	{"properties":{"limit":{"type":"string","example":".042 mg/L"}}}	
+tags:\n- name: a\n  description:\n- name: b\n  description: x\nrequired:\n- id\n-\n- name\n	{"tags":[{"name":"a","description":null},{"name":"b","description":"x"}],"required":["id",null,"name"]}	
+example:\n  id:\n    3164444\n  name:\n    example.com\n  enabled:\n    true\n	{"example":{"id":3164444,"name":"example.com","enabled":true}}	
+description: >+\n  The first line\n   \nsummary: next\n	{"description":"The first line\n \n","summary":"next"}	
+enum:\n- - a\n  - b\n- - c\ntype: array\n	{"enum":[["a","b"],["c"]],"type":"array"}	
+enum:\n  - yes\n  - no\n  - on\n  - off\nrequired: [on, off]\n	{"enum":["yes","no","on","off"],"required":["on","off"]}	{"schema":"core"}
+maximum: 1_000\npattern: 0b11\ndefault: 12\n	{"maximum":"1_000","pattern":"0b11","default":12}	{"schema":"core"}

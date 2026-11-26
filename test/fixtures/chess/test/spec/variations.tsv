@@ -1,0 +1,28 @@
+input	expected	opts
+# Recursive annotation variations, PGN spec 8.2.5. A variation is an
+# alternative to the move it follows, so it starts on that move's number
+# and side — and, being recursive, it is the same shape as a game's own
+# line of play.
+1. e4 (1. d4)	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","variations":[{"moves":[{"san":"d4","piece":"P","to":"d4","number":1,"side":"w"}]}]}]}	{"start":"movetext"}
+1. e4 e5 (1... c5)	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b","variations":[{"moves":[{"san":"c5","piece":"P","to":"c5","number":1,"side":"b"}]}]}]}	{"start":"movetext"}
+# The number and side carry on inside the variation.
+1. e4 e5 (1... c5 2. Nf3 d6)	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b","variations":[{"moves":[{"san":"c5","piece":"P","to":"c5","number":1,"side":"b"},{"san":"Nf3","piece":"N","to":"f3","number":2,"side":"w"},{"san":"d6","piece":"P","to":"d6","number":2,"side":"b"}]}]}]}	{"start":"movetext"}
+# A variation needs no move number of its own; the count is inherited.
+1. e4 e5 (c5 Nf3)	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"},{"san":"e5","piece":"P","to":"e5","number":1,"side":"b","variations":[{"moves":[{"san":"c5","piece":"P","to":"c5","number":1,"side":"b"},{"san":"Nf3","piece":"N","to":"f3","number":2,"side":"w"}]}]}]}	{"start":"movetext"}
+# One move may carry several alternatives.
+1. e4 (1. d4) (1. c4)	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","variations":[{"moves":[{"san":"d4","piece":"P","to":"d4","number":1,"side":"w"}]},{"moves":[{"san":"c4","piece":"P","to":"c4","number":1,"side":"w"}]}]}]}	{"start":"movetext"}
+# 8.2.5: the construct is recursive, so variations nest.
+1. e4 (1. d4 d5 (1... Nf6))	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","variations":[{"moves":[{"san":"d4","piece":"P","to":"d4","number":1,"side":"w"},{"san":"d5","piece":"P","to":"d5","number":1,"side":"b","variations":[{"moves":[{"san":"Nf6","piece":"N","to":"f6","number":1,"side":"b"}]}]}]}]}]}	{"start":"movetext"}
+# Annotations inside a variation behave exactly as they do outside it.
+1. e4 (1. d4 {solid} $14)	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","variations":[{"moves":[{"san":"d4","piece":"P","to":"d4","number":1,"side":"w","comments":[{"kind":"brace","text":"solid"}],"nags":[14]}]}]}]}	{"start":"movetext"}
+# A comment-only variation keeps its comment and has no moves.
+1. e4 ({just a note})	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w","variations":[{"moves":[],"comments":[{"kind":"brace","text":"just a note"}]}]}]}	{"start":"movetext"}
+# A variation before any move has no move to replace, so it annotates the
+# line's starting position.
+(1. d4) 1. e4	{"moves":[{"san":"e4","piece":"P","to":"e4","number":1,"side":"w"}],"variations":[{"moves":[{"san":"d4","piece":"P","to":"d4","number":1,"side":"w"}]}]}	{"start":"movetext"}
+# --- rejections ---
+# 8.2.5: a variation holds one or more moves, so `()` is not one.
+1. e4 ()	ERROR	{"start":"movetext"}
+1. e4 (1. d4	ERROR	{"start":"movetext"}
+1. e4 1. d4)	ERROR	{"start":"movetext"}
+1. e4 (1. d4))	ERROR	{"start":"movetext"}

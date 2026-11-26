@@ -1,0 +1,37 @@
+input	expected
+# The host grammar's value `@` not declared: `juxtapose: false` refuses
+# jsonic's values side by side, and not `@`, which an implicit list takes
+# in some places. The ternary has its binding power.
+# The table of these files, the small C of tabnas/c: `comma` `,` infix
+# (left 1000000, right 1100000), a separator; `assign` `=` infix (left
+# 1500000, right 1400000); `tern` `?` `:`, a ternary; `deref` `*` prefix
+# (right 4000000); `post_inc` `++` suffix (left 5000000); `dot` `.` infix
+# (left 5000000, right 5100000); `paren` `(` `)`, a group whose content is
+# required; `call` `(` `)`, preval active, left 5000000, its content
+# separated; `subscript` `[` `]`, preval required, left 5000000; `cast` on
+# `(` `)`, right 4000000, accepting `int`, `long` and `char`; and the
+# defaults. `juxtapose` is false. `@` is a value of the host grammar, a
+# token of its own (`#AT`). The evaluator writes each operation as
+# [op.name, ...terms].
+@	"@"
+@ + 1	["addition-infix","@",1]
+1 + @	["addition-infix",1,"@"]
+f(@)	["call-paren","f","@"]
+f(@, @)	["call-paren","f","@","@"]
+[@, @]	["@","@"]
+{x: @, y: @}	{"x":"@","y":"@"}
+x: @	{"x":"@"}
+@ @	["@","@"]
+1 + @ @	ERROR:unexpected
+(@ @)	ERROR:unexpected
+f(@ @)	ERROR:unexpected
+@++ @	ERROR:unexpected
+-@ @	ERROR:unexpected
+(@) @	ERROR:unexpected
+a ? @ : @	["tern-ternary","a","@","@"]
+a ? @ @ : c	ERROR:unexpected
+[@ @]	["@","@"]
+{x: @ y: @}	{"x":"@","y":"@"}
+@ 1	["@",1]
+1 @	[1,"@"]
+x = @ @	ERROR:unexpected

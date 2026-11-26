@@ -1,0 +1,6 @@
+input	expected
+[a	ERROR:unterminated_section
+[a\nb=1	ERROR:unterminated_section
+[a]\nx=1\n[b\ny=2	ERROR:unterminated_section
+[a\n[b]\nx=1	ERROR:unterminated_section
+[a.b\nx=1	ERROR:unterminated_section

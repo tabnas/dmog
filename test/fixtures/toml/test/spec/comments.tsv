@@ -1,0 +1,6 @@
+input	expected
+# just a comment	{}
+# c1\n# c2\na = 1	{"a":1}
+a = 1 # inline	{"a":1}
+a = 1\n# after\nb = 2	{"a":1,"b":2}
+# before\na = 1	{"a":1}

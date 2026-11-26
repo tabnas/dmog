@@ -1,0 +1,4 @@
+input	expected
+a = hello\; world	{"a":"hello; world"}
+a = hello\# world	{"a":"hello# world"}
+a = x\;y ; comment	{"a":"x;y"}

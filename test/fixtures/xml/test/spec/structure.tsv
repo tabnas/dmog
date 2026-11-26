@@ -1,0 +1,21 @@
+# name	input	expected	opts
+# Prolog constructs: XML declaration, DOCTYPE, processing instructions,
+# comments, CDATA sections. Comments, PIs and DOCTYPE are dropped by the
+# parser. CDATA is preserved as a verbatim text node (no entity decoding).
+
+comment-before	<!-- hi --><a/>	{"name":"a","localName":"a","attributes":{},"children":[]}
+comment-in-element	<a><!-- c -->hello</a>	{"name":"a","localName":"a","attributes":{},"children":["hello"]}
+comment-around-child	<a><!-- c1 --><b/><!-- c2 --></a>	{"name":"a","localName":"a","attributes":{},"children":[{"name":"b","localName":"b","attributes":{},"children":[]}]}
+pi-xml-decl	<?xml version="1.0" encoding="UTF-8"?><a/>	{"name":"a","localName":"a","attributes":{},"children":[]}
+pi-xml-stylesheet	<?xml-stylesheet href="s.xsl"?><root/>	{"name":"root","localName":"root","attributes":{},"children":[]}
+doctype-simple	<!DOCTYPE html><html/>	{"name":"html","localName":"html","attributes":{},"children":[]}
+doctype-system	<!DOCTYPE note SYSTEM "Note.dtd"><note><body>hi</body></note>	{"name":"note","localName":"note","attributes":{},"children":[{"name":"body","localName":"body","attributes":{},"children":["hi"]}]}
+doctype-internal-subset	<!DOCTYPE a [<!ENTITY x "y">]><a/>	{"name":"a","localName":"a","attributes":{},"children":[]}
+cdata-basic	<a><![CDATA[<not a tag> & raw text]]></a>	{"name":"a","localName":"a","attributes":{},"children":["<not a tag> & raw text"]}
+cdata-with-newlines	<a><![CDATA[line1\nline2]]></a>	{"name":"a","localName":"a","attributes":{},"children":["line1\nline2"]}
+cdata-no-entity-decode	<a><![CDATA[&amp;]]></a>	{"name":"a","localName":"a","attributes":{},"children":["&amp;"]}
+doctype-subset-comment-apostrophe	<!DOCTYPE doc [<!ELEMENT doc ANY><!--XML doesn't say whether this is a choice-->]><doc/>	{"name":"doc","localName":"doc","attributes":{},"children":[]}
+doctype-subset-comment-gt	<!DOCTYPE doc [<!--a > b--><!ENTITY x "y">]><doc>&x;</doc>	{"name":"doc","localName":"doc","attributes":{},"children":["y"]}
+doctype-subset-pi	<!DOCTYPE doc [<?target it's > here?><!ENTITY x "y">]><doc>&x;</doc>	{"name":"doc","localName":"doc","attributes":{},"children":["y"]}
+ws-only-before-root	  \n<a/>	{"name":"a","localName":"a","attributes":{},"children":[]}
+ws-only-after-root	<a/>  \n	{"name":"a","localName":"a","attributes":{},"children":[]}

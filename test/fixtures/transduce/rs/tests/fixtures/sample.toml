@@ -1,0 +1,4 @@
+title = "toml sample"
+[owner]
+name = "ada"
+age = 36

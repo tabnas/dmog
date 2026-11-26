@@ -75,24 +75,32 @@ pub fn repo_root() -> PathBuf {
         .to_path_buf()
 }
 
-/// The alchemy checkout beside this repository, which `rs/Cargo.toml`
-/// already takes the crate from by path: the tests read its shared
-/// fixtures. A missing checkout fails, naming where it was looked for.
+/// alchemy's test files, vendored into `test/fixtures/alchemy` by
+/// `tools/vendor-fixtures.sh`; the other repositories' are beside it, each
+/// under its own name. Missing files fail, naming where they were looked
+/// for.
 pub fn alchemy_root() -> PathBuf {
-    let root = repo_root()
-        .parent()
-        .expect("the repository has a parent")
-        .join("alchemy");
+    let root = vendored().join("alchemy");
     assert!(
         root.join("test/spec").is_dir(),
-        "no alchemy checkout with test/spec at {}: clone https://github.com/tabnas/alchemy \
-         as a sibling of this repository",
+        "no vendored alchemy test/spec at {}: run tools/vendor-fixtures.sh",
         root.display()
     );
     root
 }
 
-/// alchemy's shared `test/spec` directory, in the sibling checkout.
+/// The test files vendored from other tabnas repositories, each at its
+/// path there: `test/fixtures`, or `DMOG_FIXTURES`, which the gates set to
+/// the directory of the sibling checkouts when they run against them
+/// (`DMOG_SIBLINGS=1`).
+pub fn vendored() -> PathBuf {
+    match std::env::var_os("DMOG_FIXTURES") {
+        Some(dir) if !dir.is_empty() => PathBuf::from(dir),
+        _ => repo_root().join("test/fixtures"),
+    }
+}
+
+/// alchemy's shared `test/spec` directory, vendored.
 pub fn spec_dir() -> PathBuf {
     alchemy_root().join("test/spec")
 }

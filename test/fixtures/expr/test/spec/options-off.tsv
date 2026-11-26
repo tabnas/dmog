@@ -1,0 +1,34 @@
+input	expected
+# Every option of #105 off: the behaviour each option changes, as it is
+# without it.
+# The table every options-*.tsv file shares, a small C: the defaults;
+# `comma` `,` infix (left 1000000, right 1100000); `deref` `*` prefix
+# (right 4000000); `post_inc` `++` suffix (left 5000000); `dot` `.` infix
+# (left 5000000, right 5100000); `paren` `(` `)`, a group; `call` `(`
+# `)`, preval active; `subscript` `[` `]`, preval required. The runner's
+# evaluator writes each operation as [op.name, ...terms].
+# Option 3 off: a preval paren binds to the value just before it.
+a.b[1]	["dot-infix","a",["subscript-paren","b",1]]
+a.b(1)	["dot-infix","a",["call-paren","b",1]]
+a[1].b	["dot-infix",["subscript-paren","a",1],"b"]
+-a[1]	["negative-prefix",["subscript-paren","a",1]]
+# Option 4 off: a group and a call, no cast.
+(int)a + b	[["paren-paren","int"],["addition-infix","a","b"]]
+(long)(int)a	[["call-paren",["paren-paren","long"],"int"],"a"]
+(a)(b)	["call-paren",["paren-paren","a"],"b"]
+# Option 5 off: the comma operator applies wherever a comma is.
+f(a, b)	["call-paren","f",["comma-infix","a","b"]]
+# An empty operand of the comma operator is null to the evaluator.
+f(,a)	["call-paren","f",["comma-infix",null,"a"]]
+(,a)	["paren-paren",["comma-infix",null,"a"]]
+(a, b)	["paren-paren",["comma-infix","a","b"]]
+[-1, 2]	[["comma-infix",["negative-prefix",1],2]]
+{x: 1, y: 2}	{"x":["comma-infix",1,{"y":2}]}
+# Option 6 off: values side by side make an implicit list.
+f(a b)	["call-paren","f",["a","b"]]
+(a b)	["paren-paren",["a","b"]]
+1+2 3	[["addition-infix",1,2],3]
+-a b	[["negative-prefix","a"],"b"]
+# Option 7 off: a group may be empty.
+()	["paren-paren"]
+f()	["call-paren","f"]

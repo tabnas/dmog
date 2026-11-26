@@ -1,0 +1,77 @@
+grammar	expected
+# Each row is a grammar and its tree, member order included: see test/AGENTS.md.
+# GBNF starts from the rule named root wherever the text defines it, so every tree's start is root, before its rules.
+# The empty grammar, and one of comments alone, hold no rules.
+	{"type":"grammar","start":"root","rules":[]}
+ # a comment\n	{"type":"grammar","start":"root","rules":[]}
+# Rules in source order, a second definition of a name kept, and names as llama.cpp spells them.
+root ::= a	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a"}]]}]}
+root ::= a\nb ::= c\n	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a"}]]},{"type":"rule","name":"b","alternatives":[[{"type":"reference","name":"c"}]]}]}
+a ::= "x"\na ::= "y"	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"a","alternatives":[[{"type":"literal","text":"x","caseSensitive":true}]]},{"type":"rule","name":"a","alternatives":[[{"type":"literal","text":"y","caseSensitive":true}]]}]}
+rule-1 ::= x_2\n9a ::= -b	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"rule-1","alternatives":[[{"type":"reference","name":"x_2"}]]},{"type":"rule","name":"9a","alternatives":[[{"type":"reference","name":"-b"}]]}]}
+root ::= a\n\n# between\nb ::= "x" # trailing\n	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a"}]]},{"type":"rule","name":"b","alternatives":[[{"type":"literal","text":"x","caseSensitive":true}]]}]}
+# Alternatives, an empty one included, and a rule over lines.
+root ::= a | b | c	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a"}],[{"type":"reference","name":"b"}],[{"type":"reference","name":"c"}]]}]}
+ws ::= | " " | "\\n"	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"ws","alternatives":[[],[{"type":"literal","text":" ","caseSensitive":true}],[{"type":"literal","text":"\n","caseSensitive":true}]]}]}
+x ::=	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"x","alternatives":[[]]}]}
+x ::= |	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"x","alternatives":[[],[]]}]}
+root ::= a\n  b\n  | c\n	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a"},{"type":"reference","name":"b"}],[{"type":"reference","name":"c"}]]}]}
+# A string's text is the characters its escapes name, the empty string included.
+root ::= "ab"	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"literal","text":"ab","caseSensitive":true}]]}]}
+root ::= ""	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"literal","text":"","caseSensitive":true}]]}]}
+root ::= "\\t\\r\\n\\\\\\"\\[\\]\\-"	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"literal","text":"\t\r\n\\\"[]-","caseSensitive":true}]]}]}
+root ::= "\\x41\\u00e9\\U0001F600"	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"literal","text":"Aé😀","caseSensitive":true}]]}]}
+root ::= "\\uD83D\\uDE00"	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"literal","text":"😀","caseSensitive":true}]]}]}
+root ::= "é😀#"	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"literal","text":"é😀#","caseSensitive":true}]]}]}
+# A class's members are code points: a range, a character, a hyphen at either end, and the two halves of a pair, each a member.
+root ::= [a-z]	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"class","negated":false,"members":[{"from":97,"to":122}]}]]}]}
+root ::= [^"\\\\]	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"class","negated":true,"members":[{"from":34,"to":34},{"from":92,"to":92}]}]]}]}
+root ::= [-+*/]	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"class","negated":false,"members":[{"from":45,"to":45},{"from":43,"to":43},{"from":42,"to":42},{"from":47,"to":47}]}]]}]}
+root ::= [a-]	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"class","negated":false,"members":[{"from":97,"to":97},{"from":45,"to":45}]}]]}]}
+root ::= [\\x00-\\x1F]	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"class","negated":false,"members":[{"from":0,"to":31}]}]]}]}
+root ::= [\\uD83D\\uDE00]	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"class","negated":false,"members":[{"from":55357,"to":55357},{"from":56832,"to":56832}]}]]}]}
+root ::= [\\[\\]#]	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"class","negated":false,"members":[{"from":91,"to":91},{"from":93,"to":93},{"from":35,"to":35}]}]]}]}
+root ::= [\\uD800]	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"class","negated":false,"members":[{"from":55296,"to":55296}]}]]}]}
+# Any character, and tokenizer terminals, negated or not.
+root ::= .	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"any"}]]}]}
+root ::= <think>	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"token","negated":false,"text":"think"}]]}]}
+root ::= !<[1000]>	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"token","negated":true,"text":"[1000]"}]]}]}
+root ::= <|end|>	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"token","negated":false,"text":"|end|"}]]}]}
+# Groups, nested and empty, and a group repeated.
+root ::= (a | b) c	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"group","alternatives":[[{"type":"reference","name":"a"}],[{"type":"reference","name":"b"}]]},{"type":"reference","name":"c"}]]}]}
+root ::= ((a))	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"group","alternatives":[[{"type":"group","alternatives":[[{"type":"reference","name":"a"}]]}]]}]]}]}
+root ::= (a b)*	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"group","alternatives":[[{"type":"reference","name":"a"},{"type":"reference","name":"b"}]],"repeat":[{"min":0}]}]]}]}
+root ::= ()	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"group","alternatives":[[]]}]]}]}
+# Repetitions, the innermost first, with GBNF's spacing, a count's leading zeros and the largest count the tree holds.
+root ::= a*	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a","repeat":[{"min":0}]}]]}]}
+root ::= a+	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a","repeat":[{"min":1}]}]]}]}
+root ::= a?	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a","repeat":[{"min":0,"max":1}]}]]}]}
+root ::= a{3}	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a","repeat":[{"min":3,"max":3}]}]]}]}
+root ::= a{2,}	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a","repeat":[{"min":2}]}]]}]}
+root ::= a{2,5}	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a","repeat":[{"min":2,"max":5}]}]]}]}
+root ::= a{0,0}	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a","repeat":[{"min":0,"max":0}]}]]}]}
+root ::= a{ 2 , 5 }	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a","repeat":[{"min":2,"max":5}]}]]}]}
+root ::= a*?	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a","repeat":[{"min":0},{"min":0,"max":1}]}]]}]}
+root ::= a{2}+ b* ?	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a","repeat":[{"min":2,"max":2},{"min":1}]},{"type":"reference","name":"b","repeat":[{"min":0},{"min":0,"max":1}]}]]}]}
+root ::= a{007}	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a","repeat":[{"min":7,"max":7}]}]]}]}
+root ::= a{9007199254740991}	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"reference","name":"a","repeat":[{"min":9007199254740991,"max":9007199254740991}]}]]}]}
+root ::= "x"* [a]+ .? <t>{2} (b){1,}	{"type":"grammar","start":"root","rules":[{"type":"rule","name":"root","alternatives":[[{"type":"literal","text":"x","caseSensitive":true,"repeat":[{"min":0}]},{"type":"class","negated":false,"members":[{"from":97,"to":97}],"repeat":[{"min":1}]},{"type":"any","repeat":[{"min":0,"max":1}]},{"type":"token","negated":false,"text":"t","repeat":[{"min":2,"max":2}]},{"type":"group","alternatives":[[{"type":"reference","name":"b"}]],"repeat":[{"min":1}]}]]}]}
+# What the tree cannot hold is refused, each with its code: half of a surrogate pair alone in a string names no character.
+root ::= "\\uD800"	ERROR:gbnf_escape
+root ::= "\\uDE00\\uD83D"	ERROR:gbnf_escape
+root ::= "\\q"	ERROR:gbnf_escape
+root ::= "\\x4"	ERROR:gbnf_escape
+root ::= "\\U00110000"	ERROR:gbnf_escape
+root ::= [\\q]	ERROR:gbnf_escape
+root ::= [z-a]	ERROR:gbnf_class_range
+root ::= []	ERROR:gbnf_empty_class
+root ::= [^]	ERROR:gbnf_empty_class
+root ::= a{5,2}	ERROR:gbnf_reversed_repetition
+root ::= a{9007199254740992}	ERROR:gbnf_count
+root ::= a{1,9007199254740992}	ERROR:gbnf_count
+root ::= ( a	ERROR:gbnf_unclosed
+root ::= ( ( a )	ERROR:gbnf_unclosed
+# What the meta-grammar refuses is the engine's.
+root ::= )	ERROR:unexpected
+::= a	ERROR:unexpected
+root ::= a b ::= ::=	ERROR:unexpected

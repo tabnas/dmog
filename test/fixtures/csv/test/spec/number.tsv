@@ -1,0 +1,22 @@
+input	expected	opts
+a\n1	[{"a":"1"}]
+a\n1e2	[{"a":"1e2"}]
+a\n1	[{"a":1}]	{"number":true}
+a\n1e2	[{"a":100}]	{"number":true}
+a\n1	[{"a":1}]	{"strict":false}
+a\n1e2	[{"a":100}]	{"strict":false}
+# A header cell is a value too, and its NAME is what JavaScript names it
+# when the value is used as an object key. These pin ECMAScript
+# Number::toString at the boundaries the language switches form.
+-0\nx	[{"0":"x"}]	{"number":true}
+0\nx	[{"0":"x"}]	{"number":true}
+1\nx	[{"1":"x"}]	{"number":true}
+1e2\nx	[{"100":"x"}]	{"number":true}
+-1.5\nx	[{"-1.5":"x"}]	{"number":true}
+1e20\nx	[{"100000000000000000000":"x"}]	{"number":true}
+1e21\nx	[{"1e+21":"x"}]	{"number":true}
+1e22\nx	[{"1e+22":"x"}]	{"number":true}
+0.000001\nx	[{"0.000001":"x"}]	{"number":true}
+1e-7\nx	[{"1e-7":"x"}]	{"number":true}
+1.5e-7\nx	[{"1.5e-7":"x"}]	{"number":true}
+123456789012345680000\nx	[{"123456789012345680000":"x"}]	{"number":true}

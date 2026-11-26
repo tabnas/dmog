@@ -1,0 +1,14 @@
+input	expected	opts
+Hello *world*	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"Hello "},{"type":"emphasis","children":[{"type":"text","value":"world"}]}]}]}
+Hello **world**	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"Hello "},{"type":"strong","children":[{"type":"text","value":"world"}]}]}]}
+`code`	{"type":"document","children":[{"type":"paragraph","children":[{"type":"inlineCode","value":"code"}]}]}
+foo_bar_baz	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"foo_bar_baz"}]}]}
+Text with \\*escaped\\* stars	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"Text with *escaped* stars"}]}]}
+[link](https://example.com)	{"type":"document","children":[{"type":"paragraph","children":[{"type":"link","url":"https://example.com","title":null,"children":[{"type":"text","value":"link"}]}]}]}
+![alt](https://example.com/img.png)	{"type":"document","children":[{"type":"paragraph","children":[{"type":"image","url":"https://example.com/img.png","title":null,"alt":"alt"}]}]}
+<https://example.com>	{"type":"document","children":[{"type":"paragraph","children":[{"type":"link","url":"https://example.com","title":null,"children":[{"type":"text","value":"https://example.com"}]}]}]}
+~~delete~~	{"type":"document","children":[{"type":"paragraph","children":[{"type":"delete","children":[{"type":"text","value":"delete"}]}]}]}	{"gfm":true}
+~~delete~~	{"type":"document","children":[{"type":"paragraph","children":[{"type":"text","value":"~~delete~~"}]}]}	{"gfm":false}
+[l](/ä)	{"type":"document","children":[{"type":"paragraph","children":[{"type":"link","url":"/ä","title":null,"children":[{"type":"text","value":"l"}]}]}]}
+![i](/ö "t")	{"type":"document","children":[{"type":"paragraph","children":[{"type":"image","url":"/ö","title":"t","alt":"i"}]}]}
+<https://x.com/ä>	{"type":"document","children":[{"type":"paragraph","children":[{"type":"link","url":"https://x.com/ä","title":null,"children":[{"type":"text","value":"https://x.com/ä"}]}]}]}

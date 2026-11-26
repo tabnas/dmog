@@ -1,0 +1,35 @@
+input	expected
+# A comma operator next to separators: `call` has `content: { separated:
+# true }`, so each argument is a term of the call, and `comma` has
+# `separator: true`, so lists and maps separate on `,` too. A group
+# inside a call takes the comma operator again.
+# The table every options-*.tsv file shares, a small C: the defaults;
+# `comma` `,` infix (left 1000000, right 1100000); `deref` `*` prefix
+# (right 4000000); `post_inc` `++` suffix (left 5000000); `dot` `.` infix
+# (left 5000000, right 5100000); `paren` `(` `)`, a group; `call` `(`
+# `)`, preval active; `subscript` `[` `]`, preval required. The runner's
+# evaluator writes each operation as [op.name, ...terms].
+f(a, b)	["call-paren","f","a","b"]
+f(a)	["call-paren","f","a"]
+f()	["call-paren","f"]
+f(a, b, c)	["call-paren","f","a","b","c"]
+f(a+1, b*2)	["call-paren","f",["addition-infix","a",1],["multiplication-infix","b",2]]
+f(-a, b++)	["call-paren","f",["negative-prefix","a"],["post_inc-suffix","b"]]
+f((a, b))	["call-paren","f",["paren-paren",["comma-infix","a","b"]]]
+f(a, (b, c))	["call-paren","f","a",["paren-paren",["comma-infix","b","c"]]]
+f(g(a, b), c)	["call-paren","f",["call-paren","g","a","b"],"c"]
+f(a, b)(c)	["call-paren",["call-paren","f","a","b"],"c"]
+x+f(a, b)	["addition-infix","x",["call-paren","f","a","b"]]
+(a, b)	["paren-paren",["comma-infix","a","b"]]
+a, b	["comma-infix","a","b"]
+[-1, 2]	[["negative-prefix",1],2]
+[a, f(b, c)]	["a",["call-paren","f","b","c"]]
+{x: 1, y: 2}	{"x":1,"y":2}
+{x: f(a, b)}	{"x":["call-paren","f","a","b"]}
+f([a, b], c)	["call-paren","f",["a","b"],"c"]
+# An empty term is refused at the separator after it, and a missing last
+# term at the closer. A null is a term.
+f(,a)	ERROR:unexpected
+f(a,,b)	ERROR:unexpected
+f(a,)	ERROR:unexpected
+f(null, a)	["call-paren","f",null,"a"]

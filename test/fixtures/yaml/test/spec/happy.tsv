@@ -1,0 +1,2 @@
+input	expected	opts
+a: 1\nb: 2\nc:\n  d: 3\n  e: 4\n  f:\n  - g\n  - h\n	{"a":1,"b":2,"c":{"d":3,"e":4,"f":["g","h"]}}

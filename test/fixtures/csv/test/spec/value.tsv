@@ -1,0 +1,7 @@
+input	expected	opts
+a\ntrue	[{"a":"true"}]
+a\nfalse	[{"a":"false"}]
+a\nnull	[{"a":"null"}]
+a\ntrue	[{"a":true}]	{"value":true}
+a\nfalse	[{"a":false}]	{"value":true}
+a\nnull	[{"a":null}]	{"value":true}

@@ -1,0 +1,33 @@
+input	expected	opts
+a,b,c\ntrue,[1,2],{x:{y:"q\\"w"}}\n x , 'y\\'y', "z\\"z"\n	[{"a":true,"b":[1,2],"c":{"x":{"y":"q\"w"}}},{"a":"x","b":"y'y","c":"z\"z"}]	{"strict":false}
+a\n{x:1}y	ERROR:unexpected	{"strict":false}
+1,2,3\n4,5,6\n	[{"1":4,"2":5,"3":6}]	{"strict":false}
+true,null,1.5\np,q,r\n	[{"true":"p","null":"q","1.5":"r"}]	{"strict":false}
+# A COMPOSITE header cell is coerced the way JavaScript coerces it.
+# Array.prototype.toString is join(','): a nested array flattens, an
+# empty array is the empty string, and a null element joins as empty.
+a,[1,2]\nx,y	[{"a":"x","1,2":"y"}]	{"strict":false}
+a,[1,[2,3]]\nx,y	[{"a":"x","1,2,3":"y"}]	{"strict":false}
+a,[]\nx,y	[{"a":"x","":"y"}]	{"strict":false}
+a,[null,1]\nx,y	[{"a":"x",",1":"y"}]	{"strict":false}
+a,[[],[]]\nx,y	[{"a":"x",",":"y"}]	{"strict":false}
+a,[1.5,1e21,1e-7]\nx,y	[{"a":"x","1.5,1e+21,1e-7":"y"}]	{"strict":false}
+# The refusal an object cell provokes reaches only a column name that is
+# actually BUILT. With object:false the canonical never applies
+# ToPropertyKey to a header cell at all, and a header-only document has no
+# record to key, so all three runtimes return a value for these.
+a,{x:1}\nx,y	[["x","y"]]	{"strict":false,"object":false}
+a,{x:1}	[]	{"strict":false}
+a,{x:1}	[]	{"strict":false,"object":false}
+a,{x:1}\n	[]	{"strict":false}
+# header:false takes no name from any cell, so the object is a field VALUE.
+a,{x:1}\nx,y	[{"field~0":"a","field~1":{"x":1}},{"field~0":"x","field~1":"y"}]	{"strict":false,"header":false}
+# field.exact needs only the LENGTH of the header, so it fires, and fires
+# first, on a row whose header holds a cell that can never be named.
+a,{x:1}\nx,y,z	ERROR:csv_extra_field	{"strict":false,"object":false,"field":{"exact":true}}
+a,{x:1}\nx,y,z	ERROR:csv_extra_field	{"strict":false,"field":{"exact":true}}
+a,{x:1}\nx	ERROR:csv_missing_field	{"strict":false,"field":{"exact":true}}
+# The strict-mode CONTRAST, and the one row in this file with strict ON:
+# no field body is parsed, so the same cell is ordinary TEXT, names the
+# column in every runtime, and nothing above is reachable.
+a,{x:1}\nx,y	[{"a":"x","{x:1}":"y"}]	{"strict":true}

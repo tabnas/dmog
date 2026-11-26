@@ -1,0 +1,6 @@
+input	expected
+"key with space" = 1	{"key with space":1}
+'literal key' = 2	{"literal key":2}
+"a.b" = 1	{"a.b":1}
+"" = 1	{"":1}
+"" = "empty"	{"":"empty"}

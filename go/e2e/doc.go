@@ -11,8 +11,8 @@
 //
 // The tests are black-box, through alchemy's exported API, which they
 // import with a dot so that they read as they did inside the package. They
-// read alchemy's fixtures from its checkout beside this one
-// (../alchemy/test/spec) and transduce's from transduce's
-// (../transduce/rs/tests/fixtures); a missing sibling fails the test that
-// needs it, naming the path. The package has no code of its own.
+// read alchemy's fixtures (test/fixtures/alchemy/test/spec) and
+// transduce's (test/fixtures/transduce/rs/tests/fixtures), vendored into
+// this repository by tools/vendor-fixtures.sh; a missing file fails the
+// test that needs it, naming the path. The package has no code of its own.
 package e2e

@@ -1,0 +1,20 @@
+input	expected
+# A ternary inside a paren: a prefix operator before it, and an
+# operator in its middle term. And a ternary's first term, the whole
+# expression before it, where the operator before the ternary binds
+# tighter than the ones before that. The table: `ternary` `?` `:` and the
+# defaults.
+(-a?b:c)	["(",["?",["-","a"],"b","c"]]
+(-a ? -b : -c)	["(",["?",["-","a"],["-","b"],["-","c"]]]
+(a?-b:c)	["(",["?","a",["-","b"],"c"]]
+(a?b+c:d)	["(",["?","a",["+","b","c"],"d"]]
+(a?b:c+d)	["(",["?","a","b",["+","c","d"]]]
+(a?b*c:d)	["(",["?","a",["*","b","c"],"d"]]
+(-a+b?c:d)	["(",["?",["+",["-","a"],"b"],"c","d"]]
+(a ? b : c ? d+1 : e)	["(",["?","a","b",["?","c",["+","d",1],"e"]]]
+[-a?b:c]	[["?",["-","a"],"b","c"]]
+[a?-b:c]	[["?","a",["-","b"],"c"]]
+a+b*c?d:e	["?",["+","a",["*","b","c"]],"d","e"]
+(a+b*c?d:e)	["(",["?",["+","a",["*","b","c"]],"d","e"]]
+[a+b*c?d:e]	[["?",["+","a",["*","b","c"]],"d","e"]]
+a*b+c*d?e:f	["?",["+",["*","a","b"],["*","c","d"]],"e","f"]

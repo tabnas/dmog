@@ -1,0 +1,6 @@
+input	expected
+a=1	{"a":1}
+a = 1	{"a":1}
+a=1\nb=2	{"a":1,"b":2}
+a = true	{"a":true}
+a = "hello"	{"a":"hello"}

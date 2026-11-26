@@ -1,0 +1,73 @@
+input	expected	opts
+a: &ref hello\nb: *ref	{"a":"hello","b":"hello"}
+defaults: &defaults\n  x: 1\n  y: 2\noverride:\n  <<: *defaults\n  y: 3	{"defaults":{"x":1,"y":2},"override":{"y":3,"x":1}}
+a: &items\n  - 1\n  - 2\nb: *items	{"a":[1,2],"b":[1,2]}
+a: &x 10\nb: &y 20\nc: *x\nd: *y	{"a":10,"b":20,"c":10,"d":20}
+a: &n 1_000\nb: *n	{"a":1000,"b":1000}
+- &n 1_000	[1000]
+{a: &n 1_000, b: 2}	{"a":1000,"b":2}
+a: &n 1__0	{"a":10}
+a: &n 0x1_0	{"a":16}
+a: &n -0x10	{"a":-16}
+a: &n 1_	{"a":"1_"}
+a: &n _1	{"a":"_1"}
+a: &n 1._5	{"a":"1._5"}
+a: &n 1_000, 2	{"a":"1_000, 2"}
+&n ﻿v: 1\nb: *n	{"﻿v":1,"b":"v"}
+&n v: 1\nb: *n	{"v":1,"b":"v"}
+a: *n	ERROR:yaml_undefined_alias
+a: [*n]	ERROR:yaml_undefined_alias
+a: {b: *n}	ERROR:yaml_undefined_alias
+a: &n 1\nb: *n\nc: *m	ERROR:yaml_undefined_alias
+b: *n\na: &n 1	ERROR:yaml_undefined_alias
+*missing	ERROR:yaml_undefined_alias
+- *nowhere\n- 1	ERROR:yaml_undefined_alias
+a: &here 1\nb: *hree	ERROR:yaml_undefined_alias
+*al: a	ERROR:yaml_undefined_alias
+- {*al: 1}	ERROR:yaml_undefined_alias
+a: &al x\n*al: b	{"a":"x","x":"b"}
+a: &n 1\n*n: x	{"a":1,"1":"x"}
+a: &n 1\n*n : x	{"a":1,"1":"x"}
+a: &f 2.5\n*f: x	{"a":2.5,"2.5":"x"}
+a: &e 1e21\n*e: x	{"a":1e+21,"1e+21":"x"}
+a: &e 1.5e-7\n*e: x	{"a":1.5e-7,"1.5e-7":"x"}
+a: &e 0.000001\n*e: x	{"a":0.000001,"0.000001":"x"}
+a: &t true\n*t: x	{"a":true,"true":"x"}
+a: &z ~\n*z: x	{"a":null,"null":"x"}
+a: &l [1, 2]\n*l: x	{"a":[1,2],"1,2":"x"}
+a: &m {b: 1}\n*m: x	{"a":{"b":1},"[object Object]":"x"}
+a: &r\n  b: *r\n	ERROR:yaml_recursive_alias
+a: &__proto__ 1\nb: *__proto__\n	{"a":1,"b":1}
+a: &__proto__\n  toString: pwned\nb: *toString\n	ERROR:yaml_undefined_alias
+a: &__proto__\n  toString: pwned\nb: &toString\n  c: *toString\n	ERROR:yaml_recursive_alias
+a: &__proto__\n  toString: pwned\nb: &toString 1\nc: *toString\n	{"a":{"toString":"pwned"},"b":1,"c":1}
+__proto__:\n  polluted: yes\n	{"__proto__":{"polluted":true}}
+# An alias is the anchored node again (YAML 1.2.2, 3.2.2.2): a number that
+# is not finite is kept, which a JSON round trip of the anchored value once
+# wrote as null in TypeScript and Rust, and an anchor on a mapping that
+# follows its tag (`&a !!map`) names that mapping, where the Go port once
+# kept the tag's text.
+a: &x [.inf, .nan, 1]\nb: *x	{"a":["@@Infinity","@@NaN",1],"b":["@@Infinity","@@NaN",1]}
+a: &x [.inf]\n*x : v	{"a":["@@Infinity"],"Infinity":"v"}
+x: &a !!map\n  a: 1\ny: *a	{"x":{"a":1},"y":{"a":1}}
+# An alias to a collection writes its anchored value again, as the
+# transducer part replays it: nested anchors, an anchor defined again, an
+# anchor on an alias, and a key `__proto__` in the copy.
+a: &x [1, &y [2], *y]\nb: *x\nc: *y	{"a":[1,[2],[2]],"b":[1,[2],[2]],"c":[2]}
+a: &x [1]\nb: *x\nc: &x {p: 2}\nd: *x	{"a":[1],"b":[1],"c":{"p":2},"d":{"p":2}}
+a: &x {p: 1}\nb: &y *x\nc: [*y, *x]	{"a":{"p":1},"b":{"p":1},"c":[{"p":1},{"p":1}]}
+a: &x [{p: &y {q: [1]}}]\nb: *x\nc: {d: *y}	{"a":[{"p":{"q":[1]}}],"b":[{"p":{"q":[1]}}],"c":{"d":{"q":[1]}}}
+a: &m {__proto__: 1}\nb: *m	{"a":{"__proto__":1},"b":{"__proto__":1}}
+&a [*a]	ERROR:yaml_recursive_alias	
+a: &x {b: *x}	ERROR:yaml_recursive_alias	
+a: &x\n  - *x	ERROR:yaml_recursive_alias	
+&x\n  a: 1\n  b:\n    *x	ERROR:yaml_recursive_alias	
+&x {*x : 1}	ERROR:yaml_recursive_alias	
+&x\n*x : 1	ERROR:yaml_recursive_alias	
+- &x\n- *x	[null,null]	
+a: &x\nb: *x	{"a":null,"b":null}	
+a: &x {b: &y 1, c: *y}\nd: *x	{"a":{"b":1,"c":1},"d":{"b":1,"c":1}}	
+- &a\n  - &b 1\n  - *b\n- *a	[[1,1],[1,1]]	
+a: &x	{"a":null}	
+- &x	[null]	
+a: &x 	{"a":null}	

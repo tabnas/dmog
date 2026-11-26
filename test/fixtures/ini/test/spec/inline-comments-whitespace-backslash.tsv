@@ -1,0 +1,4 @@
+input	expected
+a = x;y	{"a":"x;y"}
+a = hello ;comment	{"a":"hello"}
+a = hello \;not-a-comment	{"a":"hello ;not-a-comment"}

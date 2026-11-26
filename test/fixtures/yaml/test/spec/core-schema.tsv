@@ -1,0 +1,35 @@
+input	expected	opts
+a: yes\nb: no\nc: on\nd: off	{"a":"yes","b":"no","c":"on","d":"off"}	{"schema":"core"}
+[yes, Yes, YES, no, No, NO, on, On, ON, off, Off, OFF]	["yes","Yes","YES","no","No","NO","on","On","ON","off","Off","OFF"]	{"schema":"core"}
+- y\n- n\n- Y\n- N	["y","n","Y","N"]	{"schema":"core"}
+yes: no\non: off	{"yes":"no","on":"off"}	{"schema":"core"}
+{yes: on, no: off}	{"yes":"on","no":"off"}	{"schema":"core"}
+[true, True, TRUE, false, False, FALSE]	[true,true,true,false,false,false]	{"schema":"core"}
+[null, Null, NULL, ~]	[null,null,null,null]	{"schema":"core"}
+[tRue, nUll, yEs]	["tRue","nUll","yEs"]	{"schema":"core"}
+[.inf, -.INF, +.Inf, .nan, .NaN, .NAN]	["@@Infinity","@@-Infinity","@@Infinity","@@NaN","@@NaN","@@NaN"]	{"schema":"core"}
+[+.nan, .Nan, .inF]	["+.nan",".Nan",".inF"]	{"schema":"core"}
+[12, -12, +12, 0, 0123, 00]	[12,-12,12,0,123,0]	{"schema":"core"}
+[0o17, 0x1f, 0x1F, 0o0]	[15,31,31,0]	{"schema":"core"}
+[.5, +.5, -.5, 1., 1.5, 1e3, 1E3, 1e+3, 1.5e-3, +.5e3]	[0.5,0.5,-0.5,1,1.5,1000,1000,1000,0.0015,500]	{"schema":"core"}
+[0b11, 0B11, +0b100, -0b101]	["0b11","0B11","+0b100","-0b101"]	{"schema":"core"}
+[1_000, 1__0, 85_230.15, .1_4, 0x2_0, 02_0]	["1_000","1__0","85_230.15",".1_4","0x2_0","02_0"]	{"schema":"core"}
+[0X1F, -0x30, +0x30, 0O17, -0o7, 0o8, 0x]	["0X1F","-0x30","+0x30","0O17","-0o7","0o8","0x"]	{"schema":"core"}
+[Infinity, -Infinity, NaN, 1e, 1e+, .e3]	["Infinity","-Infinity","NaN","1e","1e+",".e3"]	{"schema":"core"}
+a: 0b11\nb: 1_000\nc: Infinity	{"a":"0b11","b":"1_000","c":"Infinity"}	{"schema":"core"}
+- 0b11\n- 1_000\n- on	["0b11","1_000","on"]	{"schema":"core"}
+{a: 0b11, b: 1_000, c: yes}	{"a":"0b11","b":"1_000","c":"yes"}	{"schema":"core"}
+0b11: a\n1_000: b\nyes: c\n12: d	{"12":"d","0b11":"a","1_000":"b","yes":"c"}	{"schema":"core"}
+a: &n 1_000\nb: *n	{"a":"1_000","b":"1_000"}	{"schema":"core"}
+a: &n yes\nb: *n	{"a":"yes","b":"yes"}	{"schema":"core"}
+a: &n 12\nb: *n	{"a":12,"b":12}	{"schema":"core"}
+a:\n  yes\nb:\n  0b11\nc:\n  12	{"a":"yes","b":"0b11","c":12}	{"schema":"core"}
+a: yes # c\nb: 0b11 # c\nc: 12 # c	{"a":"yes","b":"0b11","c":12}	{"schema":"core"}
+a: 0b11 more\nb: 12 more\nc: yes more	{"a":"0b11 more","b":"12 more","c":"yes more"}	{"schema":"core"}
+a: 12\n  more\nb: 0b11\n  more	{"a":"12 more","b":"0b11 more"}	{"schema":"core"}
+a: "yes"\nb: 'on'\nc: "0b11"\nd: "12"	{"a":"yes","b":"on","c":"0b11","d":"12"}	{"schema":"core"}
+a: !!bool true\nb: !!int 0o7\nc: !!str yes\nd: !!float .inf	{"a":true,"b":7,"c":"yes","d":"@@Infinity"}	{"schema":"core"}
+a: 12:30\nb: 1,2,3\nc: 1.2.3	{"a":"12:30","b":"1,2,3","c":"1.2.3"}	{"schema":"core"}
+a: 1.0\nb: 0x10\nc: 0o10	{"a":1,"b":16,"c":8}	{"schema":"core"}
+a: yes\nb: 1_000	{"a":true,"b":1000}	
+[yes, No, ON, off, 0b11, 1_000, -0x30, Infinity]	[true,false,true,false,3,1000,-48,"@@Infinity"]	

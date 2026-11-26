@@ -1,16 +1,55 @@
 #!/usr/bin/env bash
-# TypeScript and Go gate. It builds each TypeScript sibling in dependency
-# order, links it into the packages that take it, and runs this package's
-# suite; then a temporary Go workspace over the sibling checkouts runs the
-# Go suite, plain and with the tabnas_nodecell build tag. The siblings are
-# the ones ci/rust/run.sh names, cloned next to this repository (the
-# workflow takes each from the branch of this one's name when it has one).
+# TypeScript and Go gate: this package's TypeScript suite, then the Go
+# suite, plain and with the tabnas_nodecell build tag, and vet.
+#
+# By default it is standalone: npm installs the @tabnas packages from the
+# registry, Go resolves go/go.mod's requirements from the module proxy
+# (GOWORK=off), and the tests read the test files vendored in
+# test/fixtures. Nothing beside this checkout is read.
+#
+# DMOG_SIBLINGS=1 runs it against sibling checkouts instead, to test
+# unreleased changes (alchemy's downstream workflow does, for each change
+# there): it builds each TypeScript sibling in dependency order and links
+# it into the packages that take it, runs Go in a temporary workspace over
+# the sibling checkouts ci/rust/run.sh names, and the tests read the
+# checkouts' test files (DMOG_FIXTURES).
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 FLEET_ROOT=$(cd "$ROOT/.." && pwd)
 # shellcheck source=../phase.sh
 source "$ROOT/ci/phase.sh"
+
+# The links a previous run left: npm installs no peer of a linked package
+# (jsonic's @tabnas/json, which xml's tests import), so a run over a
+# node_modules an earlier run linked would miss them. Remove them, and npm
+# installs the registry copies with their peers before the links go back.
+unlink_siblings() {
+  [[ -d "$1/node_modules/@tabnas" ]] || return 0
+  find "$1/node_modules/@tabnas" -mindepth 1 -maxdepth 1 -type l -exec rm -f {} +
+}
+
+if [[ "${DMOG_SIBLINGS:-}" != 1 ]]; then
+  test_registry() {
+    cd "$ROOT/ts"
+    unlink_siblings "$ROOT/ts"
+    npm install --ignore-scripts --no-save
+    npm test
+  }
+  in_go() {
+    cd "$ROOT/go"
+    GOWORK=off "$@"
+  }
+  phase "typescript: test dmog (25%)" test_registry
+  phase "go: test dmog (50%)" in_go go test -count=1 ./...
+  phase "go: test dmog with tabnas_nodecell (75%)" in_go go test -count=1 -tags tabnas_nodecell ./...
+  phase "go: vet dmog (100%)" in_go go vet ./...
+  echo "polyglot gate: green"
+  exit 0
+fi
+
+export DMOG_FIXTURES="$FLEET_ROOT"
+echo "polyglot gate: against the sibling checkouts in $FLEET_ROOT"
 
 SIBLINGS=$(sed -n 's/^SIBLINGS="\(.*\)"$/\1/p' "$ROOT/ci/rust/run.sh")
 # The engine and the grammars, then alchemy (its build compiles src only),
@@ -44,6 +83,7 @@ link_siblings() {
 
 install_and_build() {
   cd "$1"
+  unlink_siblings "$1"
   npm install --ignore-scripts --no-save
   link_siblings "$1"
   npm run build --if-present
@@ -51,6 +91,7 @@ install_and_build() {
 
 test_cli() {
   cd "$ROOT/ts"
+  unlink_siblings "$ROOT/ts"
   npm install --ignore-scripts --no-save
   link_siblings "$ROOT/ts"
   npm test

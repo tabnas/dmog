@@ -1,0 +1,26 @@
+input	expected	opts
+.foo	"foo"
+.bar_baz	"bar_baz"
+.{ .kind = .red }	{"kind":"red"}
+.{ .kind = .red }	{"kind":{"$enum":"red"}}	{"enumTag":"$enum"}
+# Zig's tokenizer emits `.` separately, so whitespace and comments may sit
+# between it and the identifier.
+. foo	"foo"
+.\n  foo	"foo"
+. // c\n  foo	"foo"
+# `.@"..."` escaped identifiers: any string may name a field or an enum.
+.@"foo bar"	"foo bar"
+.@"0"	"0"
+.@"ab\\nc"	"ab\nc"
+.@"a\\"b"	"a\"b"
+.{ .@"a b" = 1 }	{"a b":1}
+.{ .@"0" = 1.5, .@"foo" = 2 }	{"0":1.5,"foo":2}
+.{ .@"x x" = .@"x x" }	{"x x":{"$enum":"x x"}}	{"enumTag":"$enum"}
+.@"foo bar"	{"$enum":"foo bar"}	{"enumTag":"$enum"}
+# A `\u{...}` escape in an identifier must name a Unicode SCALAR value,
+# so U+D7FF and U+E000 stand either side of the surrogate block the zig
+# reference rejects (see strict.tsv).
+.@"\\u{D7FF}"	"\ud7ff"
+.@"\\u{E000}"	"\ue000"
+# The same byte decoding as a string: `.@"\xe2\x82\xac"` is the euro sign.
+.@"\\xe2\\x82\\xac"	"\u20ac"

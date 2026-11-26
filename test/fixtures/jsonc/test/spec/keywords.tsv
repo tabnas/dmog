@@ -1,0 +1,8 @@
+input	expected	opts
+true	true
+false	false
+null	null
+nulllll	ERROR:unexpected
+True	ERROR:unexpected
+foo-bar	ERROR:unexpected
+foo bar	ERROR:unexpected

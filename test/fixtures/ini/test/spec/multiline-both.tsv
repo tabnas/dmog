@@ -1,0 +1,3 @@
+input	expected
+a = hello \\\nworld	{"a":"hello world"}
+a = hello\n    world	{"a":"hello world"}

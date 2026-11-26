@@ -1,0 +1,31 @@
+input	expected	opts
+# unfinished.tsv: a construct whose closing token never comes is refused,
+# in plain C and in extended mode alike: an expression's `)` or `]`, a
+# conditional's `:` and third operand, a designator's name or `]`, a
+# static assertion's `)` and `;`.
+int x = a ? b;	ERROR:unexpected
+int x = f(1;	ERROR:unexpected
+int x = a[1;	ERROR:unexpected
+int x = (a;	ERROR:unexpected
+int x = (int)(a;	ERROR:unexpected
+int x = sizeof(a;	ERROR:unexpected
+void g(void) { x = (a; }	ERROR:unexpected
+void g(void) { f(1; }	ERROR:unexpected
+void g(void) { x = a ? b; }	ERROR:unexpected
+int a[5] = { [0 = 10, [4] = 50 };	ERROR:unexpected
+struct S s = { . = 1 };	ERROR:unexpected
+static_assert( (sizeof(int) == 4, "m");	ERROR:unexpected
+static_assert(1, "m")	ERROR:unexpected
+int x = a ? b;	ERROR:unexpected	{"plugin":{"extended":true}}
+int x = f(1;	ERROR:unexpected	{"plugin":{"extended":true}}
+int x = a[1;	ERROR:unexpected	{"plugin":{"extended":true}}
+int x = (a;	ERROR:unexpected	{"plugin":{"extended":true}}
+int x = (int)(a;	ERROR:unexpected	{"plugin":{"extended":true}}
+int x = sizeof(a;	ERROR:unexpected	{"plugin":{"extended":true}}
+void g(void) { x = (a; }	ERROR:unexpected	{"plugin":{"extended":true}}
+void g(void) { f(1; }	ERROR:unexpected	{"plugin":{"extended":true}}
+void g(void) { x = a ? b; }	ERROR:unexpected	{"plugin":{"extended":true}}
+int a[5] = { [0 = 10, [4] = 50 };	ERROR:unexpected	{"plugin":{"extended":true}}
+struct S s = { . = 1 };	ERROR:unexpected	{"plugin":{"extended":true}}
+static_assert( (sizeof(int) == 4, "m");	ERROR:unexpected	{"plugin":{"extended":true}}
+static_assert(1, "m")	ERROR:unexpected	{"plugin":{"extended":true}}

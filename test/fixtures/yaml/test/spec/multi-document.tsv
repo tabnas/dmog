@@ -1,0 +1,17 @@
+input	expected	opts
+---\na: 1	{"a":1}
+a: 1\n...	{"a":1}
+---\na: 1\n---\nb: 2	[{"a":1},{"b":2}]
+---\na: 1\n---\nb: 2\n---\nc: 3	[{"a":1},{"b":2},{"c":3}]
+---\na: 1\n...\n---\nb: 2	[{"a":1},{"b":2}]
+---\n- 1\n- 2\n---\na: 1\n---\nfoo	[[1,2],{"a":1},"foo"]
+---\n---\n---	[null,null,null]
+---\n- a\n- b\n---\n- c\n- d	[["a","b"],["c","d"]]
+%YAML 1.2\n---\na: 1	{"a":1}
+%TAG !! tag:example.com,2025:\n---\na: 1	{"a":1}
+a\n...\n...	"a"
+...	UNDEFINED
+# c\n...	UNDEFINED
+...\n---\na: 1	{"a":1}
+a: 1\n...\n...\n---\nb: 2	[{"a":1},{"b":2}]
+a\n...\n# no doc\n...\n|\nPS text\n	["a","PS text\n"]

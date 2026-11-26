@@ -1,0 +1,20 @@
+input	expected
+# Ternary with implicit lists - config: ternary + factorial
+# Operators: ternary {src: ['?', ':']}, factorial {suffix, src: '!', left: 15000}
+# Top-level implicit lists with ternary, plus inside parens.
+# Top-level: space-separated
+a 1?2:3	["a",["?",1,2,3]]
+1?2:3 b	[["?",1,2,3],"b"]
+a 1?2:3 b	["a",["?",1,2,3],"b"]
+# Top-level: comma-separated
+a,1?2:3	["a",["?",1,2,3]]
+1?2:3,b	[["?",1,2,3],"b"]
+a,1?2:3,b	["a",["?",1,2,3],"b"]
+# Inside parens: space-separated
+(a 1?2:3)	["(",["a",["?",1,2,3]]]
+(1?2:3 b)	["(",[["?",1,2,3],"b"]]
+(a 1?2:3 b)	["(",["a",["?",1,2,3],"b"]]
+# Inside parens: comma-separated
+(a,1?2:3)	["(",["a",["?",1,2,3]]]
+(1?2:3,b)	["(",[["?",1,2,3],"b"]]
+(a,1?2:3,b)	["(",["a",["?",1,2,3],"b"]]
