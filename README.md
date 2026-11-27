@@ -156,12 +156,16 @@ Each runtime installs a command named `dmog`:
 | Go | `go install github.com/tabnas/dmog/go/cmd/dmog@latest` |
 | Rust (1.85 or later) | `cargo install tabnas-dmog` |
 
+All three are published from one release, at one version: `@tabnas/dmog`
+on npm, `github.com/tabnas/dmog/go` on the Go module proxy and
+`tabnas-dmog` on crates.io.
+
 The Go command needs no build tag. `run` reads its document through
 JSON's transducer part, and `translate` reads a document through its
 format's part, or whole where the format ships none. Neither route needs
-transduce's rule-event adapter, which builds only with the
-`tabnas_nodecell` tag, so a build with the tag reads every document as a
-build without it does.
+transduce's rule-event adapter, which transduce 0.5.0 retired, so the
+`tabnas_nodecell` tag that built it gates nothing: a build with the tag
+reads every document as a build without it does.
 
 ## Layout
 
@@ -171,13 +175,18 @@ build without it does.
 | `go/` | `github.com/tabnas/dmog/go`, the `dmog` command |
 | `rs/` | `tabnas-dmog`, the `dmog` binary |
 | `examples/` | the worked example: `export.alc` renders its table as CSV, `table.alc` leaves the rendering to the command, `records.json` is the document they read |
+| `test/` | the test data the three runtimes share, and under `test/fixtures/` the test files vendored from other tabnas repositories, which `tools/vendor-fixtures.sh` writes |
+| `ci/` | the gates CI runs: `ci/polyglot/run.sh` for TypeScript and Go, `ci/rust/run.sh` for Rust |
 
 ## Build and test
 
-See [`AGENTS.md`](AGENTS.md). The Rust crate builds against sibling
-checkouts of alchemy, transduce, render and the grammars they use;
-TypeScript and Go install the published packages, and sibling checkouts
-are optional there.
+A clone of this repository builds and tests on its own, in all three
+runtimes. Every tabnas dependency comes from its registry at its latest
+release: npm, the Go module proxy and crates.io. The tests read the test
+files vendored under `test/fixtures/`. [`AGENTS.md`](AGENTS.md) has the
+commands. To test unreleased changes in alchemy, transduce, render or a
+grammar, clone them beside this checkout and run either gate with
+`DMOG_SIBLINGS=1`.
 
 ## License
 
