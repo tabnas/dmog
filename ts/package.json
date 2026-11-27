@@ -1,6 +1,6 @@
 {
   "name": "@tabnas/dmog",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "main": "dist/cli.js",
   "type": "commonjs",
   "types": "dist/cli.d.ts",

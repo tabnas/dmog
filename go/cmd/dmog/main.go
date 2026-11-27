@@ -78,7 +78,7 @@ import (
 // TestVersionMatchesPackageJSON fails the build if they drift. Keep it the
 // only `^const VERSION =` in the module, which is how the orchestrator
 // finds it.
-const VERSION = "0.3.0"
+const VERSION = "0.3.1"
 
 const usage = "usage: dmog canon|format|check|explain FILE\n       dmog run [--grammar FORMAT] [--render csv|json] [--max-output-bytes N] PROGRAM INPUT\n       dmog translate --from FORMAT --to FORMAT [--path PATH] [--key KEY] [--with PROGRAM] [--whole] [--max-output-bytes N] INPUT\n       dmog formats\n       (a FILE may be - for standard input)"
 
